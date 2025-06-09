@@ -365,8 +365,7 @@ const PurchasesPage = () => {
             <div className="border-t pt-4">
               <h4 className="font-semibold mb-3" style={{ fontFamily: 'Tajawal, sans-serif' }}>إضافة الأصناف</h4>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
-                <div>
-                  <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>نوع البطارية</Label>
+                <div> 
                   <BatteryTypeSelector
                     value={currentItem.batteryType}
                     onChange={(value) => setCurrentItem({ ...currentItem, batteryType: value })}
