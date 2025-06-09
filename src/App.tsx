@@ -1,42 +1,135 @@
-
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import CustomerFollowUp from "./pages/CustomerFollowUp";
-import SupplierFollowUp from "./pages/SupplierFollowUp";
-import SalesPage from "./pages/SalesPage";
-import PurchasesPage from "./pages/PurchasesPage";
-import VouchersPage from "./pages/VouchersPage";
-import TaxDeclarationPage from "./pages/TaxDeclarationPage";
-import NotesAndBatteriesPage from "./pages/NotesAndBatteriesPage";
-import NotFound from "./pages/NotFound";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
-const queryClient = new QueryClient();
+// Lazy load pages
+const Index = lazy(() => import("./pages/Index"));
+const CustomerFollowUp = lazy(() => import("./pages/CustomerFollowUp"));
+const SupplierFollowUp = lazy(() => import("./pages/SupplierFollowUp"));
+const SalesPage = lazy(() => import("./pages/SalesPage"));
+const PurchasesPage = lazy(() => import("./pages/PurchasesPage"));
+const VouchersPage = lazy(() => import("./pages/VouchersPage"));
+const TaxDeclarationPage = lazy(() => import("./pages/TaxDeclarationPage"));
+const NotesAndBatteriesPage = lazy(() => import("./pages/NotesAndBatteriesPage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 3,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+    },
+  },
+});
+
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <LoadingSpinner size="lg" />
+  </div>
+);
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/customer-followup" element={<CustomerFollowUp />} />
-          <Route path="/supplier-followup" element={<SupplierFollowUp />} />
-          <Route path="/sales" element={<SalesPage />} />
-          <Route path="/purchases" element={<PurchasesPage />} />
-          <Route path="/vouchers" element={<VouchersPage />} />
-          <Route path="/tax-declaration" element={<TaxDeclarationPage />} />
-          <Route path="/notes-batteries" element={<NotesAndBatteriesPage />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-background focus:text-foreground"
+          >
+            تخطي إلى المحتوى الرئيسي
+          </a>
+          <main id="main-content">
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route
+                  path="/"
+                  element={
+                    <ErrorBoundary>
+                      <Index />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/customer-followup"
+                  element={
+                    <ErrorBoundary>
+                      <CustomerFollowUp />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/supplier-followup"
+                  element={
+                    <ErrorBoundary>
+                      <SupplierFollowUp />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/sales"
+                  element={
+                    <ErrorBoundary>
+                      <SalesPage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/purchases"
+                  element={
+                    <ErrorBoundary>
+                      <PurchasesPage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/vouchers"
+                  element={
+                    <ErrorBoundary>
+                      <VouchersPage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/tax-declaration"
+                  element={
+                    <ErrorBoundary>
+                      <TaxDeclarationPage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/notes-batteries"
+                  element={
+                    <ErrorBoundary>
+                      <NotesAndBatteriesPage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="*"
+                  element={
+                    <ErrorBoundary>
+                      <NotFound />
+                    </ErrorBoundary>
+                  }
+                />
+              </Routes>
+            </Suspense>
+          </main>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
