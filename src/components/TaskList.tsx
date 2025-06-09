@@ -10,6 +10,7 @@ interface Task {
   id: string;
   title: string;
   completed: boolean;
+  color: string;  // إضافة خاصية اللون للمهمة
 }
 
 interface TaskGroup {
@@ -24,22 +25,23 @@ export const TaskList = () => {
       id: "1",
       title: "المهام الإدارية",
       tasks: [
-        { id: "1", title: "مراجعة فواتير الموردين", completed: false },
-        { id: "2", title: "تحديث أسعار البطاريات", completed: true },
+        { id: "1", title: "مراجعة فواتير الموردين", completed: false, color: "bg-blue-100" },
+        { id: "2", title: "تحديث أسعار البطاريات", completed: true, color: "bg-green-100" },
       ],
     },
     {
       id: "2",
       title: "المهام الفنية",
       tasks: [
-        { id: "3", title: "جرد المخزن الشهري", completed: false },
-        { id: "4", title: "متابعة مديونيات العملاء", completed: false },
+        { id: "3", title: "جرد المخزن الشهري", completed: false, color: "bg-yellow-100" },
+        { id: "4", title: "متابعة مديونيات العملاء", completed: false, color: "bg-orange-100" },
       ],
     },
   ]);
 
   const [newTaskGroupTitle, setNewTaskGroupTitle] = useState("");
   const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskColor, setNewTaskColor] = useState("bg-white"); // اللون الافتراضي
 
   const addTaskGroup = () => {
     if (!newTaskGroupTitle.trim()) {
@@ -75,10 +77,22 @@ export const TaskList = () => {
       return;
     }
 
+    // التحقق من عدم وجود نفس المهمة في نفس المجموعة
+    const group = taskGroups.find((group) => group.id === groupId);
+    if (group?.tasks.some((task) => task.title === newTaskTitle.trim())) {
+      toast({
+        title: "خطأ",
+        description: "المهمة موجودة بالفعل في هذه المجموعة",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const task: Task = {
       id: Date.now().toString(),
       title: newTaskTitle.trim(),
       completed: false,
+      color: newTaskColor,
     };
 
     setTaskGroups((prev) =>
@@ -169,6 +183,18 @@ export const TaskList = () => {
                   onChange={(e) => setNewTaskTitle(e.target.value)}
                   onKeyPress={(e) => e.key === "Enter" && addTaskToGroup(group.id)}
                 />
+                {/* اختيار اللون للمهمة */}
+                <select
+                  value={newTaskColor}
+                  onChange={(e) => setNewTaskColor(e.target.value)}
+                  className="p-2 border rounded"
+                >
+                  <option value="bg-white">افتراضي</option>
+                  <option value="bg-red-100">أحمر</option>
+                  <option value="bg-blue-100">أزرق</option>
+                  <option value="bg-green-100">أخضر</option>
+                  <option value="bg-yellow-100">أصفر</option>
+                </select>
                 <Button onClick={() => addTaskToGroup(group.id)}>
                   <Plus className="w-4 h-4" />
                 </Button>
@@ -182,9 +208,7 @@ export const TaskList = () => {
                   group.tasks.map((task) => (
                     <div
                       key={task.id}
-                      className={`flex items-center justify-between mb-2 p-3 border rounded-lg ${
-                        task.completed ? "bg-gray-50" : "bg-white"
-                      }`}
+                      className={`flex items-center justify-between mb-2 p-3 border rounded-lg ${task.color}`}
                     >
                       <div className="flex items-center gap-2">
                         <Checkbox
