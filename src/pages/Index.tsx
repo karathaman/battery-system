@@ -5,7 +5,17 @@ import { StatisticsPage } from "@/components/StatisticsPage";
 import { Navigation } from "@/components/Navigation";
 import { GitHubSync } from "@/components/GitHubSync";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, ShoppingCart, Truck, Users, Receipt, Banknote, FileText, StickyNote, BarChart } from "lucide-react";
+import {
+  CalendarDays,
+  ShoppingCart,
+  Truck,
+  Users,
+  Receipt,
+  Banknote,
+  FileText,
+  StickyNote,
+  BarChart
+} from "@/components/ui/icons";
 import SupplierFollowUp from "./SupplierFollowUp";
 import CustomerFollowUp from "./CustomerFollowUp";
 import SalesPage from "./SalesPage";
@@ -77,7 +87,7 @@ const Index = () => {
               className={`flex items-center gap-1 sm:gap-2 text-xs sm:text-sm ${isRTL ? 'flex-row-reverse' : ''} min-w-0`}
               style={{ fontFamily: 'Tajawal, sans-serif' }}
             >
-              <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+              <CalendarDays className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
               <span className="truncate">{getTabText("daily")}</span>
             </TabsTrigger>
             <TabsTrigger 
