@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,48 +14,16 @@ interface Task {
 
 export const TaskList = () => {
   const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: "1",
-      title: "مراجعة فواتير الموردين",
-      completed: false
-    },
-    {
-      id: "2", 
-      title: "تحديث أسعار البطاريات",
-      completed: true
-    },
-    {
-      id: "3",
-      title: "جرد المخزن الشهري", 
-      completed: false
-    },
-    {
-      id: "4",
-      title: "متابعة مديونيات العملاء",
-      completed: false
-    },
-    {
-      id: "5",
-      title: "تنظيف وترتيب المتجر",
-      completed: true
-    },
-    {
-      id: "6",
-      title: "تحديث قائمة العملاء",
-      completed: false
-    },
-    {
-      id: "7",
-      title: "مراجعة الحسابات الشهرية",
-      completed: false
-    },
-    {
-      id: "8",
-      title: "طلب بطاريات جديدة من الموردين",
-      completed: true
-    }
+    { id: "1", title: "مراجعة فواتير الموردين", completed: false },
+    { id: "2", title: "تحديث أسعار البطاريات", completed: true },
+    { id: "3", title: "جرد المخزن الشهري", completed: false },
+    { id: "4", title: "متابعة مديونيات العملاء", completed: false },
+    { id: "5", title: "تنظيف وترتيب المتجر", completed: true },
+    { id: "6", title: "تحديث قائمة العملاء", completed: false },
+    { id: "7", title: "مراجعة الحسابات الشهرية", completed: false },
+    { id: "8", title: "طلب بطاريات جديدة من الموردين", completed: true }
   ]);
-  
+
   const [newTaskTitle, setNewTaskTitle] = useState("");
 
   const addTask = () => {
@@ -77,7 +44,6 @@ export const TaskList = () => {
 
     setTasks(prev => [...prev, task]);
     setNewTaskTitle("");
-
     toast({
       title: "تمت الإضافة",
       description: "تمت إضافة المهمة بنجاح"
@@ -133,56 +99,42 @@ export const TaskList = () => {
           </div>
         </div>
 
-        {/* قائمة المهام */}
-        <div className="space-y-2">
-          {tasks.length === 0 ? (
-            <p className="text-gray-500 text-center py-4" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-              لا توجد مهام حالياً
-            </p>
-          ) : (
-            tasks.map((task) => (
-              <div
-                key={task.id}
-                className={`border rounded-lg p-3 transition-all duration-200 ${
-                  task.completed ? 'bg-gray-50 border-green-200' : 'bg-white border-gray-200'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    checked={task.completed}
-                    onCheckedChange={() => toggleTask(task.id)}
-                  />
-                  
-                  <div className="flex-1">
-                    <h4 
-                      className={`font-medium transition-all duration-200 ${
-                        task.completed 
-                          ? 'line-through text-gray-500 decoration-2' 
-                          : 'text-gray-900'
-                      }`}
-                      style={{ fontFamily: 'Tajawal, sans-serif' }}
-                    >
+        {/* قائمة المهام في جدول */}
+        <div className="overflow-x-auto">
+          <table className="w-full table-auto">
+            <thead className="bg-gray-50 border-b">
+              <tr>
+                <th className="p-3 text-center" style={{ fontFamily: 'Tajawal, sans-serif' }}>المهمة</th>
+                <th className="p-3 text-center" style={{ fontFamily: 'Tajawal, sans-serif' }}>مكتملة</th>
+                <th className="p-3 text-center" style={{ fontFamily: 'Tajawal, sans-serif' }}>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tasks.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="text-center text-gray-500 py-4" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                    لا توجد مهام حالياً
+                  </td>
+                </tr>
+              ) : (
+                tasks.map((task) => (
+                  <tr key={task.id} className="border-b hover:bg-gray-50">
+                    <td className="p-3 text-center" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                       {task.title}
-                    </h4>
-                    {task.completed && (
-                      <span className="text-xs text-green-600 font-medium">
-                        ✓ مكتملة
-                      </span>
-                    )}
-                  </div>
-                  
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => deleteTask(task.id)}
-                    className="opacity-70 hover:opacity-100"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
-                </div>
-              </div>
-            ))
-          )}
+                    </td>
+                    <td className="p-3 text-center">
+                      <Checkbox checked={task.completed} onCheckedChange={() => toggleTask(task.id)} />
+                    </td>
+                    <td className="p-3 text-center">
+                      <Button variant="destructive" size="sm" onClick={() => deleteTask(task.id)}>
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </CardContent>
     </Card>
