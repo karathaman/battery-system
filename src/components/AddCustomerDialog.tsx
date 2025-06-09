@@ -1,157 +1,128 @@
-
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-
-interface Customer {
-  id: string;
-  customerCode: string;
-  name: string;
-  phone: string;
-  description?: string;
-  lastPurchase?: string;
-}
+import type { Customer } from "@/types";
+import { UserPlus } from "lucide-react";
 
 interface AddCustomerDialogProps {
-  open: boolean;
-  onClose: () => void;
   onCustomerAdded: (customer: Customer) => void;
-  initialName?: string;
-  language?: string;
-  nextCustomerCode?: string;
+  language: string;
 }
 
-export const AddCustomerDialog = ({ 
-  open, 
-  onClose, 
-  onCustomerAdded, 
-  initialName = "",
-  language = "ar",
-  nextCustomerCode = "C001"
-}: AddCustomerDialogProps) => {
-  const [name, setName] = useState(initialName);
-  const [phone, setPhone] = useState("");
-  const [description, setDescription] = useState("");
-
-  const isRTL = language === "ar";
+export const AddCustomerDialog = ({ onCustomerAdded, language }: AddCustomerDialogProps) => {
+  const [open, setOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    phone: "",
+    description: "",
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!name.trim() || !phone.trim()) {
+
+    // Validate form data
+    if (!formData.name.trim() || !formData.phone.trim()) {
       toast({
-        title: language === "ar" ? "خطأ في البيانات" : "Data Error",
-        description: language === "ar" ? "يرجى إدخال الاسم ورقم الجوال" : "Please enter name and phone number",
+        title: "خطأ في البيانات",
+        description: "يرجى ملء جميع الحقول المطلوبة",
         variant: "destructive",
       });
       return;
     }
 
+    // Create new customer
     const newCustomer: Customer = {
-      id: Date.now().toString(),
-      customerCode: nextCustomerCode,
-      name: name.trim(),
-      phone: phone.trim(),
-      description: description.trim() || undefined,
+      id: Date.now().toString(), // Temporary ID generation
+      customerCode: `C${Date.now().toString().slice(-4)}`, // Temporary code generation
+      name: formData.name.trim(),
+      phone: formData.phone.trim(),
+      description: formData.description.trim(),
+      lastSale: new Date().toISOString().split("T")[0],
+      totalSales: 0,
+      totalAmount: 0,
+      averagePrice: 0,
+      sales: [],
+      lastPurchase: new Date().toISOString().split("T")[0],
+      totalPurchases: 0,
+      purchases: [],
+      isBlocked: false,
+      last2Quantities: [],
+      last2Prices: [],
     };
 
+    // Add customer and close dialog
     onCustomerAdded(newCustomer);
-    
-    toast({
-      title: language === "ar" ? "تم إضافة العميل" : "Customer Added",
-      description: language === "ar" ? `تم إضافة العميل ${name} برمز ${nextCustomerCode}` : `Customer ${name} added with code ${nextCustomerCode}`,
-    });
+    setOpen(false);
+    setFormData({ name: "", phone: "", description: "" });
 
-    // Reset form
-    setName("");
-    setPhone("");
-    setDescription("");
-    onClose();
+    // Show success message
+    toast({
+      title: "تمت إضافة العميل",
+      description: "تم إضافة العميل بنجاح",
+    });
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md" dir={isRTL ? "rtl" : "ltr"}>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="flex items-center gap-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+          <UserPlus className="w-4 h-4" />
+          إضافة عميل جديد
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
-            {language === "ar" ? "إضافة عميل جديد" : "Add New Customer"}
-          </DialogTitle>
+          <DialogTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>إضافة عميل جديد</DialogTitle>
         </DialogHeader>
-
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="customerCode" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-              {language === "ar" ? "رمز العميل" : "Customer Code"}
-            </Label>
+          <div className="space-y-2">
+            <Label htmlFor="name" style={{ fontFamily: 'Tajawal, sans-serif' }}>اسم العميل</Label>
             <Input
-              id="customerCode"
-              value={nextCustomerCode}
-              disabled
-              className="mt-1 bg-gray-100"
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="أدخل اسم العميل"
+              dir="rtl"
               style={{ fontFamily: 'Tajawal, sans-serif' }}
             />
           </div>
-
-          <div>
-            <Label htmlFor="customerName" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-              {language === "ar" ? "اسم العميل" : "Customer Name"}
-            </Label>
+          <div className="space-y-2">
+            <Label htmlFor="phone" style={{ fontFamily: 'Tajawal, sans-serif' }}>رقم الجوال</Label>
             <Input
-              id="customerName"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={language === "ar" ? "أدخل اسم العميل" : "Enter customer name"}
-              className="mt-1"
+              id="phone"
+              value={formData.phone}
+              onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+              placeholder="أدخل رقم الجوال"
+              dir="rtl"
               style={{ fontFamily: 'Tajawal, sans-serif' }}
-              autoFocus
             />
           </div>
-
-          <div>
-            <Label htmlFor="customerPhone" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-              {language === "ar" ? "رقم الجوال" : "Phone Number"}
-            </Label>
-            <Input
-              id="customerPhone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="05xxxxxxxx"
-              className="mt-1"
-              dir="ltr"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="customerDescription" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-              {language === "ar" ? "وصف العميل" : "Customer Description"}
-            </Label>
+          <div className="space-y-2">
+            <Label htmlFor="description" style={{ fontFamily: 'Tajawal, sans-serif' }}>وصف العميل</Label>
             <Textarea
-              id="customerDescription"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder={language === "ar" ? "أدخل وصف للعميل (اختياري)" : "Enter customer description (optional)"}
-              className="mt-1 text-right"
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="أدخل وصف العميل (اختياري)"
+              dir="rtl"
               style={{ fontFamily: 'Tajawal, sans-serif' }}
-              rows={3}
             />
           </div>
-
-          <div className={`flex gap-2 pt-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <Button type="submit" className="flex-1" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-              {language === "ar" ? "إضافة العميل" : "Add Customer"}
-            </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={onClose}
-              className="flex-1"
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
               style={{ fontFamily: 'Tajawal, sans-serif' }}
             >
-              {language === "ar" ? "إلغاء" : "Cancel"}
+              إلغاء
+            </Button>
+            <Button type="submit" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+              إضافة
             </Button>
           </div>
         </form>
