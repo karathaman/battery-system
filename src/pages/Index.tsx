@@ -5,6 +5,7 @@ import { StatisticsPage } from "@/components/StatisticsPage";
 import { Navigation } from "@/components/Navigation";
 import { GitHubSync } from "@/components/GitHubSync";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar, ShoppingCart, Truck, Users, Receipt, Banknote, FileText, StickyNote, BarChart } from "lucide-react";
 import SupplierFollowUp from "./SupplierFollowUp";
 import CustomerFollowUp from "./CustomerFollowUp";
 import SalesPage from "./SalesPage";
