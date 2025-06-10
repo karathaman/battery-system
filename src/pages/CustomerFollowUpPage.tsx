@@ -12,19 +12,7 @@ import { CustomerDetailsDialog } from "@/components/CustomerDetailsDialog";
 import { EditCustomerDialog } from "@/components/EditCustomerDialog";
 import { CustomerStatistics } from "@/components/CustomerStatistics";
 import { toast } from "@/hooks/use-toast";
-
-interface Customer {
-  id: string;
-  customerCode: string;
-  name: string;
-  phone: string;
-  description?: string;
-  notes?: string;
-  totalPurchases: number;
-  totalSales: number;
-  lastSaleDate?: string;
-  salesCount: number;
-}
+import { Customer } from "@/types";
 
 const CustomerFollowUpPage = () => {
   const [customers, setCustomers] = useState<Customer[]>([
@@ -35,10 +23,13 @@ const CustomerFollowUpPage = () => {
       phone: "0501234567",
       description: "عميل دائم",
       notes: "يفضل البطاريات الأصلية",
-      totalPurchases: 0,
-      totalSales: 15420,
-      lastSaleDate: "2024-01-15",
-      salesCount: 12
+      totalPurchases: 150,
+      totalAmount: 15420,
+      averagePrice: 102.8,
+      lastPurchase: "2024-01-15",
+      purchases: [],
+      isBlocked: false,
+      messageSent: false
     },
     {
       id: "2", 
@@ -47,10 +38,13 @@ const CustomerFollowUpPage = () => {
       phone: "0509876543",
       description: "تاجرة جملة",
       notes: "تشتري بكميات كبيرة",
-      totalPurchases: 0,
-      totalSales: 28760,
-      lastSaleDate: "2024-01-18",
-      salesCount: 8
+      totalPurchases: 280,
+      totalAmount: 28760,
+      averagePrice: 102.7,
+      lastPurchase: "2024-01-18",
+      purchases: [],
+      isBlocked: false,
+      messageSent: false
     }
   ]);
 
@@ -67,13 +61,16 @@ const CustomerFollowUpPage = () => {
     customer.phone.includes(searchTerm)
   );
 
-  const handleAddCustomer = (newCustomer: Omit<Customer, 'id' | 'totalPurchases' | 'totalSales' | 'salesCount'>) => {
+  const handleAddCustomer = (newCustomer: Omit<Customer, 'id' | 'totalPurchases' | 'totalAmount' | 'averagePrice' | 'purchases'>) => {
     const customer: Customer = {
       ...newCustomer,
       id: Date.now().toString(),
       totalPurchases: 0,
-      totalSales: 0,
-      salesCount: 0
+      totalAmount: 0,
+      averagePrice: 0,
+      purchases: [],
+      isBlocked: false,
+      messageSent: false
     };
     setCustomers(prev => [...prev, customer]);
     toast({
@@ -104,7 +101,7 @@ const CustomerFollowUpPage = () => {
   };
 
   const topCustomers = customers
-    .sort((a, b) => b.totalSales - a.totalSales)
+    .sort((a, b) => b.totalAmount - a.totalAmount)
     .slice(0, 5);
 
   const recentSales = [
@@ -188,10 +185,10 @@ const CustomerFollowUpPage = () => {
                       <div className="text-sm text-gray-600 space-y-1">
                         <p>الجوال: {customer.phone}</p>
                         {customer.description && <p>الوصف: {customer.description}</p>}
-                        <p>إجمالي المبيعات: {customer.totalSales.toLocaleString()} ريال</p>
-                        <p>عدد المبيعات: {customer.salesCount}</p>
-                        {customer.lastSaleDate && (
-                          <p>آخر مبيعة: {new Date(customer.lastSaleDate).toLocaleDateString('ar-SA')}</p>
+                        <p>إجمالي المبيعات: {customer.totalAmount.toLocaleString()} ريال</p>
+                        <p>إجمالي الكمية: {customer.totalPurchases} كيلو</p>
+                        {customer.lastPurchase && (
+                          <p>آخر مبيعة: {new Date(customer.lastPurchase).toLocaleDateString('ar-SA')}</p>
                         )}
                       </div>
                     </div>
@@ -265,10 +262,10 @@ const CustomerFollowUpPage = () => {
                     </div>
                     <div className="text-left">
                       <p className="font-semibold text-green-600">
-                        {customer.totalSales.toLocaleString()} ريال
+                        {customer.totalAmount.toLocaleString()} ريال
                       </p>
                       <p className="text-sm text-gray-600">
-                        {customer.salesCount} مبيعة
+                        {customer.totalPurchases} كيلو
                       </p>
                     </div>
                   </div>
@@ -336,6 +333,10 @@ const CustomerFollowUpPage = () => {
             open={showDetailsDialog}
             onClose={() => setShowDetailsDialog(false)}
             customer={selectedCustomer}
+            onEditCustomer={(customer) => {
+              setSelectedCustomer(customer);
+              setShowEditDialog(true);
+            }}
           />
           
           <EditCustomerDialog
