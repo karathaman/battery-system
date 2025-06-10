@@ -44,7 +44,7 @@ export const DateNavigation = ({
           <Calendar className="w-5 h-5 text-blue-600" />
           <input type="date" value={currentDate} onChange={e => onDateChange(e.target.value)} style={{
           fontFamily: 'Tajawal, sans-serif'
-        }} className="text-md font-semibold border rounded-lg px-3 py-2" />
+        }} className="text-md   border rounded-lg px-3 py-2" />
         </div>
         
         <Button onClick={() => navigateDate('next')} variant="outline" size="sm" className="flex items-center gap-1">
