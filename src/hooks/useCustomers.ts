@@ -1,52 +1,102 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { Customer, CustomerFormData, PaginatedResponse, FilterOptions } from '@/types';
 
-// Mock service for demonstration - replace with actual API calls
+// Real Supabase service implementation
 const customerService = {
   getCustomers: async (page = 1, limit = 10, filters?: FilterOptions): Promise<PaginatedResponse<Customer>> => {
-    // Mock implementation
-    const mockCustomers: Customer[] = [
-      {
-        id: "1",
-        customerCode: "C001",
-        name: "أحمد محمد",
-        phone: "0501234567",
-        description: "عميل مميز",
-        notes: "عميل منتظم",
-        lastPurchase: "2024-01-20",
-        totalPurchases: 150,
-        totalAmount: 45000,
-        averagePrice: 300,
-        purchases: [],
-        last2Quantities: [25, 20],
-        last2Prices: [280, 290],
-        last2BatteryTypes: ["بطاريات عادية", "بطاريات جافة"],
-        isBlocked: false,
-        messageSent: false
-      }
-    ];
+    const offset = (page - 1) * limit;
+    
+    let query = supabase
+      .from('customers')
+      .select('*', { count: 'exact' })
+      .range(offset, offset + limit - 1)
+      .order('created_at', { ascending: false });
+
+    // Apply filters if provided
+    if (filters?.search) {
+      query = query.or(`name.ilike.%${filters.search}%,phone.ilike.%${filters.search}%,customer_code.ilike.%${filters.search}%`);
+    }
+    
+    if (filters?.isBlocked !== undefined) {
+      query = query.eq('is_blocked', filters.isBlocked);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error('Error fetching customers:', error);
+      throw new Error(error.message);
+    }
+
+    const customers: Customer[] = (data || []).map(customer => ({
+      id: customer.id,
+      customerCode: customer.customer_code,
+      name: customer.name,
+      phone: customer.phone || '',
+      description: customer.description,
+      notes: customer.notes,
+      lastPurchase: customer.last_purchase,
+      totalPurchases: customer.total_purchases || 0,
+      totalAmount: customer.total_amount || 0,
+      averagePrice: customer.average_price || 0,
+      purchases: [], // This would need a separate query to fetch related purchases
+      last2Quantities: [], // These would be calculated from purchases
+      last2Prices: [],
+      last2BatteryTypes: [],
+      isBlocked: customer.is_blocked || false,
+      blockReason: customer.block_reason,
+      messageSent: customer.message_sent || false
+    }));
 
     return {
-      data: mockCustomers,
+      data: customers,
       pagination: {
         page,
         limit,
-        total: mockCustomers.length,
-        totalPages: Math.ceil(mockCustomers.length / limit)
+        total: count || 0,
+        totalPages: Math.ceil((count || 0) / limit)
       }
     };
   },
 
   createCustomer: async (data: CustomerFormData): Promise<Customer> => {
-    const newCustomer: Customer = {
-      id: Date.now().toString(),
-      customerCode: `C${String(Date.now()).slice(-3)}`,
-      name: data.name,
-      phone: data.phone,
-      description: data.description,
-      notes: data.notes,
+    // Generate customer code
+    const { data: lastCustomer } = await supabase
+      .from('customers')
+      .select('customer_code')
+      .order('created_at', { ascending: false })
+      .limit(1);
+    
+    const lastCode = lastCustomer?.[0]?.customer_code;
+    const nextNumber = lastCode ? parseInt(lastCode.substring(1)) + 1 : 1;
+    const customerCode = `C${String(nextNumber).padStart(3, '0')}`;
+
+    const { data: newCustomer, error } = await supabase
+      .from('customers')
+      .insert({
+        customer_code: customerCode,
+        name: data.name,
+        phone: data.phone,
+        description: data.description,
+        notes: data.notes
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating customer:', error);
+      throw new Error(error.message);
+    }
+
+    return {
+      id: newCustomer.id,
+      customerCode: newCustomer.customer_code,
+      name: newCustomer.name,
+      phone: newCustomer.phone || '',
+      description: newCustomer.description,
+      notes: newCustomer.notes,
       totalPurchases: 0,
       totalAmount: 0,
       averagePrice: 0,
@@ -54,85 +104,177 @@ const customerService = {
       isBlocked: false,
       messageSent: false
     };
-    return newCustomer;
   },
 
   updateCustomer: async (id: string, data: Partial<CustomerFormData>): Promise<Customer> => {
-    // Mock implementation
+    const { data: updatedCustomer, error } = await supabase
+      .from('customers')
+      .update({
+        name: data.name,
+        phone: data.phone,
+        description: data.description,
+        notes: data.notes
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating customer:', error);
+      throw new Error(error.message);
+    }
+
     return {
-      id,
-      customerCode: "C001",
-      name: data.name || "",
-      phone: data.phone || "",
-      description: data.description,
-      notes: data.notes,
-      totalPurchases: 0,
-      totalAmount: 0,
-      averagePrice: 0,
+      id: updatedCustomer.id,
+      customerCode: updatedCustomer.customer_code,
+      name: updatedCustomer.name,
+      phone: updatedCustomer.phone || '',
+      description: updatedCustomer.description,
+      notes: updatedCustomer.notes,
+      totalPurchases: updatedCustomer.total_purchases || 0,
+      totalAmount: updatedCustomer.total_amount || 0,
+      averagePrice: updatedCustomer.average_price || 0,
       purchases: [],
-      isBlocked: false,
-      messageSent: false
+      isBlocked: updatedCustomer.is_blocked || false,
+      blockReason: updatedCustomer.block_reason,
+      messageSent: updatedCustomer.message_sent || false
     };
   },
 
   deleteCustomer: async (id: string): Promise<void> => {
-    // Mock implementation
-    console.log(`Deleting customer ${id}`);
+    const { error } = await supabase
+      .from('customers')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting customer:', error);
+      throw new Error(error.message);
+    }
   },
 
   blockCustomer: async (id: string, reason: string): Promise<Customer> => {
-    // Mock implementation
+    const { data: blockedCustomer, error } = await supabase
+      .from('customers')
+      .update({
+        is_blocked: true,
+        block_reason: reason
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error blocking customer:', error);
+      throw new Error(error.message);
+    }
+
     return {
-      id,
-      customerCode: "C001",
-      name: "Customer",
-      phone: "0501234567",
-      totalPurchases: 0,
-      totalAmount: 0,
-      averagePrice: 0,
+      id: blockedCustomer.id,
+      customerCode: blockedCustomer.customer_code,
+      name: blockedCustomer.name,
+      phone: blockedCustomer.phone || '',
+      description: blockedCustomer.description,
+      notes: blockedCustomer.notes,
+      totalPurchases: blockedCustomer.total_purchases || 0,
+      totalAmount: blockedCustomer.total_amount || 0,
+      averagePrice: blockedCustomer.average_price || 0,
       purchases: [],
       isBlocked: true,
       blockReason: reason,
-      messageSent: false
+      messageSent: blockedCustomer.message_sent || false
     };
   },
 
   unblockCustomer: async (id: string): Promise<Customer> => {
-    // Mock implementation
+    const { data: unblockedCustomer, error } = await supabase
+      .from('customers')
+      .update({
+        is_blocked: false,
+        block_reason: null
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error unblocking customer:', error);
+      throw new Error(error.message);
+    }
+
     return {
-      id,
-      customerCode: "C001",
-      name: "Customer",
-      phone: "0501234567",
-      totalPurchases: 0,
-      totalAmount: 0,
-      averagePrice: 0,
+      id: unblockedCustomer.id,
+      customerCode: unblockedCustomer.customer_code,
+      name: unblockedCustomer.name,
+      phone: unblockedCustomer.phone || '',
+      description: unblockedCustomer.description,
+      notes: unblockedCustomer.notes,
+      totalPurchases: unblockedCustomer.total_purchases || 0,
+      totalAmount: unblockedCustomer.total_amount || 0,
+      averagePrice: unblockedCustomer.average_price || 0,
       purchases: [],
       isBlocked: false,
-      messageSent: false
+      messageSent: unblockedCustomer.message_sent || false
     };
   },
 
   updateCustomerNotes: async (id: string, notes: string): Promise<Customer> => {
-    // Mock implementation
+    const { data: updatedCustomer, error } = await supabase
+      .from('customers')
+      .update({ notes })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating customer notes:', error);
+      throw new Error(error.message);
+    }
+
     return {
-      id,
-      customerCode: "C001",
-      name: "Customer",
-      phone: "0501234567",
-      notes,
-      totalPurchases: 0,
-      totalAmount: 0,
-      averagePrice: 0,
+      id: updatedCustomer.id,
+      customerCode: updatedCustomer.customer_code,
+      name: updatedCustomer.name,
+      phone: updatedCustomer.phone || '',
+      description: updatedCustomer.description,
+      notes: updatedCustomer.notes,
+      totalPurchases: updatedCustomer.total_purchases || 0,
+      totalAmount: updatedCustomer.total_amount || 0,
+      averagePrice: updatedCustomer.average_price || 0,
       purchases: [],
-      isBlocked: false,
-      messageSent: false
+      isBlocked: updatedCustomer.is_blocked || false,
+      blockReason: updatedCustomer.block_reason,
+      messageSent: updatedCustomer.message_sent || false
     };
   },
 
   searchCustomers: async (query: string): Promise<Customer[]> => {
-    // Mock implementation
-    return [];
+    const { data, error } = await supabase
+      .from('customers')
+      .select('*')
+      .or(`name.ilike.%${query}%,phone.ilike.%${query}%,customer_code.ilike.%${query}%`)
+      .limit(50);
+
+    if (error) {
+      console.error('Error searching customers:', error);
+      throw new Error(error.message);
+    }
+
+    return (data || []).map(customer => ({
+      id: customer.id,
+      customerCode: customer.customer_code,
+      name: customer.name,
+      phone: customer.phone || '',
+      description: customer.description,
+      notes: customer.notes,
+      totalPurchases: customer.total_purchases || 0,
+      totalAmount: customer.total_amount || 0,
+      averagePrice: customer.average_price || 0,
+      purchases: [],
+      isBlocked: customer.is_blocked || false,
+      blockReason: customer.block_reason,
+      messageSent: customer.message_sent || false
+    }));
   }
 };
 

@@ -9,7 +9,528 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      battery_types: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          unit_price: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          unit_price?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          unit_price?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      customers: {
+        Row: {
+          average_price: number | null
+          block_reason: string | null
+          created_at: string | null
+          customer_code: string
+          description: string | null
+          id: string
+          is_blocked: boolean | null
+          last_message_sent: string | null
+          last_purchase: string | null
+          message_sent: boolean | null
+          name: string
+          notes: string | null
+          phone: string | null
+          total_amount: number | null
+          total_purchases: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          average_price?: number | null
+          block_reason?: string | null
+          created_at?: string | null
+          customer_code: string
+          description?: string | null
+          id?: string
+          is_blocked?: boolean | null
+          last_message_sent?: string | null
+          last_purchase?: string | null
+          message_sent?: boolean | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          total_amount?: number | null
+          total_purchases?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          average_price?: number | null
+          block_reason?: string | null
+          created_at?: string | null
+          customer_code?: string
+          description?: string | null
+          id?: string
+          is_blocked?: boolean | null
+          last_message_sent?: string | null
+          last_purchase?: string | null
+          message_sent?: boolean | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          total_amount?: number | null
+          total_purchases?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      purchase_items: {
+        Row: {
+          battery_type_id: string
+          created_at: string | null
+          id: string
+          price_per_kg: number
+          purchase_id: string
+          quantity: number
+          total: number
+        }
+        Insert: {
+          battery_type_id: string
+          created_at?: string | null
+          id?: string
+          price_per_kg: number
+          purchase_id: string
+          quantity: number
+          total: number
+        }
+        Update: {
+          battery_type_id?: string
+          created_at?: string | null
+          id?: string
+          price_per_kg?: number
+          purchase_id?: string
+          quantity?: number
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_items_battery_type_id_fkey"
+            columns: ["battery_type_id"]
+            isOneToOne: false
+            referencedRelation: "battery_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_items_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchases: {
+        Row: {
+          created_at: string | null
+          date: string
+          discount: number | null
+          id: string
+          invoice_number: string
+          notes: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          status: Database["public"]["Enums"]["status_type"] | null
+          subtotal: number
+          supplier_id: string
+          tax: number | null
+          total: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          discount?: number | null
+          id?: string
+          invoice_number: string
+          notes?: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          status?: Database["public"]["Enums"]["status_type"] | null
+          subtotal?: number
+          supplier_id: string
+          tax?: number | null
+          total?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          discount?: number | null
+          id?: string
+          invoice_number?: string
+          notes?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          status?: Database["public"]["Enums"]["status_type"] | null
+          subtotal?: number
+          supplier_id?: string
+          tax?: number | null
+          total?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchases_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sale_items: {
+        Row: {
+          battery_type_id: string
+          created_at: string | null
+          id: string
+          price_per_kg: number
+          quantity: number
+          sale_id: string
+          total: number
+        }
+        Insert: {
+          battery_type_id: string
+          created_at?: string | null
+          id?: string
+          price_per_kg: number
+          quantity: number
+          sale_id: string
+          total: number
+        }
+        Update: {
+          battery_type_id?: string
+          created_at?: string | null
+          id?: string
+          price_per_kg?: number
+          quantity?: number
+          sale_id?: string
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_items_battery_type_id_fkey"
+            columns: ["battery_type_id"]
+            isOneToOne: false
+            referencedRelation: "battery_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales: {
+        Row: {
+          created_at: string | null
+          customer_id: string
+          date: string
+          discount: number | null
+          id: string
+          invoice_number: string
+          notes: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          status: Database["public"]["Enums"]["status_type"] | null
+          subtotal: number
+          tax: number | null
+          total: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id: string
+          date: string
+          discount?: number | null
+          id?: string
+          invoice_number: string
+          notes?: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          status?: Database["public"]["Enums"]["status_type"] | null
+          subtotal?: number
+          tax?: number | null
+          total?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string
+          date?: string
+          discount?: number | null
+          id?: string
+          invoice_number?: string
+          notes?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          status?: Database["public"]["Enums"]["status_type"] | null
+          subtotal?: number
+          tax?: number | null
+          total?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suppliers: {
+        Row: {
+          average_price: number | null
+          balance: number | null
+          block_reason: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_blocked: boolean | null
+          last_message_sent: string | null
+          last_purchase: string | null
+          message_sent: boolean | null
+          name: string
+          notes: string | null
+          phone: string | null
+          supplier_code: string
+          total_amount: number | null
+          total_purchases: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          average_price?: number | null
+          balance?: number | null
+          block_reason?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_blocked?: boolean | null
+          last_message_sent?: string | null
+          last_purchase?: string | null
+          message_sent?: boolean | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          supplier_code: string
+          total_amount?: number | null
+          total_purchases?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          average_price?: number | null
+          balance?: number | null
+          block_reason?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_blocked?: boolean | null
+          last_message_sent?: string | null
+          last_purchase?: string | null
+          message_sent?: boolean | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          supplier_code?: string
+          total_amount?: number | null
+          total_purchases?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      task_group_items: {
+        Row: {
+          created_at: string | null
+          id: string
+          task_group_id: string
+          task_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          task_group_id: string
+          task_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          task_group_id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_group_items_task_group_id_fkey"
+            columns: ["task_group_id"]
+            isOneToOne: false
+            referencedRelation: "task_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_group_items_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_groups: {
+        Row: {
+          created_date: string | null
+          id: string
+          title: string
+        }
+        Insert: {
+          created_date?: string | null
+          id?: string
+          title: string
+        }
+        Update: {
+          created_date?: string | null
+          id?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      tasks: {
+        Row: {
+          color: string | null
+          completed: boolean | null
+          completed_date: string | null
+          created_date: string | null
+          id: string
+          title: string
+        }
+        Insert: {
+          color?: string | null
+          completed?: boolean | null
+          completed_date?: string | null
+          created_date?: string | null
+          id?: string
+          title: string
+        }
+        Update: {
+          color?: string | null
+          completed?: boolean | null
+          completed_date?: string | null
+          created_date?: string | null
+          id?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      voucher_items: {
+        Row: {
+          amount: number
+          created_at: string | null
+          description: string
+          id: string
+          total_amount: number
+          vat: number | null
+          vat_amount: number | null
+          voucher_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          description: string
+          id?: string
+          total_amount: number
+          vat?: number | null
+          vat_amount?: number | null
+          voucher_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          description?: string
+          id?: string
+          total_amount?: number
+          vat?: number | null
+          vat_amount?: number | null
+          voucher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voucher_items_voucher_id_fkey"
+            columns: ["voucher_id"]
+            isOneToOne: false
+            referencedRelation: "vouchers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vouchers: {
+        Row: {
+          created_at: string | null
+          date: string
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["entity_type"]
+          id: string
+          notes: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          reference: string | null
+          status: Database["public"]["Enums"]["status_type"] | null
+          subtotal: number
+          total: number
+          total_vat: number | null
+          type: Database["public"]["Enums"]["voucher_type"]
+          updated_at: string | null
+          voucher_number: string
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["entity_type"]
+          id?: string
+          notes?: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          reference?: string | null
+          status?: Database["public"]["Enums"]["status_type"] | null
+          subtotal?: number
+          total?: number
+          total_vat?: number | null
+          type: Database["public"]["Enums"]["voucher_type"]
+          updated_at?: string | null
+          voucher_number: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          entity_id?: string
+          entity_type?: Database["public"]["Enums"]["entity_type"]
+          id?: string
+          notes?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          reference?: string | null
+          status?: Database["public"]["Enums"]["status_type"] | null
+          subtotal?: number
+          total?: number
+          total_vat?: number | null
+          type?: Database["public"]["Enums"]["voucher_type"]
+          updated_at?: string | null
+          voucher_number?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +539,10 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      entity_type: "customer" | "supplier"
+      payment_method: "cash" | "card" | "bank_transfer" | "check"
+      status_type: "pending" | "completed" | "cancelled"
+      voucher_type: "receipt" | "payment" | "all"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +657,11 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      entity_type: ["customer", "supplier"],
+      payment_method: ["cash", "card", "bank_transfer", "check"],
+      status_type: ["pending", "completed", "cancelled"],
+      voucher_type: ["receipt", "payment", "all"],
+    },
   },
 } as const
