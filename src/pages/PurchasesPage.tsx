@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ShoppingCart, Search, Plus, Calendar, DollarSign, TrendingUp, Users, Edit, Printer, Trash2 } from "lucide-react";
+import { ShoppingCart, Search, Plus, Calendar, DollarSign, TrendingUp, Users, Edit, Printer, Trash2, Banknote, CreditCard, Smartphone } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { SupplierSearchDialog } from "@/components/SupplierSearchDialog";
 import { BatteryTypeSelector } from "@/components/BatteryTypeSelector";
@@ -35,10 +35,10 @@ const mockPurchases: Purchase[] = [
 ];
 
 const paymentMethods = [
-  { value: "آجل", label: "آجل", icon: DollarSign },
-  { value: "نقدي", label: "نقدي", icon: DollarSign },
-  { value: "تحويل بنكي", label: "تحويل بنكي", icon: DollarSign },
-  { value: "شيك", label: "شيك", icon: DollarSign }
+  { value: "cash", label: "نقداً", icon: Banknote },
+  { value: "card", label: "بطاقة", icon: CreditCard },
+  { value: "transfer", label: "تحويل", icon: Smartphone },
+  { value: "credit", label: "آجل", icon: Calendar }
 ];
 
 const PurchasesPage = () => {
@@ -142,7 +142,7 @@ const PurchasesPage = () => {
     }
 
     const { subtotal, tax, total } = calculateTotals();
-    
+
     const purchase: Purchase = {
       id: Date.now().toString(),
       invoiceNumber: generateNextInvoiceNumber(),
@@ -268,7 +268,7 @@ const PurchasesPage = () => {
         </body>
       </html>
     `);
-    
+
     printWindow.document.close();
     printWindow.print();
   };
@@ -276,7 +276,7 @@ const PurchasesPage = () => {
   const handleDeletePurchase = (purchase: Purchase) => {
     // Remove from purchases list
     setPurchases(prev => prev.filter(p => p.id !== purchase.id));
-    
+
     // Remove from supplier account if it was deferred
     if (purchase.paymentMethod === "آجل") {
       removeSupplierTransactionByInvoice(purchase.supplierId, purchase.invoiceNumber);
@@ -290,71 +290,71 @@ const PurchasesPage = () => {
 
   const totals = calculateTotals();
 
-const LocalSupplierSearchDialog = ({ open, onClose, onSupplierSelect }: { open: boolean; onClose: () => void; onSupplierSelect: (supplier: { id: string; name: string; balance: number }) => void }) => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const mockSuppliers = [
-    { id: "S001", name: "مورد البطاريات الرئيسي", balance: 5000 },
-    { id: "S002", name: "شركة البطاريات الحديثة", balance: -2000 },
-    { id: "S003", name: "مورد البطاريات السريعة", balance: 0 },
-  ];
+  const LocalSupplierSearchDialog = ({ open, onClose, onSupplierSelect }: { open: boolean; onClose: () => void; onSupplierSelect: (supplier: { id: string; name: string; balance: number }) => void }) => {
+    const [searchTerm, setSearchTerm] = useState("");
+    const mockSuppliers = [
+      { id: "S001", name: "مورد البطاريات الرئيسي", balance: 5000 },
+      { id: "S002", name: "شركة البطاريات الحديثة", balance: -2000 },
+      { id: "S003", name: "مورد البطاريات السريعة", balance: 0 },
+    ];
 
-  const filteredSuppliers = mockSuppliers.filter(supplier =>
-    supplier.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+    const filteredSuppliers = mockSuppliers.filter(supplier =>
+      supplier.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md" dir="rtl">
-        <DialogHeader>
-          <DialogTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
-            اختيار المورد
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4">
-          <div className="relative">
-            <Search className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="ابحث عن مورد..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pr-10"
-              style={{ fontFamily: 'Tajawal, sans-serif' }}
-            />
-          </div>
-          
-          <div className="max-h-60 overflow-y-auto space-y-2">
-            {filteredSuppliers.map(supplier => (
-              <div
-                key={supplier.id}
-                onClick={() => {
-                  onSupplierSelect(supplier);
-                  setSearchTerm("");
-                  onClose();
-                }}
-                className="p-3 border rounded cursor-pointer hover:bg-gray-50"
-              >
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-semibold" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                      {supplier.name}
-                    </p>
-                  </div>
-                  <div className="text-left">
-                    <p className={`font-bold ${supplier.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {supplier.balance.toLocaleString()} ريال
-                    </p>
-                    <p className="text-xs text-gray-500">الرصيد</p>
+    return (
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent className="max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
+              اختيار المورد
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="ابحث عن مورد..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pr-10"
+                style={{ fontFamily: 'Tajawal, sans-serif' }}
+              />
+            </div>
+
+            <div className="max-h-60 overflow-y-auto space-y-2">
+              {filteredSuppliers.map(supplier => (
+                <div
+                  key={supplier.id}
+                  onClick={() => {
+                    onSupplierSelect(supplier);
+                    setSearchTerm("");
+                    onClose();
+                  }}
+                  className="p-3 border rounded cursor-pointer hover:bg-gray-50"
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-semibold" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                        {supplier.name}
+                      </p>
+                    </div>
+                    <div className="text-left">
+                      <p className={`font-bold ${supplier.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {supplier.balance.toLocaleString()} ريال
+                      </p>
+                      <p className="text-xs text-gray-500">الرصيد</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-};
+        </DialogContent>
+      </Dialog>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -366,7 +366,7 @@ const LocalSupplierSearchDialog = ({ open, onClose, onSupplierSelect }: { open: 
             إدارة المشتريات
           </CardTitle>
         </CardHeader>
-        
+
         <CardContent className="p-4 sm:p-6">
           <div className="mb-6">
             <div className="relative">
@@ -386,53 +386,52 @@ const LocalSupplierSearchDialog = ({ open, onClose, onSupplierSelect }: { open: 
             <h3 className="text-lg font-semibold mb-4" style={{ fontFamily: 'Tajawal, sans-serif' }}>
               إضافة فاتورة مشتريات جديدة
             </h3>
-            
+
             <div className="flex flex-col md:flex-row gap-4 mb-4 items-end">
               {/* تاريخ الفاتورة */}
               <div className="flex-4">
-              <Label htmlFor="date" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                التاريخ
-              </Label>
-              <Input
-                type="date"
-                id="date"
-                value={newPurchase.date}
-                onChange={(e) => setNewPurchase({ ...newPurchase, date: e.target.value })}
-              />
+                <Label htmlFor="date" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  التاريخ
+                </Label>
+                <Input
+                  type="date"
+                  id="date"
+                  value={newPurchase.date}
+                  onChange={(e) => setNewPurchase({ ...newPurchase, date: e.target.value })}
+                />
               </div>
 
               {/* اختيار المورد */}
               <div className="flex-1 flex flex-col">
-              <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                اختر المورد
-              </Label>
-              <div className="flex items-center gap-2 mt-1">
-                <Button
-                variant="outline"
-                onClick={() => setShowSupplierDialog(true)}
-                className="flex-1 flex items-center justify-between"
-                style={{ fontFamily: 'Tajawal, sans-serif' }}
-                >
-                <span>
-                  {selectedSupplier ? selectedSupplier.name : "اختر المورد"}
-                </span>
-                <Search className="w-4 h-4" />
-                </Button>
-                {selectedSupplier && (
-                <span
-                  className={`text-sm font-bold whitespace-nowrap ${
-                  selectedSupplier.balance >= 0
-                    ? "text-green-600 bg-green-100 py-2 px-6 rounded"
-                    : "text-red-600 bg-red-100 py-2 px-6 rounded"
-                  }`}
-                >
-                  الرصيد: {selectedSupplier.balance.toLocaleString()} ريال
-                </span>
-                )}
-              </div>
+                <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  اختر المورد
+                </Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowSupplierDialog(true)}
+                    className="flex-1 flex items-center justify-between"
+                    style={{ fontFamily: 'Tajawal, sans-serif' }}
+                  >
+                    <span>
+                      {selectedSupplier ? selectedSupplier.name : "اختر المورد"}
+                    </span>
+                    <Search className="w-4 h-4" />
+                  </Button>
+                  {selectedSupplier && (
+                    <span
+                      className={`text-sm font-bold whitespace-nowrap ${selectedSupplier.balance >= 0
+                          ? "text-green-600 bg-green-100 py-2 px-6 rounded"
+                          : "text-red-600 bg-red-100 py-2 px-6 rounded"
+                        }`}
+                    >
+                      الرصيد: {selectedSupplier.balance.toLocaleString()} ريال
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
-           
+
             {/* Add Items */}
             <div>
               <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>أصناف الفاتورة</Label>
@@ -520,78 +519,78 @@ const LocalSupplierSearchDialog = ({ open, onClose, onSupplierSelect }: { open: 
             </div>
 
             <div>
-                <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>طريقة الدفع</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
-                  {paymentMethods.map(method => {
-                    const Icon = method.icon;
-                    return (
-                      <Button
-                        key={method.value}
-                        variant={newPurchase.paymentMethod === method.value ? "default" : "outline"}
-                        onClick={() => setNewPurchase({ ...newPurchase, paymentMethod: method.value })}
-                        className="flex items-center gap-2"
-                        style={{ fontFamily: 'Tajawal, sans-serif' }}
-                      >
-                        <Icon className="w-4 h-4" />
-                        {method.label}
-                      </Button>
-                    );
-                  })}
-                </div>
+              <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>طريقة الدفع</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+                {paymentMethods.map(method => {
+                  const Icon = method.icon;
+                  return (
+                    <Button
+                      key={method.value}
+                      variant={newPurchase.paymentMethod === method.value ? "default" : "outline"}
+                      onClick={() => setNewPurchase({ ...newPurchase, paymentMethod: method.value })}
+                      className="flex items-center gap-2"
+                      style={{ fontFamily: 'Tajawal, sans-serif' }}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {method.label}
+                    </Button>
+                  );
+                })}
               </div>
+            </div>
 
           </div>
 
-                          <div className="flex gap-2 ">
-                  <Button
-                    onClick={handleSavePurchase}
-                    className="flex-1 bg-green-600 "
-                    style={{ fontFamily: 'Tajawal, sans-serif' }}
-                  >
-                    إنشاء الفاتورة
-                  </Button>
-                </div>
+          <div className="flex gap-2 ">
+            <Button
+              onClick={handleSavePurchase}
+              className="flex-1 bg-green-600 "
+              style={{ fontFamily: 'Tajawal, sans-serif' }}
+            >
+              إنشاء الفاتورة
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
       {/* Purchases List */}
       <Card>
-         {/* Statistics */}
-         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <Card>
-              <CardContent className="p-4 text-center">
-                <ShoppingCart className="w-8 h-8 mx-auto mb-2 text-green-600" />
-                <p className="text-2xl font-bold">{purchases.length}</p>
-                <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                  إجمالي المشتريات
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-4 text-center">
-                <DollarSign className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-                <p className="text-2xl font-bold">
-                  {purchases.reduce((sum, p) => sum + p.total, 0).toFixed(2)}
-                </p>
-                <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                  إجمالي القيمة
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-4 text-center">
-                <TrendingUp className="w-8 h-8 mx-auto mb-2 text-purple-600" />
-                <p className="text-2xl font-bold">
-                  {purchases.reduce((sum, p) => sum + p.tax, 0).toFixed(2)}
-                </p>
-                <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                  إجمالي الضريبة
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+        {/* Statistics */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <Card>
+            <CardContent className="p-4 text-center">
+              <ShoppingCart className="w-8 h-8 mx-auto mb-2 text-green-600" />
+              <p className="text-2xl font-bold">{purchases.length}</p>
+              <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                إجمالي المشتريات
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 text-center">
+              <DollarSign className="w-8 h-8 mx-auto mb-2 text-blue-600" />
+              <p className="text-2xl font-bold">
+                {purchases.reduce((sum, p) => sum + p.total, 0).toFixed(2)}
+              </p>
+              <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                إجمالي القيمة
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 text-center">
+              <TrendingUp className="w-8 h-8 mx-auto mb-2 text-purple-600" />
+              <p className="text-2xl font-bold">
+                {purchases.reduce((sum, p) => sum + p.tax, 0).toFixed(2)}
+              </p>
+              <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                إجمالي الضريبة
+              </p>
+            </CardContent>
+          </Card>
+        </div>
         <CardHeader>
           <CardTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>قائمة المشتريات</CardTitle>
         </CardHeader>
@@ -624,15 +623,15 @@ const LocalSupplierSearchDialog = ({ open, onClose, onSupplierSelect }: { open: 
                     </td>
                     <td className="p-3">
                       <div className="flex gap-1">
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => handleEditPurchase(purchase)}
                         >
                           <Edit className="w-3 h-3" />
                         </Button>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => handlePrintPurchase(purchase)}
                         >
@@ -665,22 +664,170 @@ const LocalSupplierSearchDialog = ({ open, onClose, onSupplierSelect }: { open: 
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="max-w-2xl" dir="rtl">
           <DialogHeader>
-            <DialogTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
-              تعديل فاتورة المشتريات - {editingPurchase?.invoiceNumber}
-            </DialogTitle>
+        <DialogTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
+          تعديل فاتورة المشتريات - {editingPurchase?.invoiceNumber}
+        </DialogTitle>
           </DialogHeader>
           {editingPurchase && (
-            <div className="space-y-4">
-              <p className="text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                سيتم إضافة ميزة التعديل قريباً 
-              </p>
-              <Button onClick={() => setShowEditDialog(false)}>
-                إغلاق
-              </Button>
-            </div>
+        <EditPurchaseForm
+          purchase={editingPurchase}
+          onSave={(updatedPurchase) => {
+            setPurchases((prev) =>
+          prev.map((p) => (p.id === updatedPurchase.id ? updatedPurchase : p))
+            );
+            setShowEditDialog(false);
+            toast({
+          title: "تم التعديل",
+          description: "تم تعديل فاتورة المشتريات بنجاح",
+            });
+          }}
+          onCancel={() => setShowEditDialog(false)}
+        />
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Edit Purchase Form Component */}
+      {/* Place this outside the PurchasesPage component */}
+      {/* --- */}
+    </div>
+  );
+};
+
+// EditPurchaseForm component definition
+type EditPurchaseFormProps = {
+  purchase: Purchase;
+  onSave: (updatedPurchase: Purchase) => void;
+  onCancel: () => void;
+};
+
+const EditPurchaseForm = ({ purchase, onSave, onCancel }: EditPurchaseFormProps) => {
+  const [editedPurchase, setEditedPurchase] = useState<Purchase>({ ...purchase });
+
+  const handleItemChange = (index: number, field: keyof PurchaseItem, value: any) => {
+    const updatedItems = [...editedPurchase.items];
+    updatedItems[index] = {
+      ...updatedItems[index],
+      [field]: value,
+      total:
+        field === "quantity" || field === "price"
+          ? (field === "quantity" ? value : updatedItems[index].quantity) *
+            (field === "price" ? value : updatedItems[index].price)
+          : updatedItems[index].total,
+    };
+    setEditedPurchase({ ...editedPurchase, items: updatedItems });
+  };
+
+  const handleRemoveItem = (index: number) => {
+    const updatedItems = editedPurchase.items.filter((_, i) => i !== index);
+    setEditedPurchase({ ...editedPurchase, items: updatedItems });
+  };
+
+  const handleSave = () => {
+    // Recalculate totals
+    const subtotal = editedPurchase.items.reduce((sum, item) => sum + item.total, 0);
+    const discountAmount = (subtotal * editedPurchase.discount) / 100;
+    const afterDiscount = subtotal - discountAmount;
+    const tax = afterDiscount * 0.15;
+    const total = afterDiscount + tax;
+    onSave({
+      ...editedPurchase,
+      subtotal,
+      tax,
+      total,
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col md:flex-row gap-4 mb-4 items-end">
+        <div className="flex-4">
+          <Label htmlFor="date" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+            التاريخ
+          </Label>
+          <Input
+            type="date"
+            id="date"
+            value={editedPurchase.date}
+            onChange={(e) => setEditedPurchase({ ...editedPurchase, date: e.target.value })}
+          />
+        </div>
+        <div className="flex-1 flex flex-col">
+          <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>
+            اسم المورد
+          </Label>
+          <Input
+            value={editedPurchase.supplierName}
+            disabled
+            style={{ fontFamily: 'Tajawal, sans-serif' }}
+          />
+        </div>
+      </div>
+      <div>
+        <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>أصناف الفاتورة</Label>
+        <div className="space-y-3 mt-2">
+          {editedPurchase.items.map((item, index) => (
+            <div key={item.id} className="grid grid-cols-12 gap-2 items-end">
+              <div className="col-span-4">
+                <BatteryTypeSelector
+                  value={item.batteryType}
+                  onChange={(value) => handleItemChange(index, "batteryType", value)}
+                  placeholder="اختر نوع البطارية"
+                />
+              </div>
+              <div className="col-span-2">
+                <Input
+                  type="number"
+                  placeholder="الكمية"
+                  value={item.quantity || ''}
+                  onChange={(e) => handleItemChange(index, "quantity", Number(e.target.value) || 0)}
+                />
+              </div>
+              <div className="col-span-2">
+                <Input
+                  type="number"
+                  placeholder="السعر"
+                  value={item.price || ''}
+                  onChange={(e) => handleItemChange(index, "price", Number(e.target.value) || 0)}
+                />
+              </div>
+              <div className="col-span-2">
+                <Input
+                  value={item.total.toLocaleString()}
+                  disabled
+                  className="bg-gray-100"
+                />
+              </div>
+              <div className="col-span-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleRemoveItem(index)}
+                  disabled={editedPurchase.items.length === 1}
+                >
+                  حذف
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div>
+        <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>الخصم (%)</Label>
+        <Input
+          type="number"
+          value={editedPurchase.discount}
+          onChange={(e) => setEditedPurchase({ ...editedPurchase, discount: Number(e.target.value) || 0 })}
+        />
+      </div>
+      <div className="flex gap-2 justify-end">
+        <Button variant="outline" onClick={onCancel}>
+          إلغاء
+        </Button>
+        <Button onClick={handleSave} className="bg-green-600">
+          حفظ التعديلات
+        </Button>
+      </div>
     </div>
   );
 };
