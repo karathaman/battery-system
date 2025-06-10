@@ -1,6 +1,6 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import { Customer, CustomerFormData, PaginatedResponse, FilterOptions } from '@/types';
 
 // Mock service for demonstration - replace with actual API calls

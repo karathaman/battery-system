@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { toast } from './ui/use-toast';
+import { toast } from '@/components/ui/use-toast';
 
 interface ApiState<T> {
   data: T | null;
@@ -89,4 +89,4 @@ const handleSubmit = async (formData: CustomerFormData) => {
     // Handle error if needed
   }
 };
-*/ 
+*/
