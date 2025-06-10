@@ -162,10 +162,8 @@ const CustomerFollowUp = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50" dir="rtl">
-
-      <div className="container mx-auto p-4 sm:p-6 max-w-7xl">
-
+    <div className=" space-y-6" dir="rtl">
+ 
         {/* Search and Filters */}
         <Card className="shadow-lg mb-6 sm:mb-8">
           <CardHeader className="bg-[#f0fdf4] text-white p-4  sm:p-6">
@@ -521,8 +519,7 @@ const CustomerFollowUp = () => {
               </p>
             </CardContent>
           </Card>
-        )}
-      </div>
+        )} 
 
       {/* Customer Details Dialog */}
       <CustomerDetailsDialog
