@@ -6,7 +6,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarDays, Plus, Trash2, Check } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { SupplierSearchDialog } from "./SupplierSearchDialog";
 import { DateNavigation } from "./DateNavigation";
 
 interface DailyPurchase {
@@ -72,9 +71,6 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
   ]);
   
   const [focusedCell, setFocusedCell] = useState<{row: number, col: string} | null>(null);
-  const [showSupplierDialog, setShowSupplierDialog] = useState(false);
-  const [selectedRowForSupplier, setSelectedRowForSupplier] = useState<number>(0);
-  const [supplierSearchTerm, setSupplierSearchTerm] = useState("");
   const tableRef = useRef<HTMLDivElement>(null);
   
   const isRTL = language === "ar";
@@ -217,13 +213,11 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
   };
 
   const handleSupplierInput = (value: string, rowIndex: number) => {
-    setSupplierSearchTerm(value);
-    
     // Check for exact match first
     const foundSupplier = findSupplierBySearch(value);
     
     if (foundSupplier) {
-      // Direct selection - supplier found
+      // Direct selection - supplier found, no dialog needed
       updatePurchase(rowIndex, 'supplierName', foundSupplier.name);
       updatePurchase(rowIndex, 'supplierCode', foundSupplier.supplierCode);
       updatePurchase(rowIndex, 'supplierPhone', foundSupplier.phone);
@@ -239,30 +233,9 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
         setFocusedCell({ row: rowIndex, col: 'batteryType' });
       }, 100);
     } else {
-      // Update supplier name for search
+      // Update supplier name for manual entry
       updatePurchase(rowIndex, 'supplierName', value);
-      
-      // Show dialog if search term is long enough and no exact match
-      if (value.trim() && value.length > 2) {
-        setTimeout(() => {
-          setSelectedRowForSupplier(rowIndex);
-          setShowSupplierDialog(true);
-        }, 500);
-      }
     }
-  };
-
-  const handleSupplierSelect = (supplier: any) => {
-    updatePurchase(selectedRowForSupplier, 'supplierName', supplier.name);
-    updatePurchase(selectedRowForSupplier, 'supplierCode', supplier.supplierCode);
-    updatePurchase(selectedRowForSupplier, 'supplierPhone', supplier.phone);
-    setShowSupplierDialog(false);
-    setSupplierSearchTerm("");
-    
-    // Move to next field
-    setTimeout(() => {
-      setFocusedCell({ row: selectedRowForSupplier, col: 'batteryType' });
-    }, 100);
   };
 
   const totalDailyAmount = purchases.reduce((sum, purchase) => sum + purchase.finalTotal, 0);
@@ -323,9 +296,6 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
                     {language === "ar" ? "المورد" : "Supplier"}
                   </th>
                   <th className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                    {language === "ar" ? "رمز المورد" : "Supplier Code"}
-                  </th>
-                  <th className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
                     {language === "ar" ? "نوع البطارية" : "Battery Type"}
                   </th>
                   <th className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
@@ -363,12 +333,6 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
                         className={isRTL ? 'text-right' : 'text-left'}
                         style={{ fontFamily: 'Tajawal, sans-serif' }}
                       />
-                    </td>
-                    
-                    <td className="p-2">
-                      <div className="text-sm text-gray-600 p-2 bg-gray-50 rounded">
-                        {purchase.supplierCode || "-"}
-                      </div>
                     </td>
                     
                     <td className="p-2">
@@ -480,14 +444,6 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
           </div>
         </CardContent>
       </Card>
-
-      <SupplierSearchDialog
-        open={showSupplierDialog}
-        onClose={() => setShowSupplierDialog(false)}
-        onSupplierSelect={handleSupplierSelect}
-        searchTerm={supplierSearchTerm}
-        language={language}
-      />
     </div>
   );
 };

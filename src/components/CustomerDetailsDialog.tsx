@@ -24,6 +24,13 @@ export const CustomerDetailsDialog = ({ open, onClose, customer, onEditCustomer 
     return diffDays;
   };
 
+  const handleEditClick = () => {
+    if (onEditCustomer) {
+      onEditCustomer(customer);
+      onClose();
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" dir="rtl">
@@ -32,18 +39,16 @@ export const CustomerDetailsDialog = ({ open, onClose, customer, onEditCustomer 
             <DialogTitle className="text-xl" style={{ fontFamily: 'Tajawal, sans-serif' }}>
               إحصائيات العميل - {customer.name}
             </DialogTitle>
-            {onEditCustomer && (
-              <Button
-                onClick={() => onEditCustomer(customer)}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-                style={{ fontFamily: 'Tajawal, sans-serif' }}
-              >
-                <Edit className="w-4 h-4" />
-                تعديل بيانات العميل
-              </Button>
-            )}
+            <Button
+              onClick={handleEditClick}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+              style={{ fontFamily: 'Tajawal, sans-serif' }}
+            >
+              <Edit className="w-4 h-4" />
+              تعديل بيانات العميل
+            </Button>
           </div>
         </DialogHeader>
 

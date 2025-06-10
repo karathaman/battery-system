@@ -104,6 +104,58 @@ export interface Purchase {
   status: string;
 }
 
+// Sale types
+export interface SaleItem {
+  id: string;
+  batteryType: string;
+  quantity: number;
+  price: number;
+  total: number;
+}
+
+export interface Sale {
+  id: string;
+  invoiceNumber: string;
+  date: string;
+  customerId: string;
+  customerName: string;
+  items: SaleItem[];
+  subtotal: number;
+  discount: number;
+  tax: number;
+  total: number;
+  paymentMethod: string;
+  status: string;
+}
+
+// Receipt/Voucher types
+export interface ReceiptItem {
+  id: string;
+  description: string;
+  amount: number;
+  vat?: number;
+  vatAmount?: number;
+  totalAmount: number;
+}
+
+export interface Receipt {
+  id: string;
+  receiptNumber: string;
+  date: string;
+  type: 'receipt' | 'payment' | 'all'; // Added 'all' for mixed type
+  entityId: string;
+  entityName: string;
+  entityType: 'customer' | 'supplier';
+  items: ReceiptItem[];
+  subtotal: number;
+  totalVat: number;
+  total: number;
+  paymentMethod: string;
+  status: 'pending' | 'completed' | 'cancelled';
+  notes?: string;
+  reference?: string;
+}
+
 // Task types
 export interface Task {
   id: string;
@@ -140,4 +192,5 @@ export interface FilterOptions {
   status?: string;
   messageStatus?: string;
   lastPurchaseFilter?: string;
+  type?: string; // Added for receipt/voucher filtering
 }
