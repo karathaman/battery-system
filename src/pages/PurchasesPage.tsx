@@ -328,7 +328,7 @@ const SupplierSearchDialog = ({ open, onClose, onSupplierSelect }: { open: boole
               <div
                 key={supplier.id}
                 onClick={() => {
-                  onSupplierSelect(supplier);
+                  onSupplierSelect({ id: supplier.id, name: supplier.name });
                   setSearchTerm("");
                   onClose();
                 }}
