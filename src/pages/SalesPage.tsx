@@ -297,11 +297,14 @@ const SalesPage = () => {
     <div className="space-y-6">
       {/* Header */}
       <Card className="shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 text-white">
-          <CardTitle className="flex items-center gap-2 flex-row-reverse text-lg sm:text-xl" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-            <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
+        <CardHeader className="bg-[#f0fdf4] text-[#53864d]">
+            <CardTitle
+            className="flex items-center justify-center gap-2 flex-row-reverse text-lg sm:text-xl"
+            style={{ fontFamily: 'Tajawal, sans-serif' }}
+            >
             {editingSale ? 'تعديل فاتورة المبيعات' : 'نظام المبيعات'}
-          </CardTitle>
+            <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
+            </CardTitle>
         </CardHeader>
       </Card>
 

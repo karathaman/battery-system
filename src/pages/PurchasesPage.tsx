@@ -360,26 +360,17 @@ const PurchasesPage = () => {
     <div className="space-y-6">
       {/* Header */}
       <Card className="shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 text-white">
-          <CardTitle className="flex items-center gap-2 flex-row-reverse text-lg sm:text-xl" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-            <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
-            إدارة المشتريات
-          </CardTitle>
+        <CardHeader className="bg-[#eff6ff] text-gray-600">
+            <div className="flex justify-center">
+            <CardTitle className="flex items-center gap-2 flex-row-reverse text-lg sm:text-xl" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+              إدارة المشتريات
+              <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
+            </CardTitle>
+            </div>
         </CardHeader>
 
         <CardContent className="p-4 sm:p-6">
-          <div className="mb-6">
-            <div className="relative">
-              <Search className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="ابحث عن فاتورة مشتريات..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pr-10 text-sm"
-                style={{ fontFamily: 'Tajawal, sans-serif' }}
-              />
-            </div>
-          </div>
+         
 
           {/* Add New Purchase Form */}
           <div className="bg-gray-50 p-4 rounded-lg mb-6">
@@ -540,6 +531,40 @@ const PurchasesPage = () => {
             </div>
 
           </div>
+<Card>
+  <CardHeader>
+    <CardTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
+      ملخص الفاتورة
+    </CardTitle>
+  </CardHeader>
+  <CardContent className="space-y-4">
+    <div className="flex justify-between">
+      <span style={{ fontFamily: 'Tajawal, sans-serif' }}>المجموع الفرعي:</span>
+      <span className="font-bold">{totals.subtotal.toLocaleString()} ريال</span>
+    </div>
+    <div className="flex justify-between">
+      <span style={{ fontFamily: 'Tajawal, sans-serif' }}>الخصم:</span>
+      <span className="font-bold text-red-600">-{totals.discountAmount.toLocaleString()} ريال</span>
+    </div>
+    <div className="flex justify-between">
+      <span style={{ fontFamily: 'Tajawal, sans-serif' }}>ضريبة القيمة المضافة (15%):</span>
+      <span className="font-bold">{totals.tax.toLocaleString()} ريال</span>
+    </div>
+    <div className="border-t pt-4">
+      <div className="flex justify-between text-lg">
+        <span className="font-bold" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجمالي:</span>
+        <span className="font-bold text-green-600">{totals.total.toLocaleString()} ريال</span>
+      </div>
+    </div>
+    {newPurchase.paymentMethod === 'credit' && (
+      <div className="bg-yellow-50 p-3 rounded border">
+        <p className="text-sm text-yellow-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+          ملاحظة: سيتم إضافة هذا المبلغ لرصيد المورد في حالة الشراء الآجل
+        </p>
+      </div>
+    )}
+  </CardContent>
+</Card>
 
           <div className="flex gap-2 ">
             <Button
@@ -556,7 +581,7 @@ const PurchasesPage = () => {
       {/* Purchases List */}
       <Card>
         {/* Statistics */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 px-5 py-5 gap-4 mb-6">
           <Card>
             <CardContent className="p-4 text-center">
               <ShoppingCart className="w-8 h-8 mx-auto mb-2 text-green-600" />
@@ -569,7 +594,7 @@ const PurchasesPage = () => {
 
           <Card>
             <CardContent className="p-4 text-center">
-              <DollarSign className="w-8 h-8 mx-auto mb-2 text-blue-600" />
+            <img src="/assets/icons/SaudiRG.svg" alt="Custom Icon" className="w-8 h-8 mx-auto mb-2" />
               <p className="text-2xl font-bold">
                 {purchases.reduce((sum, p) => sum + p.total, 0).toFixed(2)}
               </p>
@@ -591,6 +616,18 @@ const PurchasesPage = () => {
             </CardContent>
           </Card>
         </div>
+        <div className="mb-6 px-5  ">
+            <div className="relative">
+              <Search className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="ابحث عن فاتورة مشتريات..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pr-10 text-sm"
+                style={{ fontFamily: 'Tajawal, sans-serif' }}
+              />
+            </div>
+          </div>
         <CardHeader>
           <CardTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>قائمة المشتريات</CardTitle>
         </CardHeader>
