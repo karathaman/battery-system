@@ -495,6 +495,7 @@ const VouchersPage = () => {
         open={showSupplierSearchDialog}
         onClose={() => setShowSupplierSearchDialog(false)}
         onSupplierSelect={handleSupplierSelect}
+        searchTerm=""
       />
 
       <EditVoucherDialog
