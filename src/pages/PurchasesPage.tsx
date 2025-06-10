@@ -387,56 +387,52 @@ const LocalSupplierSearchDialog = ({ open, onClose, onSupplierSelect }: { open: 
               إضافة فاتورة مشتريات جديدة
             </h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <div>
-                <Label htmlFor="date" style={{ fontFamily: 'Tajawal, sans-serif' }}>التاريخ</Label>
-                <Input
-                  type="date"
-                  id="date"
-                  value={newPurchase.date}
-                  onChange={(e) => setNewPurchase({ ...newPurchase, date: e.target.value })}
-                />
+            <div className="flex flex-col md:flex-row gap-4 mb-4 items-end">
+              {/* تاريخ الفاتورة */}
+              <div className="flex-4">
+              <Label htmlFor="date" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                التاريخ
+              </Label>
+              <Input
+                type="date"
+                id="date"
+                value={newPurchase.date}
+                onChange={(e) => setNewPurchase({ ...newPurchase, date: e.target.value })}
+              />
               </div>
-              
-              <div className="space-y-2">
+
+              {/* اختيار المورد */}
+              <div className="flex-1 flex flex-col">
+              <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                اختر المورد
+              </Label>
+              <div className="flex items-center gap-2 mt-1">
                 <Button
-                  variant="outline"
-                  onClick={() => setShowSupplierDialog(true)}
-                  className="w-full flex items-center justify-between"
-                  style={{ fontFamily: 'Tajawal, sans-serif' }}
+                variant="outline"
+                onClick={() => setShowSupplierDialog(true)}
+                className="flex-1 flex items-center justify-between"
+                style={{ fontFamily: 'Tajawal, sans-serif' }}
                 >
-                  <span>{selectedSupplier ? selectedSupplier.name : "اختر المورد"}</span>
-                  <Search className="w-4 h-4" />
+                <span>
+                  {selectedSupplier ? selectedSupplier.name : "اختر المورد"}
+                </span>
+                <Search className="w-4 h-4" />
                 </Button>
                 {selectedSupplier && (
-                  <p className={`text-sm font-bold ${selectedSupplier.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    الرصيد: {selectedSupplier.balance.toLocaleString()} ريال
-                  </p>
+                <span
+                  className={`text-sm font-bold whitespace-nowrap ${
+                  selectedSupplier.balance >= 0
+                    ? "text-green-600 bg-green-100 py-2 px-6 rounded"
+                    : "text-red-600 bg-red-100 py-2 px-6 rounded"
+                  }`}
+                >
+                  الرصيد: {selectedSupplier.balance.toLocaleString()} ريال
+                </span>
                 )}
               </div>
-
-              <div>
-                <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>طريقة الدفع</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
-                  {paymentMethods.map(method => {
-                    const Icon = method.icon;
-                    return (
-                      <Button
-                        key={method.value}
-                        variant={newPurchase.paymentMethod === method.value ? "default" : "outline"}
-                        onClick={() => setNewPurchase({ ...newPurchase, paymentMethod: method.value })}
-                        className="flex items-center gap-2"
-                        style={{ fontFamily: 'Tajawal, sans-serif' }}
-                      >
-                        <Icon className="w-4 h-4" />
-                        {method.label}
-                      </Button>
-                    );
-                  })}
-                </div>
               </div>
             </div>
-
+           
             {/* Add Items */}
             <div>
               <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>أصناف الفاتورة</Label>
@@ -522,10 +518,46 @@ const LocalSupplierSearchDialog = ({ open, onClose, onSupplierSelect }: { open: 
                 إضافة صنف
               </Button>
             </div>
+
+            <div>
+                <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>طريقة الدفع</Label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+                  {paymentMethods.map(method => {
+                    const Icon = method.icon;
+                    return (
+                      <Button
+                        key={method.value}
+                        variant={newPurchase.paymentMethod === method.value ? "default" : "outline"}
+                        onClick={() => setNewPurchase({ ...newPurchase, paymentMethod: method.value })}
+                        className="flex items-center gap-2"
+                        style={{ fontFamily: 'Tajawal, sans-serif' }}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {method.label}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+
           </div>
 
-          {/* Statistics */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                          <div className="flex gap-2 ">
+                  <Button
+                    onClick={handleSavePurchase}
+                    className="flex-1 bg-green-600 "
+                    style={{ fontFamily: 'Tajawal, sans-serif' }}
+                  >
+                    إنشاء الفاتورة
+                  </Button>
+                </div>
+        </CardContent>
+      </Card>
+
+      {/* Purchases List */}
+      <Card>
+         {/* Statistics */}
+         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             <Card>
               <CardContent className="p-4 text-center">
                 <ShoppingCart className="w-8 h-8 mx-auto mb-2 text-green-600" />
@@ -560,11 +592,6 @@ const LocalSupplierSearchDialog = ({ open, onClose, onSupplierSelect }: { open: 
               </CardContent>
             </Card>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Purchases List */}
-      <Card>
         <CardHeader>
           <CardTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>قائمة المشتريات</CardTitle>
         </CardHeader>

@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { DailyPurchases } from "@/components/DailyPurchases";
 import { StickyNotes } from "@/components/StickyNotes";
 import { StatisticsPage } from "@/components/StatisticsPage";
-import { Navigation } from "@/components/Navigation";
-import { GitHubSync } from "@/components/GitHubSync";
+import { Navigation } from "@/components/Navigation"; 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   CalendarDays,
@@ -68,8 +67,7 @@ const Index = () => {
       <Navigation onLanguageChange={handleLanguageChange} />
       
       <div className="container mx-auto p-4 sm:p-6 max-w-7xl">
-        {/* إضافة مكون تشخيص GitHub في الأعلى */}
-        <GitHubSync language={language} />
+      
         
         <div className="text-center mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
