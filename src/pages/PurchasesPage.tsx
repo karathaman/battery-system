@@ -45,7 +45,7 @@ const PurchasesPage = () => {
   const [purchases, setPurchases] = useState<Purchase[]>(mockPurchases);
   const [searchTerm, setSearchTerm] = useState("");
   const [showSupplierDialog, setShowSupplierDialog] = useState(false);
-  const [selectedSupplier, setSelectedSupplier] = useState<{ id: string; name: string } | null>(null);
+  const [selectedSupplier, setSelectedSupplier] = useState<{ id: string; name: string; balance: number } | null>(null);
   const [editingPurchase, setEditingPurchase] = useState<Purchase | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [newPurchase, setNewPurchase] = useState({
@@ -74,7 +74,7 @@ const PurchasesPage = () => {
     return `P${number.toString().padStart(3, '0')}`;
   };
 
-  const handleSupplierSelect = (supplier: { id: string; name: string }) => {
+  const handleSupplierSelect = (supplier: { id: string; name: string; balance: number }) => {
     setSelectedSupplier(supplier);
     setNewPurchase(prev => ({
       ...prev,
@@ -290,7 +290,7 @@ const PurchasesPage = () => {
 
   const totals = calculateTotals();
 
-const SupplierSearchDialog = ({ open, onClose, onSupplierSelect }: { open: boolean; onClose: () => void; onSupplierSelect: (supplier: { id: string; name: string }) => void }) => {
+const LocalSupplierSearchDialog = ({ open, onClose, onSupplierSelect }: { open: boolean; onClose: () => void; onSupplierSelect: (supplier: { id: string; name: string; balance: number }) => void }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const mockSuppliers = [
     { id: "S001", name: "مورد البطاريات الرئيسي", balance: 5000 },
@@ -328,7 +328,7 @@ const SupplierSearchDialog = ({ open, onClose, onSupplierSelect }: { open: boole
               <div
                 key={supplier.id}
                 onClick={() => {
-                  onSupplierSelect({ id: supplier.id, name: supplier.name });
+                  onSupplierSelect(supplier);
                   setSearchTerm("");
                   onClose();
                 }}
@@ -355,6 +355,7 @@ const SupplierSearchDialog = ({ open, onClose, onSupplierSelect }: { open: boole
     </Dialog>
   );
 };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -397,7 +398,7 @@ const SupplierSearchDialog = ({ open, onClose, onSupplierSelect }: { open: boole
                 />
               </div>
               
-                            <div className="space-y-2">
+              <div className="space-y-2">
                 <Button
                   variant="outline"
                   onClick={() => setShowSupplierDialog(true)}
@@ -412,41 +413,32 @@ const SupplierSearchDialog = ({ open, onClose, onSupplierSelect }: { open: boole
                     الرصيد: {selectedSupplier.balance.toLocaleString()} ريال
                   </p>
                 )}
-              
-                <SupplierSearchDialog
-                  open={showSupplierDialog}
-                  onClose={() => setShowSupplierDialog(false)}
-                  onSupplierSelect={(supplier) => {
-                    setSelectedSupplier(supplier);
-                    setShowSupplierDialog(false);
-                  }}
-                />
               </div>
 
-                                                        <div>
-                              <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>طريقة الدفع</Label>
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
-                                {paymentMethods.map(method => {
-                                  const Icon = method.icon;
-                                  return (
-                                    <Button
-                                      key={method.value}
-                                      variant={newPurchase.paymentMethod === method.value ? "default" : "outline"}
-                                      onClick={() => setNewPurchase({ ...newPurchase, paymentMethod: method.value })}
-                                      className="flex items-center gap-2"
-                                      style={{ fontFamily: 'Tajawal, sans-serif' }}
-                                    >
-                                      <Icon className="w-4 h-4" />
-                                      {method.label}
-                                    </Button>
-                                  );
-                                })}
-                              </div>
-                            </div>
+              <div>
+                <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>طريقة الدفع</Label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+                  {paymentMethods.map(method => {
+                    const Icon = method.icon;
+                    return (
+                      <Button
+                        key={method.value}
+                        variant={newPurchase.paymentMethod === method.value ? "default" : "outline"}
+                        onClick={() => setNewPurchase({ ...newPurchase, paymentMethod: method.value })}
+                        className="flex items-center gap-2"
+                        style={{ fontFamily: 'Tajawal, sans-serif' }}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {method.label}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             {/* Add Items */}
-                       <div>
+            <div>
               <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>أصناف الفاتورة</Label>
               <div className="space-y-3 mt-2">
                 {newPurchase.items.map((item, index) => (
@@ -636,7 +628,7 @@ const SupplierSearchDialog = ({ open, onClose, onSupplierSelect }: { open: boole
         </CardContent>
       </Card>
 
-      <SupplierSearchDialog
+      <LocalSupplierSearchDialog
         open={showSupplierDialog}
         onClose={() => setShowSupplierDialog(false)}
         onSupplierSelect={handleSupplierSelect}
