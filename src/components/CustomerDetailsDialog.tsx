@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User, Phone, Calendar, Package, DollarSign, TrendingUp, ShoppingCart, Edit } from "lucide-react";
 import { Customer } from "@/types";
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { toast } from "@/hooks/use-toast"; 
 
 interface CustomerDetailsDialogProps {
   open: boolean;
@@ -12,8 +15,9 @@ interface CustomerDetailsDialogProps {
   customer: Customer | null;
   onEditCustomer?: (customer: Customer) => void;
 }
-
 export const CustomerDetailsDialog = ({ open, onClose, customer, onEditCustomer }: CustomerDetailsDialogProps) => {
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   if (!customer) return null;
 
   const getDaysSinceLastPurchase = (lastPurchase: string) => {
@@ -22,16 +26,22 @@ export const CustomerDetailsDialog = ({ open, onClose, customer, onEditCustomer 
     const diffTime = Math.abs(today.getTime() - purchaseDate.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
+  
+   
   };
-
   const handleEditClick = () => {
-    if (onEditCustomer) {
-      onEditCustomer(customer);
-      onClose();
+    setEditingCustomer(customer); // تعيين العميل الجاري تعديله
+    setShowEditDialog(true); // فتح مربع حوار التعديل
+  }
+  const handleSaveEdit = () => {
+    if (editingCustomer && onEditCustomer) {
+      onEditCustomer(editingCustomer); // تمرير العميل المعدل
+      setShowEditDialog(false); // إغلاق مربع حوار التعديل
+      toast({ title: "تم تحديث بيانات العميل بنجاح" });
     }
   };
-
   return (
+    <>
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" dir="rtl">
         <DialogHeader>
@@ -201,14 +211,14 @@ export const CustomerDetailsDialog = ({ open, onClose, customer, onEditCustomer 
                   <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>إجمالي الكمية</p>
                 </div>
                 <div className="bg-green-50 rounded-lg p-4 text-center">
-                  <DollarSign className="w-8 h-8 mx-auto mb-2 text-green-600" />
-                  <p className="text-2xl font-bold text-green-600">{customer.totalAmount.toLocaleString()}</p>
-                  <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>إجمالي المبلغ (ريال)</p>
+                <img src="/assets/icons/SaudiRG.svg" alt="Custom Icon" className="w-8 h-8 mx-auto mb-2" />
+                   <p className="text-2xl font-bold text-green-600">{customer.totalAmount.toLocaleString()}</p>
+                  <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>إجمالي المبلغ  </p>
                 </div>
                 <div className="bg-purple-50 rounded-lg p-4 text-center">
                   <TrendingUp className="w-8 h-8 mx-auto mb-2 text-purple-600" />
                   <p className="text-2xl font-bold text-purple-600">{customer.averagePrice}</p>
-                  <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>متوسط السعر (ريال)</p>
+                  <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>متوسط السعر  </p>
                 </div>
               </div>
             </CardContent>
@@ -268,7 +278,35 @@ export const CustomerDetailsDialog = ({ open, onClose, customer, onEditCustomer 
             </CardContent>
           </Card>
         </div>
+        
       </DialogContent>
     </Dialog>
-  );
+    {showEditDialog && editingCustomer && (
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle style={{ fontFamily: "Tajawal, sans-serif" }}>
+              تعديل بيانات العميل - {editingCustomer.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              placeholder="اسم العميل"
+              value={editingCustomer.name}
+              onChange={(e) => setEditingCustomer({ ...editingCustomer, name: e.target.value })}
+            />
+            <Input
+              placeholder="رقم الهاتف"
+              value={editingCustomer.phone}
+              onChange={(e) => setEditingCustomer({ ...editingCustomer, phone: e.target.value })}
+            />
+            <Button onClick={handleSaveEdit} className="w-full">
+              حفظ التعديلات
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )}
+  </>
+);
 };

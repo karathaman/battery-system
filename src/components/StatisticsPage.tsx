@@ -284,8 +284,14 @@ export const StatisticsPage = ({ language = "ar" }: StatisticsPageProps) => {
                   <tr key={index} className="border-b hover:bg-gray-50">
                     <td className="p-3 font-semibold" style={{ fontFamily: 'Tajawal, sans-serif' }}>{customer.name}</td>
                     <td className="p-3">{customer.purchases}</td>
-                    <td className="p-3 font-semibold text-green-600">{customer.amount.toLocaleString()} {language === "ar" ? "ريال" : "SAR"}</td>
-                    <td className="p-3">{customer.lastPurchase}</td>
+                    <td className="p-3 font-semibold text-green-600">
+                      {customer.amount.toLocaleString()}{" "}
+                      {language === "ar" ? (
+                        <img src="/assets/icons/SaudiRG.svg" alt="SAR" className="inline w-5 h-5 mb-1" />
+                      ) : (
+                        "SAR"
+                      )}
+                    </td><td className="p-3">{customer.lastPurchase}</td>
                   </tr>
                 ))}
               </tbody>

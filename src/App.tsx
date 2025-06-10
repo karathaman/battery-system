@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { LoadingSpinner } from "@/components/ui/loading-spinner"; 
 
 // Lazy load pages
 const Index = lazy(() => import("./pages/Index"));
@@ -75,6 +75,7 @@ const App = () => (
                     </ErrorBoundary>
                   }
                 />
+                  
                 <Route
                   path="/sales"
                   element={

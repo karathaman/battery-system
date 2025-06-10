@@ -7,8 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Users, Search, Calendar, TrendingUp, User, Package, DollarSign, Edit3, Save, X, Ban, UserPlus } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
-import { AddCustomerDialog } from "./AddCustomerDialog";
+import { toast } from "@/hooks/use-toast"; 
 
 interface Purchase {
   id: string;
@@ -341,7 +340,7 @@ export const CustomerManagement = () => {
           <Card>
             <CardHeader>
               <CardTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                تاريخ المشتريات
+                تاريخ المبيعات
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -405,7 +404,7 @@ export const CustomerManagement = () => {
           </CardTitle>
         </CardHeader>
         
-        <CardContent className="p-4 sm:p-6">
+        <CardContent className="p-4 sm:p-6 !block">
           <div className="mb-6">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
@@ -432,7 +431,7 @@ export const CustomerManagement = () => {
           {/* Statistics Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             <Card>
-              <CardContent className="p-3 sm:p-4 text-center">
+              <CardContent className="p-3 sm:p-4 text-center !block">
                 <Users className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-blue-600" />
                 <p className="text-lg sm:text-2xl font-bold">{customers.length}</p>
                 <p className="text-xs sm:text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
@@ -442,7 +441,7 @@ export const CustomerManagement = () => {
             </Card>
             
             <Card>
-              <CardContent className="p-3 sm:p-4 text-center">
+              <CardContent className="p-3 sm:p-4 text-center !block">
                 <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-green-600" />
                 <p className="text-lg sm:text-2xl font-bold">
                   {customers.reduce((sum, c) => sum + c.totalAmount, 0).toLocaleString()}
@@ -454,7 +453,7 @@ export const CustomerManagement = () => {
             </Card>
             
             <Card>
-              <CardContent className="p-3 sm:p-4 text-center">
+              <CardContent className="p-3 sm:p-4 text-center !block">
                 <Calendar className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-orange-600" />
                 <p className="text-lg sm:text-2xl font-bold">
                   {customers.length > 0 ? Math.round(customers.reduce((sum, c) => sum + c.averagePrice, 0) / customers.length) : 0}
@@ -609,15 +608,7 @@ export const CustomerManagement = () => {
           </CardContent>
         </Card>
       )}
-
-      {/* Add Customer Dialog */}
-      <AddCustomerDialog
-        open={showAddDialog}
-        onClose={() => setShowAddDialog(false)}
-        onCustomerAdded={handleCustomerAdded}
-        nextCustomerCode={generateNextCustomerCode()}
-        language="ar"
-      />
+ 
     </div>
   );
 };

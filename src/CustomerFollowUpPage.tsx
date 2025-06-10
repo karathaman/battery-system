@@ -7,10 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Users, Search, Phone, Calendar, Filter, User, Package, DollarSign, Edit3, Save, X, Ban, BarChart } from "lucide-react";
+import { Users, Search, Phone, Calendar, Filter, User, Package, DollarSign, Edit3, Save, X, Ban, BarChart, UserPlus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { CustomerDetailsDialog } from "@/components/CustomerDetailsDialog";
 import { Customer, CustomerPurchase } from "@/types";
+import { AddCustomerDialog } from "src/components/AddCustomerDialog";
 
 // Mock data - سيتم استبدالها ببيانات Supabase
 const mockCustomers: Customer[] = [
@@ -78,7 +79,8 @@ const CustomerFollowUp = () => {
   const [customerNotes, setCustomerNotes] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showCustomerDetails, setShowCustomerDetails] = useState(false);
-
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  
   // Helper functions
   const getDaysSinceLastSale = (lastSale: string) => {
     const today = new Date();
@@ -101,6 +103,29 @@ const CustomerFollowUp = () => {
     
     return matchesSearch && matchesLastSale;
   });
+
+  const handleCustomerAdded = (newCustomer: Customer) => {
+    const customerWithDefaults = {
+      ...newCustomer,
+      lastPurchase: new Date().toISOString().split('T')[0],
+      totalPurchases: 0,
+      totalAmount: 0,
+      averagePrice: 0,
+      purchases: []
+    };
+    setCustomers(prev => [...prev, customerWithDefaults]);
+    setShowAddDialog(false);
+  };
+  const generateNextCustomerCode = () => {
+    if (customers.length === 0) return "C001";
+    
+    const maxCode = customers.reduce((max, customer) => {
+      const codeNumber = parseInt(customer.customerCode.replace('C', ''));
+      return codeNumber > max ? codeNumber : max;
+    }, 0);
+    
+    return `C${String(maxCode + 1).padStart(3, '0')}`;
+  };
 
   const updateCustomerNotes = (customerId: string, notes: string) => {
     setCustomers(prev => prev.map(c => 
@@ -138,17 +163,25 @@ const CustomerFollowUp = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50" dir="rtl">
+      <Button
+                onClick={() => setShowAddDialog(true)}
+                className="flex items-center gap-2 flex-row-reverse bg-blue-600 hover:bg-blue-700"
+                style={{ fontFamily: 'Tajawal, sans-serif' }}
+              >
+                <UserPlus className="w-4 h-4" />
+                إضافة عميل جديد
+              </Button>
       <div className="container mx-auto p-4 sm:p-6 max-w-7xl">
         {/* Header */}
         <div className="text-center mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-            متابعة العملاء
+            متابعة العملاء sss
           </h1>
           <p className="text-sm sm:text-base text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
             متابعة عمليات البيع وإحصائيات العملاء
           </p>
         </div>
-
+        
         {/* Search and Filters */}
         <Card className="shadow-lg mb-6 sm:mb-8">
           <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 text-white p-4 sm:p-6">
@@ -386,7 +419,7 @@ const CustomerFollowUp = () => {
                         <BarChart className="w-3 h-3 sm:w-4 sm:h-4" />
                         إحصائيات العميل
                       </Button>
-
+ 
                       {/* Block/Unblock Button */}
                       <Dialog>
                         <DialogTrigger asChild>
@@ -459,6 +492,14 @@ const CustomerFollowUp = () => {
         onClose={() => setShowCustomerDetails(false)}
         customer={selectedCustomer}
       />
+      {/* Add Customer Dialog */}
+            <AddCustomerDialog
+              open={showAddDialog}
+              onClose={() => setShowAddDialog(false)}
+              onCustomerAdded={handleCustomerAdded}
+              nextCustomerCode={generateNextCustomerCode()}
+              language="ar"
+            />
     </div>
   );
 };

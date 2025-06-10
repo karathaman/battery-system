@@ -375,7 +375,7 @@ const VouchersPage = () => {
             
             <Card>
               <CardContent className="p-3 sm:p-4 text-center">
-                <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-green-600" />
+              <img src="/assets/icons/SaudiRG.svg" alt="Custom Icon" className="w-8 h-8 mx-auto mb-2" />
                 <p className="text-lg sm:text-2xl font-bold">
                   {vouchers.reduce((sum, v) => sum + v.amount, 0).toLocaleString()}
                 </p>
@@ -419,9 +419,9 @@ const VouchersPage = () => {
                   <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجراءات</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody >
                 {filteredVouchers.map((voucher) => (
-                  <tr key={voucher.id} className="border-b hover:bg-gray-50">
+                  <tr key={voucher.id} className="border-b hover:bg-gray-50 text-center">
                     <td className="p-3 font-semibold">{voucher.voucherNumber}</td>
                     <td className="p-3">
                       <Badge 
@@ -439,8 +439,11 @@ const VouchersPage = () => {
                         {voucher.entityType === "customer" ? "عميل" : "مورد"}
                       </span>
                     </td>
-                    <td className="p-3 font-bold text-green-600">
-                      {voucher.amount.toLocaleString()} ريال
+                    <td className="p-3 font-bold text-green-600 ">
+                      <span className="flex items-center gap-1 justify-end">
+                        {voucher.amount.toLocaleString()}
+                        <img src="/assets/icons/SaudiRG.svg" alt="Custom Icon" className="w-4 h-4" />
+                      </span>
                     </td>
                     <td className="p-3" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                       {getPaymentMethodLabel(voucher.paymentMethod)}

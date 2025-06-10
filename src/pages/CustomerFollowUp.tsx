@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,42 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Users, Search, Phone, Calendar, Filter, User, Package, DollarSign, Edit3, Save, X, Ban, BarChart } from "lucide-react";
+import { Users, Search, Phone, Calendar, Filter, User, Package, DollarSign, Edit3, Save, X, Ban, BarChart, UserPlus, TrendingUp } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { CustomerDetailsDialog } from "@/components/CustomerDetailsDialog";
-
-interface Sale {
-  id: string;
-  date: string;
-  batteryType: string;
-  quantity: number;
-  pricePerKg: number;
-  total: number;
-  discount: number;
-  finalTotal: number;
-}
-
-interface Customer {
-  id: string;
-  customerCode: string;
-  name: string;
-  phone: string;
-  description?: string;
-  lastSale: string;
-  totalSales: number;
-  totalAmount: number;
-  averagePrice: number;
-  sales: Sale[];
-  notes?: string;
-  isBlocked?: boolean;
-  blockReason?: string;
-  last2Quantities?: number[];
-  last2Prices?: number[];
-  // Properties required by CustomerDetailsDialog
-  lastPurchase: string;
-  totalPurchases: number;
-  purchases: Sale[];
-}
+import { Customer, CustomerPurchase } from "@/types";
+import { AddCustomerDialog } from "../components/AddCustomerDialog";
 
 // Mock data - سيتم استبدالها ببيانات Supabase
 const mockCustomers: Customer[] = [
@@ -51,65 +21,53 @@ const mockCustomers: Customer[] = [
     name: "أحمد محمد",
     phone: "0501234567",
     description: "عميل مميز وموثوق",
-    lastSale: "2024-01-15",
-    totalSales: 15,
+    lastPurchase: "2024-01-15",
+    totalPurchases: 15,
     totalAmount: 4500,
     averagePrice: 300,
     notes: "عميل مميز، يشتري بانتظام كل شهر",
-    sales: [
+    purchases: [
       { id: "s1", date: "2024-01-15", batteryType: "بطاريات عادية", quantity: 12, pricePerKg: 25, total: 300, discount: 0, finalTotal: 300 },
       { id: "s2", date: "2024-01-10", batteryType: "بطاريات جافة", quantity: 8, pricePerKg: 30, total: 240, discount: 20, finalTotal: 220 }
     ],
     last2Quantities: [12, 8],
     last2Prices: [25, 30],
-    lastPurchase: "2024-01-15",
-    totalPurchases: 15,
-    purchases: [
-      { id: "s1", date: "2024-01-15", batteryType: "بطاريات عادية", quantity: 12, pricePerKg: 25, total: 300, discount: 0, finalTotal: 300 },
-      { id: "s2", date: "2024-01-10", batteryType: "بطاريات جافة", quantity: 8, pricePerKg: 30, total: 240, discount: 20, finalTotal: 220 }
-    ]
+    last2BatteryTypes: ["بطاريات عادية", "بطاريات جافة"]
   },
   {
-    id: "2", 
+    id: "2",
     customerCode: "C002",
     name: "فاطمة علي",
     phone: "0507654321",
     description: "تتعامل مع البطاريات اليابانية فقط",
-    lastSale: "2024-01-10",
-    totalSales: 8,
+    lastPurchase: "2024-01-10",
+    totalPurchases: 8,
     totalAmount: 2400,
     averagePrice: 300,
     notes: "تفضل البطاريات اليابانية",
-    sales: [
+    purchases: [
       { id: "s3", date: "2024-01-10", batteryType: "بطاريات زجاج", quantity: 15, pricePerKg: 35, total: 525, discount: 50, finalTotal: 475 },
       { id: "s4", date: "2024-01-05", batteryType: "بطاريات عادية", quantity: 10, pricePerKg: 28, total: 280, discount: 0, finalTotal: 280 }
     ],
     last2Quantities: [15, 10],
     last2Prices: [35, 28],
-    lastPurchase: "2024-01-10",
-    totalPurchases: 8,
-    purchases: [
-      { id: "s3", date: "2024-01-10", batteryType: "بطاريات زجاج", quantity: 15, pricePerKg: 35, total: 525, discount: 50, finalTotal: 475 },
-      { id: "s4", date: "2024-01-05", batteryType: "بطاريات عادية", quantity: 10, pricePerKg: 28, total: 280, discount: 0, finalTotal: 280 }
-    ]
+    last2BatteryTypes: ["بطاريات زجاج", "بطاريات عادية"]
   },
   {
     id: "3",
     customerCode: "C003",
-    name: "خالد أحمد", 
+    name: "خالد أحمد",
     phone: "0501111111",
-    lastSale: "2024-01-05",
-    totalSales: 22,
+    lastPurchase: "2024-01-05",
+    totalPurchases: 22,
     totalAmount: 6600,
     averagePrice: 300,
     isBlocked: true,
     blockReason: "مشاكل في الدفع",
-    sales: [],
+    purchases: [],
     last2Quantities: [0, 0],
     last2Prices: [0, 0],
-    lastPurchase: "2024-01-05",
-    totalPurchases: 22,
-    purchases: []
+    last2BatteryTypes: ["", ""]
   }
 ];
 
@@ -121,6 +79,7 @@ const CustomerFollowUp = () => {
   const [customerNotes, setCustomerNotes] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showCustomerDetails, setShowCustomerDetails] = useState(false);
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   // Helper functions
   const getDaysSinceLastSale = (lastSale: string) => {
@@ -133,20 +92,43 @@ const CustomerFollowUp = () => {
 
   const filteredCustomers = customers.filter(customer => {
     const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         customer.phone.includes(searchTerm);
-    
-    const daysSinceLastSale = getDaysSinceLastSale(customer.lastSale);
-    
+      customer.phone.includes(searchTerm);
+
+    const daysSinceLastSale = getDaysSinceLastSale(customer.lastPurchase || "");
+
     let matchesLastSale = true;
     if (lastSaleFilter === "recent") matchesLastSale = daysSinceLastSale <= 7;
     else if (lastSaleFilter === "week") matchesLastSale = daysSinceLastSale > 7 && daysSinceLastSale <= 30;
     else if (lastSaleFilter === "month") matchesLastSale = daysSinceLastSale > 30;
-    
+
     return matchesSearch && matchesLastSale;
   });
 
+  const handleCustomerAdded = (newCustomer: Customer) => {
+    const customerWithDefaults = {
+      ...newCustomer,
+      lastPurchase: new Date().toISOString().split('T')[0],
+      totalPurchases: 0,
+      totalAmount: 0,
+      averagePrice: 0,
+      purchases: []
+    };
+    setCustomers(prev => [...prev, customerWithDefaults]);
+    setShowAddDialog(false);
+  };
+  const generateNextCustomerCode = () => {
+    if (customers.length === 0) return "C001";
+
+    const maxCode = customers.reduce((max, customer) => {
+      const codeNumber = parseInt(customer.customerCode.replace('C', ''));
+      return codeNumber > max ? codeNumber : max;
+    }, 0);
+
+    return `C${String(maxCode + 1).padStart(3, '0')}`;
+  };
+
   const updateCustomerNotes = (customerId: string, notes: string) => {
-    setCustomers(prev => prev.map(c => 
+    setCustomers(prev => prev.map(c =>
       c.id === customerId ? { ...c, notes } : c
     ));
     setEditingCustomer(null);
@@ -158,14 +140,14 @@ const CustomerFollowUp = () => {
   };
 
   const toggleCustomerBlock = (customerId: string, blockReason?: string) => {
-    setCustomers(prev => prev.map(c => 
-      c.id === customerId ? { 
-        ...c, 
-        isBlocked: !c.isBlocked, 
-        blockReason: !c.isBlocked ? blockReason : undefined 
+    setCustomers(prev => prev.map(c =>
+      c.id === customerId ? {
+        ...c,
+        isBlocked: !c.isBlocked,
+        blockReason: !c.isBlocked ? blockReason : undefined
       } : c
     ));
-    
+
     const customer = customers.find(c => c.id === customerId);
     toast({
       title: customer?.isBlocked ? "تم إلغاء حظر العميل" : "تم حظر العميل",
@@ -181,26 +163,57 @@ const CustomerFollowUp = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50" dir="rtl">
+
       <div className="container mx-auto p-4 sm:p-6 max-w-7xl">
-        {/* Header */}
-        <div className="text-center mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-            متابعة العملاء
-          </h1>
-          <p className="text-sm sm:text-base text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-            متابعة عمليات البيع وإحصائيات العملاء
-          </p>
-        </div>
 
         {/* Search and Filters */}
         <Card className="shadow-lg mb-6 sm:mb-8">
-          <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 text-white p-4 sm:p-6">
-            <CardTitle className="flex items-center gap-2 flex-row-reverse text-lg sm:text-xl" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
-              متابعة العملاء ({filteredCustomers.length})
-            </CardTitle>
+          <CardHeader className="bg-[#f0fdf4] text-white p-4  sm:p-6">
+            <div className="w-full flex justify-center">
+              <CardTitle className="flex text-[#4e844d] items-center gap-2 flex-row-reverse text-lg sm:text-xl text-center" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                متابعة العملاء  [ {filteredCustomers.length} ]
+                <Users className="w-4 h-4 sm:w-5 sm:h-5" />
+              </CardTitle>
+            </div>
           </CardHeader>
-          
+          <br />
+          <div className="grid px-7 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            <Card>
+              <CardContent className="p-3 sm:p-4 text-center !block">
+                <Users className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-blue-600" />
+                <p className="text-lg sm:text-2xl font-bold">{customers.length}</p>
+                <p className="text-xs sm:text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  إجمالي العملاء
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-3 sm:p-4 text-center !block">
+                <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-green-600" />
+                <p className="text-lg sm:text-2xl font-bold">
+                  {customers.reduce((sum, c) => sum + c.totalAmount, 0).toLocaleString()}
+                </p>
+                <p className="text-xs sm:text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  إجمالي المبيعات
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-3 sm:p-4 text-center !block">
+                <Calendar className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-orange-600" />
+                <p className="text-lg sm:text-2xl font-bold">
+                  {customers.length > 0 ? Math.round(customers.reduce((sum, c) => sum + c.averagePrice, 0) / customers.length) : 0}
+                </p>
+                <p className="text-xs sm:text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  متوسط سعر الكيلو
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+
           <CardContent className="p-4 sm:p-6 space-y-4">
             {/* Search */}
             <div className="relative">
@@ -215,13 +228,20 @@ const CustomerFollowUp = () => {
             </div>
 
             {/* Filters */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+            <div className="flex flex-col sm:flex-row gap-4 w-full">
+              {/* Filter by Last Sale */}
+              <div className="flex-1 min-w-0">
+                <label
+                  className="text-sm font-medium text-gray-700 block mb-2"
+                  style={{ fontFamily: "Tajawal, sans-serif" }}
+                >
                   فلترة حسب آخر عملية بيع
                 </label>
                 <Select value={lastSaleFilter} onValueChange={setLastSaleFilter}>
-                  <SelectTrigger className="text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  <SelectTrigger
+                    className="text-right w-full"
+                    style={{ fontFamily: "Tajawal, sans-serif" }}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -233,18 +253,27 @@ const CustomerFollowUp = () => {
                 </Select>
               </div>
 
-              <div className="flex items-end">
+              {/* Actions */}
+              <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0 w-full sm:w-auto sm:items-end">
                 <Button
                   onClick={() => {
                     setLastSaleFilter("all");
                     setSearchTerm("");
                   }}
                   variant="outline"
-                  className="w-full flex items-center gap-2 flex-row-reverse"
-                  style={{ fontFamily: 'Tajawal, sans-serif' }}
+                  className="flex-1 flex items-center gap-2 flex-row-reverse"
+                  style={{ fontFamily: "Tajawal, sans-serif" }}
                 >
                   <Filter className="w-4 h-4" />
                   إعادة تعيين الفلاتر
+                </Button>
+                <Button
+                  onClick={() => setShowAddDialog(true)}
+                  className="flex-1 flex items-center gap-2 flex-row-reverse bg-[#4e844d] "
+                  style={{ fontFamily: "Tajawal, sans-serif" }}
+                >
+                  <UserPlus className="w-4 h-4" />
+                  إضافة عميل جديد
                 </Button>
               </div>
             </div>
@@ -254,14 +283,13 @@ const CustomerFollowUp = () => {
         {/* Customers Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-6">
           {filteredCustomers.map(customer => {
-            const daysSinceLastSale = getDaysSinceLastSale(customer.lastSale);
-            
+            const daysSinceLastSale = getDaysSinceLastSale(customer.lastPurchase || "");
+
             return (
-              <Card 
-                key={customer.id} 
-                className={`shadow-lg transition-all duration-300 hover:shadow-xl ${
-                  customer.isBlocked ? 'bg-red-50 border-red-300' : 'bg-white border-blue-200'
-                }`}
+              <Card
+                key={customer.id}
+                className={`shadow-lg transition-all duration-300  hover:shadow-xl ${customer.isBlocked ? 'bg-red-50 border-red-300' : 'bg-white border-blue-200'
+                  }`}
               >
                 <CardHeader className="pb-3 p-3 sm:p-4">
                   <div className="flex justify-between items-start flex-row-reverse">
@@ -274,7 +302,7 @@ const CustomerFollowUp = () => {
                         <span style={{ fontFamily: 'Tajawal, sans-serif' }}>{customer.phone}</span>
                       </div>
                     </div>
-                    
+
                     <div className="flex flex-col gap-1">
                       {customer.isBlocked && (
                         <Badge variant="destructive" className="text-xs">
@@ -284,7 +312,7 @@ const CustomerFollowUp = () => {
                     </div>
                   </div>
                 </CardHeader>
-                
+
                 <CardContent className="pt-0 p-3 sm:p-4">
                   <div className="space-y-3">
                     {/* Sale Info */}
@@ -296,7 +324,7 @@ const CustomerFollowUp = () => {
                         </span>
                       </div>
                       <p className="text-xs sm:text-sm text-gray-700 text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                        {customer.lastSale}
+                        {customer.lastPurchase}
                       </p>
                       <p className="text-xs text-gray-500 text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                         منذ {daysSinceLastSale} يوم
@@ -333,7 +361,7 @@ const CustomerFollowUp = () => {
                     <div className="grid grid-cols-3 gap-2 text-center">
                       <div className="bg-gray-50 rounded p-2">
                         <p className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>الكمية</p>
-                        <p className="font-bold text-xs sm:text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{customer.totalSales}</p>
+                        <p className="font-bold text-xs sm:text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{customer.totalPurchases}</p>
                       </div>
                       <div className="bg-gray-50 rounded p-2">
                         <p className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجمالي</p>
@@ -482,7 +510,7 @@ const CustomerFollowUp = () => {
             );
           })}
         </div>
-        
+
         {/* Empty State */}
         {filteredCustomers.length === 0 && (
           <Card className="shadow-md mt-8">
@@ -501,6 +529,14 @@ const CustomerFollowUp = () => {
         open={showCustomerDetails}
         onClose={() => setShowCustomerDetails(false)}
         customer={selectedCustomer}
+      />
+      {/* Add Customer Dialog */}
+      <AddCustomerDialog
+        open={showAddDialog}
+        onClose={() => setShowAddDialog(false)}
+        onCustomerAdded={handleCustomerAdded}
+        nextCustomerCode={generateNextCustomerCode()}
+        language="ar"
       />
     </div>
   );
