@@ -15,8 +15,9 @@ const customerService = {
       .order('created_at', { ascending: false });
 
     // Apply filters if provided
-    if (filters?.search) {
-      query = query.or(`name.ilike.%${filters.search}%,phone.ilike.%${filters.search}%,customer_code.ilike.%${filters.search}%`);
+    if (filters?.searchTerm || filters?.search) {
+      const searchValue = filters.searchTerm || filters.search;
+      query = query.or(`name.ilike.%${searchValue}%,phone.ilike.%${searchValue}%,customer_code.ilike.%${searchValue}%`);
     }
     
     if (filters?.isBlocked !== undefined) {

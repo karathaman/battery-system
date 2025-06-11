@@ -187,10 +187,12 @@ export interface PaginatedResponse<T> {
 // Common types
 export interface FilterOptions {
   searchTerm?: string;
+  search?: string; // Added for backward compatibility
   dateFrom?: string;
   dateTo?: string;
   status?: string;
   messageStatus?: string;
   lastPurchaseFilter?: string;
   type?: string; // Added for receipt/voucher filtering
+  isBlocked?: boolean; // Added for customer/supplier blocking filter
 }
