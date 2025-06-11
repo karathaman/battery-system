@@ -70,24 +70,6 @@ export const useBatteryTypes = () => {
     }
   });
 
-  const toggleStatusMutation = useMutation<BatteryType, Error, { id: string; isActive: boolean }>({
-    mutationFn: ({ id, isActive }) => batteryTypeService.toggleBatteryTypeStatus(id, isActive),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['batteryTypes'] });
-      toast({
-        title: data.is_active ? "تم تفعيل النوع" : "تم إيقاف النوع",
-        description: data.is_active ? "تم تفعيل نوع البطارية" : "تم إيقاف نوع البطارية",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "خطأ",
-        description: "فشل في تغيير حالة نوع البطارية",
-        variant: "destructive",
-      });
-    }
-  });
-
   return {
     batteryTypes,
     isLoading,
@@ -96,10 +78,8 @@ export const useBatteryTypes = () => {
     createBatteryType: createBatteryTypeMutation.mutate,
     updateBatteryType: updateBatteryTypeMutation.mutate,
     deleteBatteryType: deleteBatteryTypeMutation.mutate,
-    toggleStatus: toggleStatusMutation.mutate,
     isCreating: createBatteryTypeMutation.isPending,
     isUpdating: updateBatteryTypeMutation.isPending,
-    isDeleting: deleteBatteryTypeMutation.isPending,
-    isToggling: toggleStatusMutation.isPending
+    isDeleting: deleteBatteryTypeMutation.isPending
   };
 };

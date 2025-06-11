@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,112 +10,17 @@ import { toast } from "@/hooks/use-toast";
 import { AddSupplierDialog } from "@/components/AddSupplierDialog";
 import { SupplierDetailsDialog } from "@/components/SupplierDetailsDialog";
 import { EditSupplierDialog } from "@/components/EditSupplierDialog";
-import { useSuppliers } from "@/hooks/use-suppliers";
-
-interface Purchase {
-  id: string;
-  date: string;
-  batteryType: string;
-  quantity: number;
-  pricePerKg: number;
-  total: number;
-  discount: number;
-  finalTotal: number;
-}
-
-interface Supplier {
-  id: string;
-  supplierCode: string;
-  name: string;
-  phone: string;
-  description?: string;
-  lastPurchase?: string;
-  totalPurchases: number;
-  totalAmount: number;
-  averagePrice: number;
-  purchases: Purchase[];
-  notes?: string;
-  isBlocked?: boolean;
-  blockReason?: string;
-  balance: number;
-  messageSent?: boolean;
-  lastMessageSent?: string;
-  last2Quantities?: number[];
-  last2Prices?: number[];
-  last2BatteryTypes?: string[];
-}
-
-// Mock data - سيتم استبدالها ببيانات Supabase
-const mockSuppliers: Supplier[] = [
-  {
-    id: "1",
-    supplierCode: "S001",
-    name: "مورد البطاريات الذهبية",
-    phone: "0501234567",
-    description: "مورد موثوق للبطاريات عالية الجودة",
-    lastPurchase: "2024-01-15",
-    totalPurchases: 15,
-    totalAmount: 4500,
-    averagePrice: 300,
-    balance: -1200,
-    notes: "مورد مميز، توريدات منتظمة كل شهر",
-    messageSent: true,
-    lastMessageSent: "2024-01-10",
-    last2Quantities: [12, 8],
-    last2Prices: [25, 30],
-    last2BatteryTypes: ["بطاريات عادية", "بطاريات جافة"],
-    purchases: [
-      {
-        id: "p1",
-        date: "2024-01-15",
-        batteryType: "بطاريات عادية",
-        quantity: 12,
-        pricePerKg: 25,
-        total: 300,
-        discount: 0,
-        finalTotal: 300
-      },
-      {
-        id: "p2",
-        date: "2024-01-10",
-        batteryType: "بطاريات جافة",
-        quantity: 8,
-        pricePerKg: 30,
-        total: 240,
-        discount: 0,
-        finalTotal: 240
-      }
-    ]
-  },
-  {
-    id: "2",
-    supplierCode: "S002",
-    name: "شركة البطاريات المتطورة",
-    phone: "0507654321",
-    description: "متخصص في البطاريات اليابانية",
-    lastPurchase: "2024-01-10",
-    totalPurchases: 8,
-    totalAmount: 2400,
-    averagePrice: 300,
-    balance: 800,
-    notes: "يوفر البطاريات اليابانية عالية الجودة",
-    messageSent: false,
-    last2Quantities: [10, 6],
-    last2Prices: [28, 32],
-    last2BatteryTypes: ["بطاريات زجاج", "بطاريات تعبئة"],
-    purchases: []
-  }
-];
+import { useSuppliers } from "@/hooks/useSuppliers";
 
 const SupplierFollowUp = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [editingSupplier, setEditingSupplier] = useState<string | null>(null);
   const [supplierNotes, setSupplierNotes] = useState("");
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+  const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [editingSupplierData, setEditingSupplierData] = useState<Supplier | null>(null);
+  const [editingSupplierData, setEditingSupplierData] = useState<any>(null);
 
   const {
     suppliers,
@@ -200,7 +106,7 @@ const SupplierFollowUp = () => {
     return diffDays;
   };
 
-  const sendWhatsAppMessage = (supplier: Supplier) => {
+  const sendWhatsAppMessage = (supplier: any) => {
     const message = `مرحباً ${supplier.name}، نود التواصل معكم بخصوص التوريدات.`;
     const whatsappUrl = `https://wa.me/${supplier.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
@@ -220,12 +126,12 @@ const SupplierFollowUp = () => {
     });
   };
 
-  const handleEditSupplier = (supplier: Supplier) => {
+  const handleEditSupplier = (supplier: any) => {
     setEditingSupplierData(supplier);
     setShowEditDialog(true);
   };
 
-  const handleSupplierUpdated = (updatedSupplier: Supplier) => {
+  const handleSupplierUpdated = (updatedSupplier: any) => {
     updateSupplier({
       id: updatedSupplier.id,
       data: {
@@ -302,7 +208,6 @@ const SupplierFollowUp = () => {
                     style={{ fontFamily: 'Tajawal, sans-serif' }}
                   />
                 </div>
-                {/* Add New Supplier Button */}
                 <Button
                   onClick={() => setShowAddDialog(true)}
                   className="flex items-center gap-2 flex-row-reverse bg-blue-600 hover:bg-blue-700 whitespace-nowrap"
@@ -312,7 +217,6 @@ const SupplierFollowUp = () => {
                   إضافة مورد جديد
                 </Button>
               </div>
-
             </div>
           </div>
 
@@ -352,34 +256,9 @@ const SupplierFollowUp = () => {
               </CardContent>
             </Card>
           </div>
-          <div className="flex flex-wrap gap-2 w-full justify-between items-center">
-            {/* فلتر حسب آخر رسالة */}
-            <div className="flex gap-4 flex-wrap w-full">
-              {/* Filter by Last Message */}
-              <select
-                className="border rounded px-2 py-1 text-xs flex-1 min-w-[180px]"
-                style={{ fontFamily: 'Tajawal, sans-serif' }}
-                onChange={e => {
-                  const value = e.target.value;
-                  if (value === "") {
-                    setSuppliers(mockSuppliers);
-                  } else if (value === "never") {
-                    setSuppliers(mockSuppliers.filter(s => !s.lastMessageSent));
-                  } else if (value === "7") {
-                    setSuppliers(mockSuppliers.filter(s => getDaysSinceLastMessage(s.lastMessageSent) > 7));
-                  } else if (value === "30") {
-                    setSuppliers(mockSuppliers.filter(s => getDaysSinceLastMessage(s.lastMessageSent) > 30));
-                  }
-                }}
-                defaultValue=""
-              >
-                <option value="">كل الرسائل</option>
-                <option value="never">لم ترسل له رسالة</option>
-                <option value="7">لم ترسل له رسالة منذ أكثر من 7 أيام</option>
-                <option value="30">لم ترسل له رسالة منذ أكثر من 30 يوم</option>
-              </select>
 
-              {/* Reset Filters Button */}
+          <div className="flex flex-wrap gap-2 w-full justify-between items-center">
+            <div className="flex gap-4 flex-wrap w-full">
               <Button
                 onClick={resetFilters}
                 variant="outline"
@@ -390,7 +269,6 @@ const SupplierFollowUp = () => {
                 إعادة تعيين الفلاتر
               </Button>
 
-              {/* Export to Excel Button */}
               <Button
                 onClick={exportToExcel}
                 variant="outline"
@@ -401,9 +279,7 @@ const SupplierFollowUp = () => {
                 تصدير Excel
               </Button>
             </div>
- 
           </div>
-
         </CardContent>
       </Card>
 
@@ -480,32 +356,6 @@ const SupplierFollowUp = () => {
                   </div>
                 </div>
 
-                {/* Last 2 Purchases Comparison */}
-                {supplier.last2Quantities && supplier.last2Quantities.length >= 2 && (
-                  <table className="w-full text-xs bg-blue-50 rounded mb-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                    <thead>
-                      <tr className="text-blue-700 font-semibold text-center"> 
-                        <th className="p-1 border-b border-blue-200">الصنف</th>
-                        <th className="p-1 border-b border-blue-200">الكمية</th>
-                        <th className="p-1 border-b border-blue-200">السعر</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr className="bg-white text-center"> 
-                        <td className="p-1 border-b border-blue-100">{supplier.last2BatteryTypes?.[0] || "غير محدد"}</td>
-                        <td className="p-1 border-b border-blue-100">{supplier.last2Quantities[0]} كيلو</td>
-                        <td className="p-1 border-b border-blue-100">{supplier.last2Prices?.[0]} ريال</td>
-                      </tr>
-                      <tr className="bg-white text-center"> 
-                        <td className="p-1 border-b border-blue-100">{supplier.last2BatteryTypes?.[1] || "غير محدد"}</td>
-                        <td className="p-1 border-b border-blue-100">{supplier.last2Quantities[1]} كيلو</td>
-                        <td className="p-1 border-b border-blue-100">{supplier.last2Prices?.[1]} ريال</td>
-                      </tr>
-                      
-                    </tbody>
-                  </table>
-                )}
-
                 <div className="space-y-2">
                   <Button
                     onClick={() => generateSupplierStatement(supplier.id)}
@@ -542,12 +392,26 @@ const SupplierFollowUp = () => {
                       تعديل
                     </Button>
 
+                    <Button
+                      onClick={() => handleDeleteSupplier(supplier.id)}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1 flex-row-reverse text-xs text-red-600"
+                      style={{ fontFamily: 'Tajawal, sans-serif' }}
+                    >
+                      <X className="w-3 h-3" />
+                      حذف
+                    </Button>
+                  </div>
+
+                  {/* Block/Unblock Button */}
+                  <div className="w-full">
                     {supplier.isBlocked ? (
                       <Button
                         onClick={() => handleUnblockSupplier(supplier.id)}
                         variant="outline"
                         size="sm"
-                        className="flex items-center gap-1 flex-row-reverse text-xs text-green-600"
+                        className="w-full flex items-center gap-1 flex-row-reverse text-xs text-green-600"
                         style={{ fontFamily: 'Tajawal, sans-serif' }}
                       >
                         <CheckCircle className="w-3 h-3" />
@@ -558,11 +422,11 @@ const SupplierFollowUp = () => {
                         onClick={() => handleBlockSupplier(supplier.id)}
                         variant="outline"
                         size="sm"
-                        className="flex items-center gap-1 flex-row-reverse text-xs text-red-600"
+                        className="w-full flex items-center gap-1 flex-row-reverse text-xs text-red-600"
                         style={{ fontFamily: 'Tajawal, sans-serif' }}
                       >
                         <Ban className="w-3 h-3" />
-                        حظر
+                        حظر المورد
                       </Button>
                     )}
                   </div>
@@ -637,6 +501,7 @@ const SupplierFollowUp = () => {
         open={showAddDialog}
         onClose={() => setShowAddDialog(false)}
         onSupplierAdded={handleSupplierAdded}
+        nextSupplierCode={generateNextSupplierCode()}
       />
 
       <SupplierDetailsDialog

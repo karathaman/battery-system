@@ -7,7 +7,6 @@ interface BatteryType {
   name: string;
   description?: string;
   unit_price: number;
-  is_active: boolean;
   created_at: string;
 }
 
@@ -21,7 +20,7 @@ const batteryTypeService = {
   getBatteryTypes: async (): Promise<BatteryType[]> => {
     const { data, error } = await supabase
       .from('battery_types')
-      .select('id, name, description, unit_price, is_active, created_at')
+      .select('id, name, description, unit_price, created_at')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -29,10 +28,7 @@ const batteryTypeService = {
       throw new Error(error.message);
     }
 
-    return data?.map(item => ({
-      ...item,
-      is_active: item.is_active ?? true
-    })) || [];
+    return data || [];
   },
 
   createBatteryType: async (data: BatteryTypeFormData): Promise<BatteryType> => {
@@ -41,10 +37,9 @@ const batteryTypeService = {
       .insert({
         name: data.name,
         description: data.description,
-        unit_price: data.unit_price,
-        is_active: true
+        unit_price: data.unit_price
       })
-      .select('id, name, description, unit_price, is_active, created_at')
+      .select('id, name, description, unit_price, created_at')
       .single();
 
     if (error) {
@@ -52,10 +47,7 @@ const batteryTypeService = {
       throw new Error(error.message);
     }
 
-    return {
-      ...newBatteryType,
-      is_active: newBatteryType.is_active ?? true
-    };
+    return newBatteryType;
   },
 
   updateBatteryType: async (id: string, data: Partial<BatteryTypeFormData>): Promise<BatteryType> => {
@@ -63,7 +55,7 @@ const batteryTypeService = {
       .from('battery_types')
       .update(data)
       .eq('id', id)
-      .select('id, name, description, unit_price, is_active, created_at')
+      .select('id, name, description, unit_price, created_at')
       .single();
 
     if (error) {
@@ -71,10 +63,7 @@ const batteryTypeService = {
       throw new Error(error.message);
     }
 
-    return {
-      ...updatedBatteryType,
-      is_active: updatedBatteryType.is_active ?? true
-    };
+    return updatedBatteryType;
   },
 
   deleteBatteryType: async (id: string): Promise<void> => {
@@ -87,25 +76,6 @@ const batteryTypeService = {
       console.error('Error deleting battery type:', error);
       throw new Error(error.message);
     }
-  },
-
-  toggleBatteryTypeStatus: async (id: string, isActive: boolean): Promise<BatteryType> => {
-    const { data: updatedBatteryType, error } = await supabase
-      .from('battery_types')
-      .update({ is_active: isActive })
-      .eq('id', id)
-      .select('id, name, description, unit_price, is_active, created_at')
-      .single();
-
-    if (error) {
-      console.error('Error toggling battery type status:', error);
-      throw new Error(error.message);
-    }
-
-    return {
-      ...updatedBatteryType,
-      is_active: updatedBatteryType.is_active ?? true
-    };
   }
 };
 
