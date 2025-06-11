@@ -1,15 +1,17 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarDays, Plus, Trash2, Check } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { CalendarDays, Plus, Trash2, Check, UserPlus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { DateNavigation } from "./DateNavigation";
 import { useDailyPurchases, DailyPurchase } from "@/hooks/useDailyPurchases";
+import { useSuppliers } from "@/hooks/useSuppliers";
+import { AddSupplierDialog } from "./AddSupplierDialog";
 import { supabase } from "@/integrations/supabase/client";
-
-
 
 interface DailyPurchasesProps {
   language?: string;
@@ -19,6 +21,7 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
   const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
   const [localPurchases, setLocalPurchases] = useState<DailyPurchase[]>([]);
   const [focusedCell, setFocusedCell] = useState<{ row: number, col: string } | null>(null);
+  const [showAddSupplierDialog, setShowAddSupplierDialog] = useState(false);
   const tableRef = useRef<HTMLDivElement>(null);
 
   const isRTL = language === "ar";
@@ -33,8 +36,30 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
     isDeleting
   } = useDailyPurchases(currentDate);
 
+  const { suppliers, createSupplier, isCreating } = useSuppliers(1, 1000);
+
   // Initialize local purchases when db data loads
-  
+  useEffect(() => {
+    if (dbPurchases && dbPurchases.length > 0) {
+      setLocalPurchases(dbPurchases);
+    } else {
+      // Add one empty row if no data
+      setLocalPurchases([{
+        id: `temp-${Date.now()}`,
+        date: currentDate,
+        supplierName: "",
+        supplierCode: "",
+        supplierPhone: "",
+        batteryType: "بطاريات عادية",
+        quantity: 0,
+        pricePerKg: 0,
+        total: 0,
+        discount: 0,
+        finalTotal: 0,
+        isSaved: false
+      }]);
+    }
+  }, [dbPurchases, currentDate]);
 
   const calculateTotals = (purchase: DailyPurchase): DailyPurchase => {
     const total = Math.round(purchase.quantity * purchase.pricePerKg);
@@ -51,35 +76,7 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
     });
   };
 
-  //  {*الموردين*} 
-  const [suppliers, setSuppliers] = useState<{ name: string; supplier_code: string; phone: string }[]>([]);
-  const fetchSuppliers = async () => {
-    const { data, error } = await supabase.from("suppliers").select("name, supplier_code, phone");
-    if (error) {
-      console.error("Error fetching suppliers:", error);
-      return [];
-    }
-    return data || [];
-  };
-
-  useEffect(() => {
-    const loadSuppliers = async () => {
-      const suppliers = await fetchSuppliers();
-      setSuppliers(suppliers); // قم بتخزين الموردين في الحالة
-    };
-    loadSuppliers();
-  }, []);
-
-  const findSupplierBySearch = (searchTerm: string) => {
-    const term = searchTerm.toLowerCase().trim();
-    return suppliers.find(supplier =>
-      supplier.phone === term ||
-      supplier.supplier_code.toLowerCase() === term ||
-      supplier.name.toLowerCase().includes(term)
-    );
-  };
-
-  //  {*انواع البطاريات*} 
+  // Battery Types
   const [batteryTypes, setBatteryTypes] = useState<string[]>([]);
   const fetchBatteryTypes = async () => {
     const { data, error } = await supabase.from("battery_types").select("name");
@@ -93,12 +90,10 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
   useEffect(() => {
     const loadBatteryTypes = async () => {
       const types = await fetchBatteryTypes();
-      setBatteryTypes(types); // قم بتخزين أنواع البطاريات في الحالة
+      setBatteryTypes(types);
     };
     loadBatteryTypes();
   }, []);
-
-
 
   const addRow = () => {
     const newPurchase: DailyPurchase = {
@@ -232,8 +227,6 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
       setFocusedCell({ row: rowIndex, col: fields[currentFieldIndex + 1] });
     }
   };
- 
-  
 
   const totalDailyAmount = localPurchases.reduce((sum, purchase) => sum + purchase.finalTotal, 0);
 
@@ -253,6 +246,16 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
     }
   }, [focusedCell]);
 
+  const handleSupplierAdded = (supplierData: any) => {
+    createSupplier(supplierData);
+    setShowAddSupplierDialog(false);
+    
+    // Refresh suppliers list
+    setTimeout(() => {
+      // The suppliers will be automatically updated via the useSuppliers hook
+    }, 1000);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -265,7 +268,7 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
 
   const filteredSuppliers = suppliers.filter((supplier) =>
     supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    supplier.supplier_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    supplier.supplierCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
     supplier.phone.includes(searchTerm)
   );
 
@@ -335,40 +338,63 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
                 {localPurchases.map((purchase, index) => (
                   <tr key={purchase.id} className={`border-b hover:bg-gray-50 ${purchase.isSaved ? 'bg-green-50' : ''}`}>
                     <td className="p-2">
-                      <Select
-                        value={purchase.supplierName}
-                        onValueChange={(value) => {
-                          const selectedSupplier = suppliers.find((supplier) => supplier.name === value);
-                          if (selectedSupplier) {
-                            updateLocalPurchase(index, 'supplierName', selectedSupplier.name);
-                            updateLocalPurchase(index, 'supplierCode', selectedSupplier.supplier_code);
-                            updateLocalPurchase(index, 'supplierPhone', selectedSupplier.phone);
-                          }
-                        }}
-                      >
-                        <SelectTrigger
-                          id={`${index}-supplierName`}
-                          onKeyDown={(e) => handleKeyDown(e, index, 'supplierName')}
-                          className={isRTL ? 'text-right' : 'text-left'}
+                      <div className="flex gap-1">
+                        <Select
+                          value={purchase.supplierName}
+                          onValueChange={(value) => {
+                            const selectedSupplier = suppliers.find((supplier) => supplier.name === value);
+                            if (selectedSupplier) {
+                              updateLocalPurchase(index, 'supplierName', selectedSupplier.name);
+                              updateLocalPurchase(index, 'supplierCode', selectedSupplier.supplierCode);
+                              updateLocalPurchase(index, 'supplierPhone', selectedSupplier.phone);
+                            }
+                          }}
                         >
-                          <SelectValue placeholder={language === "ar" ? "ابحث أو اختر المورد..." : "Search or select supplier..."} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {/* حقل البحث */}
-                          <Input
-                            placeholder={language === "ar" ? "بحث بالاسم، الكود أو الجوال..." : "Search by name, code, or phone..."}
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="p-2"
-                          />
-                          {/* عرض الموردين المصفاة */}
-                          {filteredSuppliers.map((supplier) => (
-                            <SelectItem key={supplier.supplier_code} value={supplier.name} style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                              {supplier.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                          <SelectTrigger
+                            id={`${index}-supplierName`}
+                            onKeyDown={(e) => handleKeyDown(e, index, 'supplierName')}
+                            className={`${isRTL ? 'text-right' : 'text-left'} flex-1`}
+                          >
+                            <SelectValue placeholder={language === "ar" ? "ابحث أو اختر المورد..." : "Search or select supplier..."} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <Input
+                              placeholder={language === "ar" ? "بحث بالاسم، الكود أو الجوال..." : "Search by name, code, or phone..."}
+                              value={searchTerm}
+                              onChange={(e) => setSearchTerm(e.target.value)}
+                              className="p-2"
+                            />
+                            {filteredSuppliers.map((supplier) => (
+                              <SelectItem key={supplier.supplierCode} value={supplier.name} style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                                {supplier.name}
+                              </SelectItem>
+                            ))}
+                            {filteredSuppliers.length === 0 && searchTerm && (
+                              <div className="p-2 text-center">
+                                <Button
+                                  onClick={() => setShowAddSupplierDialog(true)}
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full"
+                                  style={{ fontFamily: 'Tajawal, sans-serif' }}
+                                >
+                                  <UserPlus className="w-4 h-4 mr-2" />
+                                  {language === "ar" ? "إضافة مورد جديد" : "Add New Supplier"}
+                                </Button>
+                              </div>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          onClick={() => setShowAddSupplierDialog(true)}
+                          variant="outline"
+                          size="sm"
+                          className="px-2"
+                          title={language === "ar" ? "إضافة مورد جديد" : "Add New Supplier"}
+                        >
+                          <UserPlus className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </td>
 
                     <td className="p-2">
@@ -448,7 +474,7 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
                           size="sm"
                           className={`text-green-600 hover:text-green-800 ${purchase.isSaved ? 'bg-green-100' : ''}`}
                           title={language === "ar" ? "حفظ" : "Save"}
-                          disabled={isSaving}
+                          disabled={isSaving || purchase.isSaved}
                         >
                           <Check className="w-4 h-4" />
                         </Button>
@@ -482,6 +508,13 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
           </div>
         </CardContent>
       </Card>
+
+      <AddSupplierDialog
+        open={showAddSupplierDialog}
+        onClose={() => setShowAddSupplierDialog(false)}
+        onSupplierAdded={handleSupplierAdded}
+        language={language}
+      />
     </div>
   );
 };
