@@ -6,152 +6,121 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-
-interface Customer {
-  id: string;
-  customerCode: string;
-  name: string;
-  phone: string;
-  description?: string;
-  lastPurchase?: string;
-}
+import { CustomerFormData } from "@/types";
 
 interface AddCustomerDialogProps {
   open: boolean;
   onClose: () => void;
-  onCustomerAdded: (customer: Customer) => void;
-  initialName?: string;
-  language?: string;
-  nextCustomerCode?: string;
+  onCustomerAdded: (customer: CustomerFormData) => void;
 }
 
-export const AddCustomerDialog = ({ 
-  open, 
-  onClose, 
-  onCustomerAdded, 
-  initialName = "",
-  language = "ar",
-  nextCustomerCode = "C001"
-}: AddCustomerDialogProps) => {
-  const [name, setName] = useState(initialName);
-  const [phone, setPhone] = useState("");
-  const [description, setDescription] = useState("");
-
-  const isRTL = language === "ar";
+export const AddCustomerDialog = ({ open, onClose, onCustomerAdded }: AddCustomerDialogProps) => {
+  const [formData, setFormData] = useState<CustomerFormData>({
+    name: "",
+    phone: "",
+    description: "",
+    notes: ""
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name.trim() || !phone.trim()) {
+    if (!formData.name.trim() || !formData.phone.trim()) {
       toast({
-        title: language === "ar" ? "خطأ في البيانات" : "Data Error",
-        description: language === "ar" ? "يرجى إدخال الاسم ورقم الجوال" : "Please enter name and phone number",
+        title: "خطأ",
+        description: "يرجى ملء جميع الحقول المطلوبة",
         variant: "destructive",
       });
       return;
     }
 
-    const newCustomer: Customer = {
-      id: Date.now().toString(),
-      customerCode: nextCustomerCode,
-      name: name.trim(),
-      phone: phone.trim(),
-      description: description.trim() || undefined,
-    };
-
-    onCustomerAdded(newCustomer);
-    
-    toast({
-      title: language === "ar" ? "تم إضافة العميل" : "Customer Added",
-      description: language === "ar" ? `تم إضافة العميل ${name} برمز ${nextCustomerCode}` : `Customer ${name} added with code ${nextCustomerCode}`,
+    onCustomerAdded({
+      name: formData.name.trim(),
+      phone: formData.phone.trim(),
+      description: formData.description?.trim(),
+      notes: formData.notes?.trim()
     });
-
-    // Reset form
-    setName("");
-    setPhone("");
-    setDescription("");
+    
+    setFormData({
+      name: "",
+      phone: "",
+      description: "",
+      notes: ""
+    });
+    
     onClose();
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md" dir={isRTL ? "rtl" : "ltr"}>
+      <DialogContent className="max-w-md" dir="rtl">
         <DialogHeader>
           <DialogTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
-            {language === "ar" ? "إضافة عميل جديد" : "Add New Customer"}
+            إضافة عميل جديد
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="customerCode" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-              {language === "ar" ? "رمز العميل" : "Customer Code"}
+            <Label htmlFor="name" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+              اسم العميل *
             </Label>
             <Input
-              id="customerCode"
-              value={nextCustomerCode}
-              disabled
-              className="mt-1 bg-gray-100"
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="أدخل اسم العميل"
+              required
               style={{ fontFamily: 'Tajawal, sans-serif' }}
             />
           </div>
 
           <div>
-            <Label htmlFor="customerName" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-              {language === "ar" ? "اسم العميل" : "Customer Name"}
+            <Label htmlFor="phone" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+              رقم الجوال *
             </Label>
             <Input
-              id="customerName"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={language === "ar" ? "أدخل اسم العميل" : "Enter customer name"}
-              className="mt-1"
-              style={{ fontFamily: 'Tajawal, sans-serif' }}
-              autoFocus
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="customerPhone" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-              {language === "ar" ? "رقم الجوال" : "Phone Number"}
-            </Label>
-            <Input
-              id="customerPhone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              id="phone"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               placeholder="05xxxxxxxx"
-              className="mt-1"
-              dir="ltr"
+              required
             />
           </div>
 
           <div>
-            <Label htmlFor="customerDescription" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-              {language === "ar" ? "وصف العميل" : "Customer Description"}
+            <Label htmlFor="description" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+              الوصف
+            </Label>
+            <Input
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="وصف العميل"
+              style={{ fontFamily: 'Tajawal, sans-serif' }}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="notes" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+              ملاحظات
             </Label>
             <Textarea
-              id="customerDescription"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder={language === "ar" ? "أدخل وصف للعميل (اختياري)" : "Enter customer description (optional)"}
-              className="mt-1 text-right"
+              id="notes"
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              placeholder="أضف ملاحظات..."
               style={{ fontFamily: 'Tajawal, sans-serif' }}
               rows={3}
             />
           </div>
 
-          <div className={`flex gap-2 pt-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <Button type="submit" className="flex-1" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-              {language === "ar" ? "إضافة العميل" : "Add Customer"}
+          <div className="flex gap-2 justify-end">
+            <Button type="button" variant="outline" onClick={onClose}>
+              إلغاء
             </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={onClose}
-              className="flex-1"
-              style={{ fontFamily: 'Tajawal, sans-serif' }}
-            >
-              {language === "ar" ? "إلغاء" : "Cancel"}
+            <Button type="submit">
+              إضافة العميل
             </Button>
           </div>
         </form>

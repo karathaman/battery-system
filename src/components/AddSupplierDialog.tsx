@@ -6,164 +6,121 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-
-interface Supplier {
-  id: string;
-  supplierCode: string;
-  name: string;
-  phone: string;
-  description?: string;
-  lastPurchase?: string;
-  totalPurchases: number;
-  totalAmount: number;
-  averagePrice: number;
-  purchases: any[];
-  balance: number;
-}
+import { SupplierFormData } from "@/types";
 
 interface AddSupplierDialogProps {
   open: boolean;
   onClose: () => void;
-  onSupplierAdded: (supplier: Supplier) => void;
-  initialName?: string;
-  language?: string;
-  nextSupplierCode?: string;
+  onSupplierAdded: (supplier: SupplierFormData) => void;
 }
 
-export const AddSupplierDialog = ({ 
-  open, 
-  onClose, 
-  onSupplierAdded, 
-  initialName = "",
-  language = "ar",
-  nextSupplierCode = "S001"
-}: AddSupplierDialogProps) => {
-  const [name, setName] = useState(initialName);
-  const [phone, setPhone] = useState("");
-  const [description, setDescription] = useState("");
-
-  const isRTL = language === "ar";
+export const AddSupplierDialog = ({ open, onClose, onSupplierAdded }: AddSupplierDialogProps) => {
+  const [formData, setFormData] = useState<SupplierFormData>({
+    name: "",
+    phone: "",
+    description: "",
+    notes: ""
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name.trim() || !phone.trim()) {
+    if (!formData.name.trim() || !formData.phone.trim()) {
       toast({
-        title: language === "ar" ? "خطأ في البيانات" : "Data Error",
-        description: language === "ar" ? "يرجى إدخال الاسم ورقم الجوال" : "Please enter name and phone number",
+        title: "خطأ",
+        description: "يرجى ملء جميع الحقول المطلوبة",
         variant: "destructive",
-        duration: 2000,
       });
       return;
     }
 
-    const newSupplier: Supplier = {
-      id: Date.now().toString(),
-      supplierCode: nextSupplierCode,
-      name: name.trim(),
-      phone: phone.trim(),
-      description: description.trim() || undefined,
-      totalPurchases: 0,
-      totalAmount: 0,
-      averagePrice: 0,
-      purchases: [],
-      balance: 0
-    };
-
-    onSupplierAdded(newSupplier);
-    
-    toast({
-      title: language === "ar" ? "تم إضافة المورد" : "Supplier Added",
-      description: language === "ar" ? `تم إضافة المورد ${name} برمز ${nextSupplierCode}` : `Supplier ${name} added with code ${nextSupplierCode}`,
-      duration: 2000,
+    onSupplierAdded({
+      name: formData.name.trim(),
+      phone: formData.phone.trim(),
+      description: formData.description?.trim(),
+      notes: formData.notes?.trim()
     });
-
-    // Reset form
-    setName("");
-    setPhone("");
-    setDescription("");
+    
+    setFormData({
+      name: "",
+      phone: "",
+      description: "",
+      notes: ""
+    });
+    
     onClose();
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md" dir={isRTL ? "rtl" : "ltr"}>
+      <DialogContent className="max-w-md" dir="rtl">
         <DialogHeader>
           <DialogTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
-            {language === "ar" ? "إضافة مورد جديد" : "Add New Supplier"}
+            إضافة مورد جديد
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="supplierCode" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-              {language === "ar" ? "رمز المورد" : "Supplier Code"}
+            <Label htmlFor="name" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+              اسم المورد *
             </Label>
             <Input
-              id="supplierCode"
-              value={nextSupplierCode}
-              disabled
-              className="mt-1 bg-gray-100"
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="أدخل اسم المورد"
+              required
               style={{ fontFamily: 'Tajawal, sans-serif' }}
             />
           </div>
 
           <div>
-            <Label htmlFor="supplierName" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-              {language === "ar" ? "اسم المورد" : "Supplier Name"}
+            <Label htmlFor="phone" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+              رقم الجوال *
             </Label>
             <Input
-              id="supplierName"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={language === "ar" ? "أدخل اسم المورد" : "Enter supplier name"}
-              className="mt-1"
-              style={{ fontFamily: 'Tajawal, sans-serif' }}
-              autoFocus
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="supplierPhone" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-              {language === "ar" ? "رقم الجوال" : "Phone Number"}
-            </Label>
-            <Input
-              id="supplierPhone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              id="phone"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               placeholder="05xxxxxxxx"
-              className="mt-1"
-              dir="ltr"
+              required
             />
           </div>
 
           <div>
-            <Label htmlFor="supplierDescription" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-              {language === "ar" ? "وصف المورد" : "Supplier Description"}
+            <Label htmlFor="description" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+              الوصف
+            </Label>
+            <Input
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="وصف المورد"
+              style={{ fontFamily: 'Tajawal, sans-serif' }}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="notes" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+              ملاحظات
             </Label>
             <Textarea
-              id="supplierDescription"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder={language === "ar" ? "أدخل وصف للمورد (اختياري)" : "Enter supplier description (optional)"}
-              className="mt-1 text-right"
+              id="notes"
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              placeholder="أضف ملاحظات..."
               style={{ fontFamily: 'Tajawal, sans-serif' }}
               rows={3}
             />
           </div>
 
-          <div className={`flex gap-2 pt-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <Button type="submit" className="flex-1" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-              {language === "ar" ? "إضافة المورد" : "Add Supplier"}
+          <div className="flex gap-2 justify-end">
+            <Button type="button" variant="outline" onClick={onClose}>
+              إلغاء
             </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={onClose}
-              className="flex-1"
-              style={{ fontFamily: 'Tajawal, sans-serif' }}
-            >
-              {language === "ar" ? "إلغاء" : "Cancel"}
+            <Button type="submit">
+              إضافة المورد
             </Button>
           </div>
         </form>
