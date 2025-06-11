@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,20 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarDays, Plus, Trash2, Check } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { DateNavigation } from "./DateNavigation";
-
-interface DailyPurchase {
-  id: string;
-  supplierName: string;
-  supplierCode: string;
-  supplierPhone: string;
-  batteryType: string;
-  quantity: number;
-  price: number;
-  total: number;
-  discount: number;
-  finalTotal: number;
-  saved: boolean;
-}
+import { useDailyPurchases, DailyPurchase } from "@/hooks/useDailyPurchases";
 
 const batteryTypes = [
   "بطاريات عادية",
@@ -54,35 +40,53 @@ interface DailyPurchasesProps {
 
 export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
   const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
-  const [purchases, setPurchases] = useState<DailyPurchase[]>([
-    {
-      id: "1",
-      supplierName: "",
-      supplierCode: "",
-      supplierPhone: "",
-      batteryType: "بطاريات عادية",
-      quantity: 0,
-      price: 0,
-      total: 0,
-      discount: 0,
-      finalTotal: 0,
-      saved: false
-    }
-  ]);
-  
+  const [localPurchases, setLocalPurchases] = useState<DailyPurchase[]>([]);
   const [focusedCell, setFocusedCell] = useState<{row: number, col: string} | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
   
   const isRTL = language === "ar";
+  
+  const { 
+    purchases: dbPurchases, 
+    isLoading, 
+    savePurchase, 
+    deletePurchase, 
+    clearDay,
+    isSaving,
+    isDeleting 
+  } = useDailyPurchases(currentDate);
+
+  // Initialize local purchases when db data loads
+  useEffect(() => {
+    if (dbPurchases.length > 0) {
+      setLocalPurchases(dbPurchases);
+    } else {
+      // If no saved data, start with one empty row
+      setLocalPurchases([{
+        id: "temp-1",
+        date: currentDate,
+        supplierName: "",
+        supplierCode: "",
+        supplierPhone: "",
+        batteryType: "بطاريات عادية",
+        quantity: 0,
+        pricePerKg: 0,
+        total: 0,
+        discount: 0,
+        finalTotal: 0,
+        isSaved: false
+      }]);
+    }
+  }, [dbPurchases, currentDate]);
 
   const calculateTotals = (purchase: DailyPurchase): DailyPurchase => {
-    const total = Math.round(purchase.quantity * purchase.price);
+    const total = Math.round(purchase.quantity * purchase.pricePerKg);
     const finalTotal = total - purchase.discount;
     return { ...purchase, total, finalTotal };
   };
 
-  const updatePurchase = (index: number, field: keyof DailyPurchase, value: any) => {
-    setPurchases(prev => {
+  const updateLocalPurchase = (index: number, field: keyof DailyPurchase, value: any) => {
+    setLocalPurchases(prev => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
       updated[index] = calculateTotals(updated[index]);
@@ -101,37 +105,49 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
 
   const addRow = () => {
     const newPurchase: DailyPurchase = {
-      id: Date.now().toString(),
+      id: `temp-${Date.now()}`,
+      date: currentDate,
       supplierName: "",
       supplierCode: "",
       supplierPhone: "",
       batteryType: "بطاريات عادية",
       quantity: 0,
-      price: 0,
+      pricePerKg: 0,
       total: 0,
       discount: 0,
       finalTotal: 0,
-      saved: false
+      isSaved: false
     };
-    setPurchases(prev => [...prev, newPurchase]);
+    setLocalPurchases(prev => [...prev, newPurchase]);
   };
 
   const deleteRow = (index: number) => {
-    if (purchases.length > 1) {
-      setPurchases(prev => prev.filter((_, i) => i !== index));
-      toast({
-        title: language === "ar" ? "تم حذف السطر" : "Row Deleted",
-        description: language === "ar" ? "تم حذف السطر بنجاح" : "Row deleted successfully",
-        duration: 2000,
-      });
+    const purchase = localPurchases[index];
+    
+    if (localPurchases.length > 1) {
+      if (purchase.isSaved && !purchase.id.startsWith('temp-')) {
+        // Delete from database
+        deletePurchase(purchase.id);
+      }
+      
+      // Remove from local state
+      setLocalPurchases(prev => prev.filter((_, i) => i !== index));
+      
+      if (!purchase.isSaved) {
+        toast({
+          title: language === "ar" ? "تم حذف السطر" : "Row Deleted",
+          description: language === "ar" ? "تم حذف السطر بنجاح" : "Row deleted successfully",
+          duration: 2000,
+        });
+      }
     }
   };
 
-  const savePurchase = (index: number) => {
-    const purchase = purchases[index];
+  const savePurchaseRow = (index: number) => {
+    const purchase = localPurchases[index];
     
     // Validate required fields
-    if (!purchase.supplierName || !purchase.quantity || !purchase.price) {
+    if (!purchase.supplierName || !purchase.quantity || !purchase.pricePerKg) {
       toast({
         title: language === "ar" ? "خطأ" : "Error",
         description: language === "ar" ? "يرجى ملء جميع الحقول المطلوبة" : "Please fill all required fields",
@@ -141,53 +157,61 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
       return;
     }
 
-    // Mark as saved
-    updatePurchase(index, 'saved', true);
-    
-    toast({
-      title: language === "ar" ? "تم الحفظ" : "Saved",
-      description: language === "ar" ? "تم حفظ البيانات بنجاح" : "Data saved successfully",
-      duration: 2000,
+    // Save to database
+    savePurchase({
+      date: currentDate,
+      supplierName: purchase.supplierName,
+      supplierCode: purchase.supplierCode,
+      supplierPhone: purchase.supplierPhone,
+      batteryType: purchase.batteryType,
+      quantity: purchase.quantity,
+      pricePerKg: purchase.pricePerKg,
+      total: purchase.total,
+      discount: purchase.discount,
+      finalTotal: purchase.finalTotal
     });
+
+    // Mark as saved locally
+    updateLocalPurchase(index, 'isSaved', true);
 
     // Add new row and focus on it
     addRow();
     setTimeout(() => {
-      setFocusedCell({ row: purchases.length, col: 'supplierName' });
+      setFocusedCell({ row: localPurchases.length, col: 'supplierName' });
     }, 100);
   };
 
   const clearAllData = () => {
-    setPurchases([{
-      id: "1",
+    clearDay();
+    setLocalPurchases([{
+      id: "temp-1",
+      date: currentDate,
       supplierName: "",
       supplierCode: "",
       supplierPhone: "",
       batteryType: "بطاريات عادية",
       quantity: 0,
-      price: 0,
+      pricePerKg: 0,
       total: 0,
       discount: 0,
       finalTotal: 0,
-      saved: false
+      isSaved: false
     }]);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, rowIndex: number, field: string) => {
-    const totalRows = purchases.length;
-    const fields = ['supplierName', 'batteryType', 'quantity', 'price', 'discount', 'save'];
+    const totalRows = localPurchases.length;
+    const fields = ['supplierName', 'batteryType', 'quantity', 'pricePerKg', 'discount', 'save'];
     const currentFieldIndex = fields.indexOf(field);
 
     if (e.key === 'Enter' || e.key === 'Tab') {
       e.preventDefault();
       
       if (field === 'discount') {
-        // Move to save button
         setFocusedCell({ row: rowIndex, col: 'save' });
       } else if (field === 'save') {
-        // Save and create new row
-        savePurchase(rowIndex);
-      } else if (currentFieldIndex < fields.length - 2) { // -2 to skip save button in normal navigation
+        savePurchaseRow(rowIndex);
+      } else if (currentFieldIndex < fields.length - 2) {
         setFocusedCell({ row: rowIndex, col: fields[currentFieldIndex + 1] });
       } else if (rowIndex < totalRows - 1) {
         setFocusedCell({ row: rowIndex + 1, col: fields[0] });
@@ -213,14 +237,12 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
   };
 
   const handleSupplierInput = (value: string, rowIndex: number) => {
-    // Check for exact match first
     const foundSupplier = findSupplierBySearch(value);
     
     if (foundSupplier) {
-      // Direct selection - supplier found, no dialog needed
-      updatePurchase(rowIndex, 'supplierName', foundSupplier.name);
-      updatePurchase(rowIndex, 'supplierCode', foundSupplier.supplierCode);
-      updatePurchase(rowIndex, 'supplierPhone', foundSupplier.phone);
+      updateLocalPurchase(rowIndex, 'supplierName', foundSupplier.name);
+      updateLocalPurchase(rowIndex, 'supplierCode', foundSupplier.supplierCode);
+      updateLocalPurchase(rowIndex, 'supplierPhone', foundSupplier.phone);
       
       toast({
         title: language === "ar" ? "تم العثور على المورد" : "Supplier Found",
@@ -228,19 +250,16 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
         duration: 2000,
       });
       
-      // Move to next field
       setTimeout(() => {
         setFocusedCell({ row: rowIndex, col: 'batteryType' });
       }, 100);
     } else {
-      // Update supplier name for manual entry
-      updatePurchase(rowIndex, 'supplierName', value);
+      updateLocalPurchase(rowIndex, 'supplierName', value);
     }
   };
 
-  const totalDailyAmount = purchases.reduce((sum, purchase) => sum + purchase.finalTotal, 0);
+  const totalDailyAmount = localPurchases.reduce((sum, purchase) => sum + purchase.finalTotal, 0);
 
-  // Focus management
   useEffect(() => {
     if (focusedCell) {
       if (focusedCell.col === 'save') {
@@ -256,6 +275,14 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
       }
     }
   }, [focusedCell]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg">جاري التحميل...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -320,8 +347,8 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
               </thead>
               
               <tbody>
-                {purchases.map((purchase, index) => (
-                  <tr key={purchase.id} className={`border-b hover:bg-gray-50 ${purchase.saved ? 'bg-green-50' : ''}`}>
+                {localPurchases.map((purchase, index) => (
+                  <tr key={purchase.id} className={`border-b hover:bg-gray-50 ${purchase.isSaved ? 'bg-green-50' : ''}`}>
                     <td className="p-2">
                       <Input
                         id={`${index}-supplierName`}
@@ -338,7 +365,7 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
                     <td className="p-2">
                       <Select
                         value={purchase.batteryType}
-                        onValueChange={(value) => updatePurchase(index, 'batteryType', value)}
+                        onValueChange={(value) => updateLocalPurchase(index, 'batteryType', value)}
                       >
                         <SelectTrigger 
                           id={`${index}-batteryType`}
@@ -362,7 +389,7 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
                         id={`${index}-quantity`}
                         type="number"
                         value={purchase.quantity || ''}
-                        onChange={(e) => updatePurchase(index, 'quantity', Number(e.target.value) || 0)}
+                        onChange={(e) => updateLocalPurchase(index, 'quantity', Number(e.target.value) || 0)}
                         onKeyDown={(e) => handleKeyDown(e, index, 'quantity')}
                         onFocus={() => setFocusedCell({row: index, col: 'quantity'})}
                         className="text-center"
@@ -371,13 +398,13 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
                     
                     <td className="p-2">
                       <Input
-                        id={`${index}-price`}
+                        id={`${index}-pricePerKg`}
                         type="number"
                         step="0.01"
-                        value={purchase.price || ''}
-                        onChange={(e) => updatePurchase(index, 'price', Number(e.target.value) || 0)}
-                        onKeyDown={(e) => handleKeyDown(e, index, 'price')}
-                        onFocus={() => setFocusedCell({row: index, col: 'price'})}
+                        value={purchase.pricePerKg || ''}
+                        onChange={(e) => updateLocalPurchase(index, 'pricePerKg', Number(e.target.value) || 0)}
+                        onKeyDown={(e) => handleKeyDown(e, index, 'pricePerKg')}
+                        onFocus={() => setFocusedCell({row: index, col: 'pricePerKg'})}
                         className="text-center"
                       />
                     </td>
@@ -391,7 +418,7 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
                         id={`${index}-discount`}
                         type="number"
                         value={purchase.discount || ''}
-                        onChange={(e) => updatePurchase(index, 'discount', Number(e.target.value) || 0)}
+                        onChange={(e) => updateLocalPurchase(index, 'discount', Number(e.target.value) || 0)}
                         onKeyDown={(e) => handleKeyDown(e, index, 'discount')}
                         onFocus={() => setFocusedCell({row: index, col: 'discount'})}
                         className="text-center"
@@ -406,12 +433,13 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
                       <div className="flex gap-1 justify-center">
                         <Button
                           id={`save-${index}`}
-                          onClick={() => savePurchase(index)}
+                          onClick={() => savePurchaseRow(index)}
                           onKeyDown={(e) => handleKeyDown(e, index, 'save')}
                           variant="outline"
                           size="sm"
-                          className={`text-green-600 hover:text-green-800 ${purchase.saved ? 'bg-green-100' : ''}`}
+                          className={`text-green-600 hover:text-green-800 ${purchase.isSaved ? 'bg-green-100' : ''}`}
                           title={language === "ar" ? "حفظ" : "Save"}
+                          disabled={isSaving}
                         >
                           <Check className="w-4 h-4" />
                         </Button>
@@ -420,6 +448,7 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
                           variant="outline"
                           size="sm"
                           className="text-red-600 hover:text-red-800"
+                          disabled={isDeleting}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>

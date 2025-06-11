@@ -93,6 +93,57 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_purchases: {
+        Row: {
+          battery_type: string
+          created_at: string | null
+          date: string
+          discount: number | null
+          final_total: number
+          id: string
+          is_saved: boolean | null
+          price_per_kg: number
+          quantity: number
+          supplier_code: string | null
+          supplier_name: string
+          supplier_phone: string | null
+          total: number
+          updated_at: string | null
+        }
+        Insert: {
+          battery_type: string
+          created_at?: string | null
+          date: string
+          discount?: number | null
+          final_total: number
+          id?: string
+          is_saved?: boolean | null
+          price_per_kg: number
+          quantity: number
+          supplier_code?: string | null
+          supplier_name: string
+          supplier_phone?: string | null
+          total: number
+          updated_at?: string | null
+        }
+        Update: {
+          battery_type?: string
+          created_at?: string | null
+          date?: string
+          discount?: number | null
+          final_total?: number
+          id?: string
+          is_saved?: boolean | null
+          price_per_kg?: number
+          quantity?: number
+          supplier_code?: string | null
+          supplier_name?: string
+          supplier_phone?: string | null
+          total?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       purchase_items: {
         Row: {
           battery_type_id: string
