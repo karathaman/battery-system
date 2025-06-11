@@ -4,14 +4,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ShoppingCart, Search, Plus, Calendar, TrendingUp, Edit, Printer, Trash2, Banknote, CreditCard, Smartphone } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ShoppingCart, Search, Plus, Calendar, DollarSign, TrendingUp, Users, Edit, Printer, Trash2, Banknote, CreditCard, Smartphone } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { SupplierSearchDialog } from "@/components/SupplierSearchDialog";
 import { BatteryTypeSelector } from "@/components/BatteryTypeSelector";
-import { AddSupplierDialog } from "@/components/AddSupplierDialog";
 import { Purchase, PurchaseItem } from "@/types/purchases";
 import { addTransactionToSupplier, removeSupplierTransactionByInvoice } from "@/utils/accountUtils";
-import { useSuppliers } from "@/hooks/useSuppliers";
 
 // Mock data
 const mockPurchases: Purchase[] = [
@@ -45,7 +45,6 @@ const PurchasesPage = () => {
   const [purchases, setPurchases] = useState<Purchase[]>(mockPurchases);
   const [searchTerm, setSearchTerm] = useState("");
   const [showSupplierDialog, setShowSupplierDialog] = useState(false);
-  const [showAddSupplierDialog, setShowAddSupplierDialog] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<{ id: string; name: string; balance: number } | null>(null);
   const [editingPurchase, setEditingPurchase] = useState<Purchase | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -57,9 +56,11 @@ const PurchasesPage = () => {
     discount: 0,
     paymentMethod: "آجل"
   });
-
-  // Use Supabase suppliers
-  const { suppliers, createSupplier, isCreating } = useSuppliers(1, 1000);
+  const [currentItem, setCurrentItem] = useState({
+    batteryType: "",
+    quantity: 0,
+    price: 0
+  });
 
   const filteredPurchases = purchases.filter(purchase =>
     purchase.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -81,11 +82,6 @@ const PurchasesPage = () => {
       supplierName: supplier.name
     }));
     setShowSupplierDialog(false);
-  };
-
-  const handleSupplierAdded = (supplierData: any) => {
-    createSupplier(supplierData);
-    setShowAddSupplierDialog(false);
   };
 
   const addItemToPurchase = () => {
@@ -296,11 +292,14 @@ const PurchasesPage = () => {
 
   const LocalSupplierSearchDialog = ({ open, onClose, onSupplierSelect }: { open: boolean; onClose: () => void; onSupplierSelect: (supplier: { id: string; name: string; balance: number }) => void }) => {
     const [searchTerm, setSearchTerm] = useState("");
+    const mockSuppliers = [
+      { id: "S001", name: "مورد البطاريات الرئيسي", balance: 5000 },
+      { id: "S002", name: "شركة البطاريات الحديثة", balance: -2000 },
+      { id: "S003", name: "مورد البطاريات السريعة", balance: 0 },
+    ];
 
-    const filteredSuppliers = suppliers.filter(supplier =>
-      supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      supplier.supplierCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      supplier.phone.includes(searchTerm)
+    const filteredSuppliers = mockSuppliers.filter(supplier =>
+      supplier.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
@@ -325,58 +324,31 @@ const PurchasesPage = () => {
             </div>
 
             <div className="max-h-60 overflow-y-auto space-y-2">
-              {filteredSuppliers.length === 0 ? (
-                <div className="text-center py-4">
-                  <p className="text-gray-500 mb-4" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                    لم يتم العثور على موردين
-                  </p>
-                  <Button
-                    onClick={() => {
-                      setShowAddSupplierDialog(true);
-                      onClose();
-                    }}
-                    className="flex items-center gap-2"
-                    style={{ fontFamily: 'Tajawal, sans-serif' }}
-                  >
-                    <Plus className="w-4 h-4" />
-                    إضافة مورد جديد
-                  </Button>
-                </div>
-              ) : (
-                filteredSuppliers.map(supplier => (
-                  <div
-                    key={supplier.id}
-                    onClick={() => {
-                      onSupplierSelect({
-                        id: supplier.id,
-                        name: supplier.name,
-                        balance: supplier.balance || 0
-                      });
-                      setSearchTerm("");
-                      onClose();
-                    }}
-                    className="p-3 border rounded cursor-pointer hover:bg-gray-50"
-                  >
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-semibold" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                          {supplier.name}
-                        </p>
-                        <p className="text-sm text-gray-600">{supplier.phone}</p>
-                        <Badge variant="secondary" className="mt-1">
-                          {supplier.supplierCode}
-                        </Badge>
-                      </div>
-                      <div className="text-left">
-                        <p className={`font-bold ${(supplier.balance || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {(supplier.balance || 0).toLocaleString()} ريال
-                        </p>
-                        <p className="text-xs text-gray-500">الرصيد</p>
-                      </div>
+              {filteredSuppliers.map(supplier => (
+                <div
+                  key={supplier.id}
+                  onClick={() => {
+                    onSupplierSelect(supplier);
+                    setSearchTerm("");
+                    onClose();
+                  }}
+                  className="p-3 border rounded cursor-pointer hover:bg-gray-50"
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-semibold" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                        {supplier.name}
+                      </p>
+                    </div>
+                    <div className="text-left">
+                      <p className={`font-bold ${supplier.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {supplier.balance.toLocaleString()} ريال
+                      </p>
+                      <p className="text-xs text-gray-500">الرصيد</p>
                     </div>
                   </div>
-                ))
-              )}
+                </div>
+              ))}
             </div>
           </div>
         </DialogContent>
@@ -723,13 +695,6 @@ const PurchasesPage = () => {
         open={showSupplierDialog}
         onClose={() => setShowSupplierDialog(false)}
         onSupplierSelect={handleSupplierSelect}
-      />
-
-      <AddSupplierDialog
-        open={showAddSupplierDialog}
-        onClose={() => setShowAddSupplierDialog(false)}
-        onSupplierAdded={handleSupplierAdded}
-        language="ar"
       />
 
       {/* Edit Purchase Dialog */}

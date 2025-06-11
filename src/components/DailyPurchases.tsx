@@ -1,17 +1,38 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CalendarDays, Plus, Trash2, Check, UserPlus } from "lucide-react";
+import { CalendarDays, Plus, Trash2, Check } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { DateNavigation } from "./DateNavigation";
 import { useDailyPurchases, DailyPurchase } from "@/hooks/useDailyPurchases";
-import { useSuppliers } from "@/hooks/useSuppliers";
-import { AddSupplierDialog } from "./AddSupplierDialog";
-import { supabase } from "@/integrations/supabase/client";
+
+const batteryTypes = [
+  "بطاريات عادية",
+  "بطاريات جافة", 
+  "بطاريات زجاج",
+  "بطاريات تعبئة",
+  "رصاص"
+];
+
+// Mock supplier data for testing direct selection
+const mockSuppliers = [
+  {
+    id: "1",
+    supplierCode: "S001",
+    name: "مورد البطاريات الذهبية",
+    phone: "0501234567",
+    lastPurchase: "2024-01-15"
+  },
+  {
+    id: "2",
+    supplierCode: "S002", 
+    name: "شركة البطاريات المتطورة",
+    phone: "0507654321",
+    lastPurchase: "2024-01-10"
+  }
+];
 
 interface DailyPurchasesProps {
   language?: string;
@@ -20,32 +41,29 @@ interface DailyPurchasesProps {
 export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
   const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
   const [localPurchases, setLocalPurchases] = useState<DailyPurchase[]>([]);
-  const [focusedCell, setFocusedCell] = useState<{ row: number, col: string } | null>(null);
-  const [showAddSupplierDialog, setShowAddSupplierDialog] = useState(false);
+  const [focusedCell, setFocusedCell] = useState<{row: number, col: string} | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
-
+  
   const isRTL = language === "ar";
-
-  const {
-    purchases: dbPurchases,
-    isLoading,
-    savePurchase,
-    deletePurchase,
+  
+  const { 
+    purchases: dbPurchases, 
+    isLoading, 
+    savePurchase, 
+    deletePurchase, 
     clearDay,
     isSaving,
-    isDeleting
+    isDeleting 
   } = useDailyPurchases(currentDate);
-
-  const { suppliers, createSupplier, isCreating } = useSuppliers(1, 1000);
 
   // Initialize local purchases when db data loads
   useEffect(() => {
-    if (dbPurchases && dbPurchases.length > 0) {
+    if (dbPurchases.length > 0) {
       setLocalPurchases(dbPurchases);
     } else {
-      // Add one empty row if no data
+      // If no saved data, start with one empty row
       setLocalPurchases([{
-        id: `temp-${Date.now()}`,
+        id: "temp-1",
         date: currentDate,
         supplierName: "",
         supplierCode: "",
@@ -76,24 +94,14 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
     });
   };
 
-  // Battery Types
-  const [batteryTypes, setBatteryTypes] = useState<string[]>([]);
-  const fetchBatteryTypes = async () => {
-    const { data, error } = await supabase.from("battery_types").select("name");
-    if (error) {
-      console.error("Error fetching battery types:", error);
-      return [];
-    }
-    return data.map((type) => type.name) || [];
+  const findSupplierBySearch = (searchTerm: string) => {
+    const term = searchTerm.toLowerCase().trim();
+    return mockSuppliers.find(supplier => 
+      supplier.phone === term || 
+      supplier.supplierCode.toLowerCase() === term ||
+      supplier.name.toLowerCase().includes(term)
+    );
   };
-
-  useEffect(() => {
-    const loadBatteryTypes = async () => {
-      const types = await fetchBatteryTypes();
-      setBatteryTypes(types);
-    };
-    loadBatteryTypes();
-  }, []);
 
   const addRow = () => {
     const newPurchase: DailyPurchase = {
@@ -115,16 +123,16 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
 
   const deleteRow = (index: number) => {
     const purchase = localPurchases[index];
-
+    
     if (localPurchases.length > 1) {
       if (purchase.isSaved && !purchase.id.startsWith('temp-')) {
         // Delete from database
         deletePurchase(purchase.id);
       }
-
+      
       // Remove from local state
       setLocalPurchases(prev => prev.filter((_, i) => i !== index));
-
+      
       if (!purchase.isSaved) {
         toast({
           title: language === "ar" ? "تم حذف السطر" : "Row Deleted",
@@ -137,7 +145,7 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
 
   const savePurchaseRow = (index: number) => {
     const purchase = localPurchases[index];
-
+    
     // Validate required fields
     if (!purchase.supplierName || !purchase.quantity || !purchase.pricePerKg) {
       toast({
@@ -198,7 +206,7 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
 
     if (e.key === 'Enter' || e.key === 'Tab') {
       e.preventDefault();
-
+      
       if (field === 'discount') {
         setFocusedCell({ row: rowIndex, col: 'save' });
       } else if (field === 'save') {
@@ -228,6 +236,28 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
     }
   };
 
+  const handleSupplierInput = (value: string, rowIndex: number) => {
+    const foundSupplier = findSupplierBySearch(value);
+    
+    if (foundSupplier) {
+      updateLocalPurchase(rowIndex, 'supplierName', foundSupplier.name);
+      updateLocalPurchase(rowIndex, 'supplierCode', foundSupplier.supplierCode);
+      updateLocalPurchase(rowIndex, 'supplierPhone', foundSupplier.phone);
+      
+      toast({
+        title: language === "ar" ? "تم العثور على المورد" : "Supplier Found",
+        description: language === "ar" ? `تم اختيار ${foundSupplier.name}` : `Selected ${foundSupplier.name}`,
+        duration: 2000,
+      });
+      
+      setTimeout(() => {
+        setFocusedCell({ row: rowIndex, col: 'batteryType' });
+      }, 100);
+    } else {
+      updateLocalPurchase(rowIndex, 'supplierName', value);
+    }
+  };
+
   const totalDailyAmount = localPurchases.reduce((sum, purchase) => sum + purchase.finalTotal, 0);
 
   useEffect(() => {
@@ -246,16 +276,6 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
     }
   }, [focusedCell]);
 
-  const handleSupplierAdded = (supplierData: any) => {
-    createSupplier(supplierData);
-    setShowAddSupplierDialog(false);
-    
-    // Refresh suppliers list
-    setTimeout(() => {
-      // The suppliers will be automatically updated via the useSuppliers hook
-    }, 1000);
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -264,25 +284,17 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
     );
   }
 
-  const [searchTerm, setSearchTerm] = useState("");
-
-  const filteredSuppliers = suppliers.filter((supplier) =>
-    supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    supplier.supplierCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    supplier.phone.includes(searchTerm)
-  );
-
   return (
     <div className="space-y-6">
       {/* Header with Date Navigation and Total */}
       <div className={`flex justify-between items-center bg-white rounded-lg shadow-lg p-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
-        <DateNavigation
+        <DateNavigation 
           currentDate={currentDate}
           onDateChange={setCurrentDate}
           onClearData={clearAllData}
           language={language}
         />
-
+        
         <div className={isRTL ? 'text-right' : 'text-left'}>
           <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
             {language === "ar" ? "إجمالي مشتريات اليوم" : "Daily Total"}
@@ -301,108 +313,61 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
             {language === "ar" ? "المشتريات من الموردين" : "Supplier Purchases"}
           </CardTitle>
         </CardHeader>
-
+        
         <CardContent className="p-0">
           <div className="overflow-x-auto" ref={tableRef}>
-            <table className="w-full table-fixed">
+            <table className="w-full">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="p-3 font-semibold w-1/4" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  <th className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
                     {language === "ar" ? "المورد" : "Supplier"}
                   </th>
-                  <th className="p-3 font-semibold w-1/4" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  <th className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
                     {language === "ar" ? "نوع البطارية" : "Battery Type"}
                   </th>
-                  <th className="p-3 font-semibold w-1/6" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  <th className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
                     {language === "ar" ? "الكمية" : "Quantity"}
                   </th>
-                  <th className="p-3 font-semibold w-1/6" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  <th className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
                     {language === "ar" ? "السعر" : "Price"}
                   </th>
-                  <th className="p-3 font-semibold w-1/6" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  <th className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
                     {language === "ar" ? "الإجمالي" : "Total"}
                   </th>
-                  <th className="p-3 font-semibold w-1/6" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  <th className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
                     {language === "ar" ? "الخصم" : "Discount"}
                   </th>
-                  <th className="p-3 font-semibold w-1/6" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  <th className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
                     {language === "ar" ? "الإجمالي النهائي" : "Final Total"}
                   </th>
-                  <th className="p-3 font-semibold w-1/6" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  <th className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
                     {language === "ar" ? "إجراءات" : "Actions"}
                   </th>
                 </tr>
               </thead>
-
+              
               <tbody>
                 {localPurchases.map((purchase, index) => (
                   <tr key={purchase.id} className={`border-b hover:bg-gray-50 ${purchase.isSaved ? 'bg-green-50' : ''}`}>
                     <td className="p-2">
-                      <div className="flex gap-1">
-                        <Select
-                          value={purchase.supplierName}
-                          onValueChange={(value) => {
-                            const selectedSupplier = suppliers.find((supplier) => supplier.name === value);
-                            if (selectedSupplier) {
-                              updateLocalPurchase(index, 'supplierName', selectedSupplier.name);
-                              updateLocalPurchase(index, 'supplierCode', selectedSupplier.supplierCode);
-                              updateLocalPurchase(index, 'supplierPhone', selectedSupplier.phone);
-                            }
-                          }}
-                        >
-                          <SelectTrigger
-                            id={`${index}-supplierName`}
-                            onKeyDown={(e) => handleKeyDown(e, index, 'supplierName')}
-                            className={`${isRTL ? 'text-right' : 'text-left'} flex-1`}
-                          >
-                            <SelectValue placeholder={language === "ar" ? "ابحث أو اختر المورد..." : "Search or select supplier..."} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <Input
-                              placeholder={language === "ar" ? "بحث بالاسم، الكود أو الجوال..." : "Search by name, code, or phone..."}
-                              value={searchTerm}
-                              onChange={(e) => setSearchTerm(e.target.value)}
-                              className="p-2"
-                            />
-                            {filteredSuppliers.map((supplier) => (
-                              <SelectItem key={supplier.supplierCode} value={supplier.name} style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                                {supplier.name}
-                              </SelectItem>
-                            ))}
-                            {filteredSuppliers.length === 0 && searchTerm && (
-                              <div className="p-2 text-center">
-                                <Button
-                                  onClick={() => setShowAddSupplierDialog(true)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="w-full"
-                                  style={{ fontFamily: 'Tajawal, sans-serif' }}
-                                >
-                                  <UserPlus className="w-4 h-4 mr-2" />
-                                  {language === "ar" ? "إضافة مورد جديد" : "Add New Supplier"}
-                                </Button>
-                              </div>
-                            )}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          onClick={() => setShowAddSupplierDialog(true)}
-                          variant="outline"
-                          size="sm"
-                          className="px-2"
-                          title={language === "ar" ? "إضافة مورد جديد" : "Add New Supplier"}
-                        >
-                          <UserPlus className="w-4 h-4" />
-                        </Button>
-                      </div>
+                      <Input
+                        id={`${index}-supplierName`}
+                        value={purchase.supplierName}
+                        onChange={(e) => handleSupplierInput(e.target.value, index)}
+                        onKeyDown={(e) => handleKeyDown(e, index, 'supplierName')}
+                        onFocus={() => setFocusedCell({row: index, col: 'supplierName'})}
+                        placeholder={language === "ar" ? "ابحث: اسم/جوال/رمز..." : "Search: name/phone/code..."}
+                        className={isRTL ? 'text-right' : 'text-left'}
+                        style={{ fontFamily: 'Tajawal, sans-serif' }}
+                      />
                     </td>
-
+                    
                     <td className="p-2">
                       <Select
                         value={purchase.batteryType}
                         onValueChange={(value) => updateLocalPurchase(index, 'batteryType', value)}
                       >
-                        <SelectTrigger
+                        <SelectTrigger 
                           id={`${index}-batteryType`}
                           onKeyDown={(e) => handleKeyDown(e, index, 'batteryType')}
                           className={isRTL ? 'text-right' : 'text-left'}
@@ -418,7 +383,7 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
                         </SelectContent>
                       </Select>
                     </td>
-
+                    
                     <td className="p-2">
                       <Input
                         id={`${index}-quantity`}
@@ -426,11 +391,11 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
                         value={purchase.quantity || ''}
                         onChange={(e) => updateLocalPurchase(index, 'quantity', Number(e.target.value) || 0)}
                         onKeyDown={(e) => handleKeyDown(e, index, 'quantity')}
-                        onFocus={() => setFocusedCell({ row: index, col: 'quantity' })}
+                        onFocus={() => setFocusedCell({row: index, col: 'quantity'})}
                         className="text-center"
                       />
                     </td>
-
+                    
                     <td className="p-2">
                       <Input
                         id={`${index}-pricePerKg`}
@@ -439,15 +404,15 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
                         value={purchase.pricePerKg || ''}
                         onChange={(e) => updateLocalPurchase(index, 'pricePerKg', Number(e.target.value) || 0)}
                         onKeyDown={(e) => handleKeyDown(e, index, 'pricePerKg')}
-                        onFocus={() => setFocusedCell({ row: index, col: 'pricePerKg' })}
+                        onFocus={() => setFocusedCell({row: index, col: 'pricePerKg'})}
                         className="text-center"
                       />
                     </td>
-
+                    
                     <td className="p-2 text-center font-semibold">
                       {purchase.total.toLocaleString()}
                     </td>
-
+                    
                     <td className="p-2">
                       <Input
                         id={`${index}-discount`}
@@ -455,15 +420,15 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
                         value={purchase.discount || ''}
                         onChange={(e) => updateLocalPurchase(index, 'discount', Number(e.target.value) || 0)}
                         onKeyDown={(e) => handleKeyDown(e, index, 'discount')}
-                        onFocus={() => setFocusedCell({ row: index, col: 'discount' })}
+                        onFocus={() => setFocusedCell({row: index, col: 'discount'})}
                         className="text-center"
                       />
                     </td>
-
+                    
                     <td className="p-2 text-center font-bold text-green-600">
                       {purchase.finalTotal.toLocaleString()}
                     </td>
-
+                    
                     <td className="p-2 text-center">
                       <div className="flex gap-1 justify-center">
                         <Button
@@ -474,7 +439,7 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
                           size="sm"
                           className={`text-green-600 hover:text-green-800 ${purchase.isSaved ? 'bg-green-100' : ''}`}
                           title={language === "ar" ? "حفظ" : "Save"}
-                          disabled={isSaving || purchase.isSaved}
+                          disabled={isSaving}
                         >
                           <Check className="w-4 h-4" />
                         </Button>
@@ -494,7 +459,7 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
               </tbody>
             </table>
           </div>
-
+          
           <div className="p-4 bg-gray-50 border-t">
             <Button
               onClick={addRow}
@@ -508,13 +473,6 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
           </div>
         </CardContent>
       </Card>
-
-      <AddSupplierDialog
-        open={showAddSupplierDialog}
-        onClose={() => setShowAddSupplierDialog(false)}
-        onSupplierAdded={handleSupplierAdded}
-        language={language}
-      />
     </div>
   );
 };
