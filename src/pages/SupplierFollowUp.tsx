@@ -484,69 +484,28 @@ const SupplierFollowUp = () => {
 
                 {/* Last 2 Purchases Comparison */}
                 {supplier.last2Quantities && supplier.last2Quantities.length >= 2 && (
-                  <div className="bg-blue-50 rounded p-2">
-                    <p className="text-xs text-center text-blue-700 font-semibold mb-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                      آخر عمليتي شراء
-                    </p>
-                    <div className="space-y-2">
-                      <div className="bg-white rounded p-2 border border-blue-200">
-                        <div className="grid grid-cols-2 gap-1 text-xs">
-                          <div>
-                            <p className="text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>الصنف:</p>
-                            <p className="font-semibold text-blue-700" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                              {supplier.last2BatteryTypes?.[0] || "غير محدد"}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>الكمية:</p>
-                            <p className="font-semibold">{supplier.last2Quantities[0]} كيلو</p>
-                          </div>
-                        </div>
-                        <div className="mt-1">
-                          <p className="text-gray-600 text-xs" style={{ fontFamily: 'Tajawal, sans-serif' }}>السعر:</p>
-                          <p className="font-semibold text-green-600">{supplier.last2Prices![0]} ريال</p>
-                        </div>
-                      </div>
-
-                      <div className="bg-white rounded p-2 border border-blue-200">
-                        <div className="grid grid-cols-2 gap-1 text-xs">
-                          <div>
-                            <p className="text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>الصنف:</p>
-                            <p className="font-semibold text-blue-700" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                              {supplier.last2BatteryTypes?.[1] || "غير محدد"}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>الكمية:</p>
-                            <p className="font-semibold">{supplier.last2Quantities[1]} كيلو</p>
-                          </div>
-                        </div>
-                        <div className="mt-1">
-                          <p className="text-gray-600 text-xs" style={{ fontFamily: 'Tajawal, sans-serif' }}>السعر:</p>
-                          <p className="font-semibold text-green-600">{supplier.last2Prices![1]} ريال</p>
-                        </div>
-                      </div>
-
-                      <div className="bg-yellow-50 rounded p-2 mt-2">
-                        <div className="grid grid-cols-2 gap-1 text-xs text-center">
-                          <div>
-                            <p className="text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>تغيير الكمية</p>
-                            <p className={`font-semibold ${supplier.last2Quantities[0] > supplier.last2Quantities[1] ? 'text-green-600' : 'text-red-600'}`}>
-                              {supplier.last2Quantities[0] > supplier.last2Quantities[1] ? '↗' : '↘'}
-                              {Math.abs(supplier.last2Quantities[0] - supplier.last2Quantities[1])}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>تغيير السعر</p>
-                            <p className={`font-semibold ${supplier.last2Prices![0] > supplier.last2Prices![1] ? 'text-red-600' : 'text-green-600'}`}>
-                              {supplier.last2Prices![0] > supplier.last2Prices![1] ? '↗' : '↘'}
-                              {Math.abs(supplier.last2Prices![0] - supplier.last2Prices![1])}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <table className="w-full text-xs bg-blue-50 rounded mb-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                    <thead>
+                      <tr className="text-blue-700 font-semibold text-center"> 
+                        <th className="p-1 border-b border-blue-200">الصنف</th>
+                        <th className="p-1 border-b border-blue-200">الكمية</th>
+                        <th className="p-1 border-b border-blue-200">السعر</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="bg-white text-center"> 
+                        <td className="p-1 border-b border-blue-100">{supplier.last2BatteryTypes?.[0] || "غير محدد"}</td>
+                        <td className="p-1 border-b border-blue-100">{supplier.last2Quantities[0]} كيلو</td>
+                        <td className="p-1 border-b border-blue-100">{supplier.last2Prices?.[0]} ريال</td>
+                      </tr>
+                      <tr className="bg-white text-center"> 
+                        <td className="p-1 border-b border-blue-100">{supplier.last2BatteryTypes?.[1] || "غير محدد"}</td>
+                        <td className="p-1 border-b border-blue-100">{supplier.last2Quantities[1]} كيلو</td>
+                        <td className="p-1 border-b border-blue-100">{supplier.last2Prices?.[1]} ريال</td>
+                      </tr>
+                      
+                    </tbody>
+                  </table>
                 )}
 
                 <div className="space-y-2">
