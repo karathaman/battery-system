@@ -107,15 +107,19 @@ const supplierService = {
     };
   },
 
-  updateSupplier: async (id: string, data: Partial<SupplierFormData>): Promise<Supplier> => {
+  updateSupplier: async (id: string, data: Partial<SupplierFormData & { messageSent?: boolean; lastMessageSent?: string }>): Promise<Supplier> => {
+    const updateData: any = {};
+    
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.phone !== undefined) updateData.phone = data.phone;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.notes !== undefined) updateData.notes = data.notes;
+    if (data.messageSent !== undefined) updateData.message_sent = data.messageSent;
+    if (data.lastMessageSent !== undefined) updateData.last_message_sent = data.lastMessageSent;
+
     const { data: updatedSupplier, error } = await supabase
       .from('suppliers')
-      .update({
-        name: data.name,
-        phone: data.phone,
-        description: data.description,
-        notes: data.notes
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
