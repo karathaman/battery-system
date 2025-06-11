@@ -21,7 +21,7 @@ const batteryTypeService = {
   getBatteryTypes: async (): Promise<BatteryType[]> => {
     const { data, error } = await supabase
       .from('battery_types')
-      .select('*')
+      .select('id, name, description, unit_price, is_active, created_at')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -29,7 +29,10 @@ const batteryTypeService = {
       throw new Error(error.message);
     }
 
-    return data || [];
+    return data?.map(item => ({
+      ...item,
+      is_active: item.is_active ?? true
+    })) || [];
   },
 
   createBatteryType: async (data: BatteryTypeFormData): Promise<BatteryType> => {
@@ -38,9 +41,10 @@ const batteryTypeService = {
       .insert({
         name: data.name,
         description: data.description,
-        unit_price: data.unit_price
+        unit_price: data.unit_price,
+        is_active: true
       })
-      .select()
+      .select('id, name, description, unit_price, is_active, created_at')
       .single();
 
     if (error) {
@@ -48,7 +52,10 @@ const batteryTypeService = {
       throw new Error(error.message);
     }
 
-    return newBatteryType;
+    return {
+      ...newBatteryType,
+      is_active: newBatteryType.is_active ?? true
+    };
   },
 
   updateBatteryType: async (id: string, data: Partial<BatteryTypeFormData>): Promise<BatteryType> => {
@@ -56,7 +63,7 @@ const batteryTypeService = {
       .from('battery_types')
       .update(data)
       .eq('id', id)
-      .select()
+      .select('id, name, description, unit_price, is_active, created_at')
       .single();
 
     if (error) {
@@ -64,7 +71,10 @@ const batteryTypeService = {
       throw new Error(error.message);
     }
 
-    return updatedBatteryType;
+    return {
+      ...updatedBatteryType,
+      is_active: updatedBatteryType.is_active ?? true
+    };
   },
 
   deleteBatteryType: async (id: string): Promise<void> => {
@@ -84,7 +94,7 @@ const batteryTypeService = {
       .from('battery_types')
       .update({ is_active: isActive })
       .eq('id', id)
-      .select()
+      .select('id, name, description, unit_price, is_active, created_at')
       .single();
 
     if (error) {
@@ -92,7 +102,10 @@ const batteryTypeService = {
       throw new Error(error.message);
     }
 
-    return updatedBatteryType;
+    return {
+      ...updatedBatteryType,
+      is_active: updatedBatteryType.is_active ?? true
+    };
   }
 };
 

@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { AddSupplierDialog } from "@/components/AddSupplierDialog";
 import { SupplierDetailsDialog } from "@/components/SupplierDetailsDialog";
 import { EditSupplierDialog } from "@/components/EditSupplierDialog";
+import { useSuppliers } from "@/hooks/use-suppliers";
 
 interface Purchase {
   id: string;
@@ -107,7 +108,6 @@ const mockSuppliers: Supplier[] = [
 
 const SupplierFollowUp = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [suppliers, setSuppliers] = useState<Supplier[]>(mockSuppliers);
   const [editingSupplier, setEditingSupplier] = useState<string | null>(null);
   const [supplierNotes, setSupplierNotes] = useState("");
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -115,6 +115,20 @@ const SupplierFollowUp = () => {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingSupplierData, setEditingSupplierData] = useState<Supplier | null>(null);
+
+  const {
+    suppliers,
+    pagination,
+    isLoading,
+    createSupplier,
+    updateSupplier,
+    deleteSupplier,
+    blockSupplier,
+    unblockSupplier,
+    isCreating,
+    isUpdating,
+    isDeleting
+  } = useSuppliers(1, 50, { searchTerm });
 
   const filteredSuppliers = suppliers.filter(supplier =>
     supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -158,71 +172,14 @@ const SupplierFollowUp = () => {
     }
   };
 
-  const sendMessageToSupplier = (supplierId: string) => {
-    setSuppliers(prev => prev.map(supplier =>
-      supplier.id === supplierId
-        ? {
-          ...supplier,
-          messageSent: true,
-          lastMessageSent: new Date().toISOString().split('T')[0]
-        }
-        : supplier
-    ));
-
-    const supplier = suppliers.find(s => s.id === supplierId);
-    toast({
-      title: "تم إرسال الرسالة",
-      description: `تم إرسال رسالة للمورد: ${supplier?.name}`,
-      duration: 2000,
-    });
-  };
-
-  const blockSupplier = (supplierId: string) => {
-    const reason = prompt("سبب حظر المورد:");
-    if (reason) {
-      setSuppliers(prev => prev.map(supplier =>
-        supplier.id === supplierId
-          ? { ...supplier, isBlocked: true, blockReason: reason }
-          : supplier
-      ));
-
-      toast({
-        title: "تم حظر المورد",
-        description: "تم حظر المورد بنجاح",
-        duration: 2000,
-      });
-    }
-  };
-
-  const unblockSupplier = (supplierId: string) => {
-    setSuppliers(prev => prev.map(supplier =>
-      supplier.id === supplierId
-        ? { ...supplier, isBlocked: false, blockReason: undefined }
-        : supplier
-    ));
-
-    toast({
-      title: "تم إلغاء حظر المورد",
-      description: "تم إلغاء حظر المورد بنجاح",
-      duration: 2000,
-    });
-  };
-
   const saveNotes = (supplierId: string) => {
-    setSuppliers(prev => prev.map(supplier =>
-      supplier.id === supplierId
-        ? { ...supplier, notes: supplierNotes }
-        : supplier
-    ));
+    updateSupplier({
+      id: supplierId,
+      data: { notes: supplierNotes }
+    });
 
     setEditingSupplier(null);
     setSupplierNotes("");
-
-    toast({
-      title: "تم حفظ الملاحظات",
-      description: "تم حفظ ملاحظات المورد بنجاح",
-      duration: 2000,
-    });
   };
 
   const getDaysSinceLastPurchase = (lastPurchase?: string) => {
@@ -248,15 +205,13 @@ const SupplierFollowUp = () => {
     const whatsappUrl = `https://wa.me/${supplier.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
 
-    setSuppliers(prev => prev.map(s =>
-      s.id === supplier.id
-        ? {
-          ...s,
-          messageSent: true,
-          lastMessageSent: new Date().toISOString().split('T')[0]
-        }
-        : s
-    ));
+    updateSupplier({
+      id: supplier.id,
+      data: {
+        messageSent: true,
+        lastMessageSent: new Date().toISOString().split('T')[0]
+      }
+    });
 
     toast({
       title: "تم فتح واتساب",
@@ -271,10 +226,53 @@ const SupplierFollowUp = () => {
   };
 
   const handleSupplierUpdated = (updatedSupplier: Supplier) => {
-    setSuppliers(prev => prev.map(s =>
-      s.id === updatedSupplier.id ? updatedSupplier : s
-    ));
+    updateSupplier({
+      id: updatedSupplier.id,
+      data: {
+        name: updatedSupplier.name,
+        phone: updatedSupplier.phone,
+        description: updatedSupplier.description,
+        notes: updatedSupplier.notes
+      }
+    });
   };
+
+  const handleSupplierAdded = (supplierData: any) => {
+    createSupplier(supplierData);
+    setShowAddDialog(false);
+  };
+
+  const handleDeleteSupplier = (supplierId: string) => {
+    if (confirm('هل أنت متأكد من حذف هذا المورد؟')) {
+      deleteSupplier(supplierId);
+    }
+  };
+
+  const handleBlockSupplier = (supplierId: string) => {
+    const reason = prompt('يرجى إدخال سبب الحظر:');
+    if (reason) {
+      blockSupplier({ id: supplierId, reason });
+    }
+  };
+
+  const handleUnblockSupplier = (supplierId: string) => {
+    if (confirm('هل أنت متأكد من إلغاء حظر هذا المورد؟')) {
+      unblockSupplier(supplierId);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-2 text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+            جاري تحميل البيانات...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -546,7 +544,7 @@ const SupplierFollowUp = () => {
 
                     {supplier.isBlocked ? (
                       <Button
-                        onClick={() => unblockSupplier(supplier.id)}
+                        onClick={() => handleUnblockSupplier(supplier.id)}
                         variant="outline"
                         size="sm"
                         className="flex items-center gap-1 flex-row-reverse text-xs text-green-600"
@@ -557,7 +555,7 @@ const SupplierFollowUp = () => {
                       </Button>
                     ) : (
                       <Button
-                        onClick={() => blockSupplier(supplier.id)}
+                        onClick={() => handleBlockSupplier(supplier.id)}
                         variant="outline"
                         size="sm"
                         className="flex items-center gap-1 flex-row-reverse text-xs text-red-600"
@@ -638,12 +636,7 @@ const SupplierFollowUp = () => {
       <AddSupplierDialog
         open={showAddDialog}
         onClose={() => setShowAddDialog(false)}
-        onSupplierAdded={(supplier) => {
-          setSuppliers(prev => [...prev, supplier]);
-          setShowAddDialog(false);
-        }}
-        nextSupplierCode={generateNextSupplierCode()}
-        language="ar"
+        onSupplierAdded={handleSupplierAdded}
       />
 
       <SupplierDetailsDialog

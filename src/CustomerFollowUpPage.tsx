@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -164,13 +163,14 @@ const CustomerFollowUp = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50" dir="rtl">
       <Button
-                onClick={() => setShowAddDialog(true)}
-                className="flex items-center gap-2 flex-row-reverse bg-blue-600 hover:bg-blue-700"
-                style={{ fontFamily: 'Tajawal, sans-serif' }}
-              >
-                <UserPlus className="w-4 h-4" />
-                إضافة عميل جديد
-              </Button>
+        onClick={() => setShowAddDialog(true)}
+        className="flex items-center gap-2 flex-row-reverse bg-blue-600 hover:bg-blue-700"
+        style={{ fontFamily: 'Tajawal, sans-serif' }}
+      >
+        <UserPlus className="w-4 h-4" />
+        إضافة عميل جديد
+      </Button>
+      
       <div className="container mx-auto p-4 sm:p-6 max-w-7xl">
         {/* Header */}
         <div className="text-center mb-6 sm:mb-8">
@@ -492,14 +492,13 @@ const CustomerFollowUp = () => {
         onClose={() => setShowCustomerDetails(false)}
         customer={selectedCustomer}
       />
+      
       {/* Add Customer Dialog */}
-            <AddCustomerDialog
-              open={showAddDialog}
-              onClose={() => setShowAddDialog(false)}
-              onCustomerAdded={handleCustomerAdded}
-              nextCustomerCode={generateNextCustomerCode()}
-              language="ar"
-            />
+      <AddCustomerDialog
+        open={showAddDialog}
+        onClose={() => setShowAddDialog(false)}
+        onCustomerAdded={handleCustomerAdded}
+      />
     </div>
   );
 };

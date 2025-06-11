@@ -12,11 +12,21 @@ interface AddCustomerDialogProps {
   open: boolean;
   onClose: () => void;
   onCustomerAdded: (customer: CustomerFormData) => void;
+  nextCustomerCode?: string;
+  initialName?: string;
+  language?: string;
 }
 
-export const AddCustomerDialog = ({ open, onClose, onCustomerAdded }: AddCustomerDialogProps) => {
+export const AddCustomerDialog = ({ 
+  open, 
+  onClose, 
+  onCustomerAdded,
+  nextCustomerCode,
+  initialName = "",
+  language = "ar"
+}: AddCustomerDialogProps) => {
   const [formData, setFormData] = useState<CustomerFormData>({
-    name: "",
+    name: initialName,
     phone: "",
     description: "",
     notes: ""
@@ -57,6 +67,9 @@ export const AddCustomerDialog = ({ open, onClose, onCustomerAdded }: AddCustome
         <DialogHeader>
           <DialogTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
             إضافة عميل جديد
+            {nextCustomerCode && (
+              <span className="text-sm text-gray-500 mr-2">({nextCustomerCode})</span>
+            )}
           </DialogTitle>
         </DialogHeader>
 

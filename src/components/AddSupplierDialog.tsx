@@ -12,9 +12,17 @@ interface AddSupplierDialogProps {
   open: boolean;
   onClose: () => void;
   onSupplierAdded: (supplier: SupplierFormData) => void;
+  nextSupplierCode?: string;
+  language?: string;
 }
 
-export const AddSupplierDialog = ({ open, onClose, onSupplierAdded }: AddSupplierDialogProps) => {
+export const AddSupplierDialog = ({ 
+  open, 
+  onClose, 
+  onSupplierAdded,
+  nextSupplierCode,
+  language = "ar"
+}: AddSupplierDialogProps) => {
   const [formData, setFormData] = useState<SupplierFormData>({
     name: "",
     phone: "",
@@ -57,6 +65,9 @@ export const AddSupplierDialog = ({ open, onClose, onSupplierAdded }: AddSupplie
         <DialogHeader>
           <DialogTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
             إضافة مورد جديد
+            {nextSupplierCode && (
+              <span className="text-sm text-gray-500 mr-2">({nextSupplierCode})</span>
+            )}
           </DialogTitle>
         </DialogHeader>
 
