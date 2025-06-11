@@ -35,7 +35,7 @@ export const useSuppliers = (page = 1, limit = 10, filters?: FilterOptions) => {
     }
   });
 
-  const updateSupplierMutation = useMutation<Supplier, Error, { id: string; data: Partial<SupplierFormData> }>({
+  const updateSupplierMutation = useMutation<Supplier, Error, { id: string; data: Partial<SupplierFormData & { messageSent?: boolean; lastMessageSent?: string }> }>({
     mutationFn: ({ id, data }) => supplierService.updateSupplier(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
