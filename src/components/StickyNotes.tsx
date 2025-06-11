@@ -7,6 +7,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { StickyNote, Plus, Trash2, Edit3, Palette, CheckSquare, Square } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client.ts";
+
 
 interface ChecklistItem {
   id: string;
@@ -40,31 +43,8 @@ const noteColors = [
 ];
 
 export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesProps) => {
-  const [notes, setNotes] = useState<Note[]>([
-    {
-      id: "1",
-      title: "متابعة عميل أحمد",
-      content: "الاتصال بأحمد لتذكيره بموعد التسليم",
-      completed: false,
-      createdAt: new Date().toISOString(),
-      color: "yellow",
-      type: "note"
-    },
-    {
-      id: "2",
-      title: "مهام اليوم",
-      content: "",
-      completed: false,
-      createdAt: new Date().toISOString(),
-      color: "blue",
-      type: "checklist",
-      checklistItems: [
-        { id: "c1", text: "مقابلة المدير", completed: false },
-        { id: "c2", text: "تنظيف المكتب", completed: true },
-        { id: "c3", text: "مراجعة التقارير", completed: false }
-      ]
-    }
-  ]);
+ const [notes, setNotes] = useState<Note[]>([]); // إزالة البيانات الافتراضية
+ 
   const [newNote, setNewNote] = useState({ title: "", content: "", color: "yellow", type: "note" as 'note' | 'checklist' });
   const [newChecklistItems, setNewChecklistItems] = useState<string[]>([""]);
   const [editingNote, setEditingNote] = useState<string | null>(null);
@@ -75,6 +55,26 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
   const getColorClasses = (color: string) => {
     return noteColors.find(c => c.value === color) || noteColors[0];
   };
+
+  useEffect(() => {
+    const fetchNotes = async () => {
+      const { data, error } = await supabase.from("tasks").select("*");
+      if (error) console.error(error);
+      else setNotes(
+        (data || []).map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          content: item.content ?? "",
+          completed: item.completed ?? false,
+          createdAt: item.createdAt ?? item.created_date ?? new Date().toISOString(),
+          color: item.color ?? "yellow",
+          type: item.type ?? "note",
+          checklistItems: item.checklistItems ?? undefined
+        }))
+      );
+    };
+    fetchNotes();
+  }, []);
 
   const addNote = () => {
     if (!newNote.title.trim()) {
@@ -782,3 +782,7 @@ const EditNoteForm = ({ note, onSave, onCancel, language = "ar", compact = false
     </div>
   );
 };
+function setNotes(arg0: { color: string | null; completed: boolean | null; completed_date: string | null; created_date: string | null; id: string; title: string; }[]) {
+  throw new Error("Function not implemented.");
+}
+

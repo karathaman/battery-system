@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2, CheckSquare, Palette } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client.ts";
 
 interface Task {
   id: string;
@@ -29,29 +31,26 @@ const groupColors = [
 ];
 
 export const TaskList = () => {
-  const [taskGroups, setTaskGroups] = useState<TaskGroup[]>([
-    {
-      id: "1",
-      title: "المهام الإدارية",
-      color: "yellow",
-      tasks: [
-        { id: "1", title: "مراجعة فواتير الموردين", completed: false,   createdDate: "2024-01-15" },
-        { id: "2", title: "تحديث أسعار البطاريات", completed: true,   createdDate: "2024-01-15" },
-      ],
-    },
-    {
-      id: "2",
-      title: "المهام الفنية",
-      color: "blue",
-      tasks: [
-        { id: "3", title: "جرد المخزن الشهري", completed: false,  createdDate: "2024-01-15" },
-        { id: "4", title: "متابعة مديونيات العملاء", completed: false,   createdDate: "2024-01-15" },
-      ],
-    },
-  ]);
+    const [taskGroups, setTaskGroups] = useState<TaskGroup[]>([]); // إزالة البيانات الافتراضية
 
   const [newGroupTitle, setNewGroupTitle] = useState("");
   const [newGroupColor, setNewGroupColor] = useState("yellow");
+
+    useEffect(() => {
+    const fetchTaskGroups = async () => {
+      const { data, error } = await supabase.from("task_groups").select("*");
+      if (error) console.error(error);
+      else setTaskGroups(
+        (data || []).map((group: any) => ({
+          id: group.id,
+          title: group.title,
+          color: group.color || "yellow",
+          tasks: [],
+        }))
+      );
+    };
+    fetchTaskGroups();
+  }, []);
 
   const addTaskGroup = () => {
     if (!newGroupTitle.trim()) {
