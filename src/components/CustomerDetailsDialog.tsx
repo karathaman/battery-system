@@ -31,7 +31,7 @@ interface Customer {
   notes?: string;
   isBlocked?: boolean;
   blockReason?: string;
-  balance: number; // Made required
+  balance: number;
   messageSent?: boolean;
   lastMessageSent?: string;
   last2Quantities?: number[];
@@ -47,6 +47,10 @@ interface CustomerDetailsDialogProps {
 
 export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetailsDialogProps) => {
   const [customerHistory, setCustomerHistory] = useState([]);
+  const [dateRange, setDateRange] = useState<{ startDate: string | null; endDate: string | null }>({
+    startDate: null,
+    endDate: null,
+  });
 
   useEffect(() => {
     if (open && customer) {
@@ -127,22 +131,6 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
   };
-
-  const [dateRange, setDateRange] = useState<{ startDate: string | null; endDate: string | null }>({
-    startDate: null,
-    endDate: null,
-  });
-
-  useEffect(() => {
-    if (open && customer) {
-      const fetchHistory = async () => {
-        const history = await fetchCustomerHistory(customer.customerCode);
-        setCustomerHistory(history);
-      };
-
-      fetchHistory();
-    }
-  }, [open, customer]);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
