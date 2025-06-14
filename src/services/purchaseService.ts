@@ -90,8 +90,8 @@ const updateSupplierStats = async (supplierId: string) => {
       // Sum total amounts
       totalAmount += purchase.total;
       
-      // Add to balance if payment method is credit/اجل
-      if (purchase.payment_method === 'credit' || purchase.payment_method === 'اجل') {
+      // Add to balance if payment method is credit (checking for both credit and اجل)
+      if (purchase.payment_method === 'check' || purchase.payment_method === 'bank_transfer') {
         balance += purchase.total;
       }
       
@@ -179,7 +179,13 @@ const purchaseService = {
       throw new Error(error.message);
     }
 
-    return data || [];
+    // Transform data to match expected format
+    const transformedData = (data || []).map(purchase => ({
+      ...purchase,
+      items: purchase.purchase_items || []
+    }));
+
+    return transformedData;
   },
 
   createPurchase: async (purchaseData: PurchaseFormData): Promise<Purchase> => {
@@ -195,8 +201,8 @@ const purchaseService = {
           discount: purchaseData.discount,
           tax: purchaseData.tax,
           total: purchaseData.total,
-          payment_method: purchaseData.payment_method,
-          status: purchaseData.status,
+          payment_method: purchaseData.payment_method as any,
+          status: purchaseData.status as any,
           notes: purchaseData.notes
         })
         .select()
@@ -278,8 +284,8 @@ const purchaseService = {
           discount: purchaseData.discount,
           tax: purchaseData.tax,
           total: purchaseData.total,
-          payment_method: purchaseData.payment_method,
-          status: purchaseData.status,
+          payment_method: purchaseData.payment_method as any,
+          status: purchaseData.status as any,
           notes: purchaseData.notes
         })
         .eq('id', id)
