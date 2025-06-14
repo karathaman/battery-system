@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -738,9 +739,9 @@ const EditPurchaseForm = ({ purchase, onSave, onCancel }: EditPurchaseFormProps)
       ...updatedItems[index],
       [field]: value,
       total:
-        field === "quantity" || field === "price"
+        field === "quantity" || field === "price_per_kg"
           ? (field === "quantity" ? value : updatedItems[index].quantity) *
-          (field === "price" ? value : updatedItems[index].price || (updatedItems[index] as any).price_per_kg)
+          (field === "price_per_kg" ? value : updatedItems[index].price_per_kg)
           : updatedItems[index].total,
     };
     setEditedPurchase({ ...editedPurchase, items: updatedItems });
