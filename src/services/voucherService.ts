@@ -33,11 +33,7 @@ export const voucherService = {
   async getVouchers(page = 1, limit = 50, filters?: FilterOptions): Promise<PaginatedResponse<VoucherData>> {
     let query = supabase
       .from('vouchers')
-      .select(`
-        *,
-        customers!vouchers_entity_id_fkey(name),
-        suppliers!vouchers_entity_id_fkey(name)
-      `, { count: 'exact' })
+      .select('*', { count: 'exact' })
       .order('created_at', { ascending: false });
 
     // Apply filters
@@ -69,18 +65,15 @@ export const voucherService = {
       throw error;
     }
 
-    // Transform data to include entity_name and amount from joined tables
+    // Transform data
     const transformedData = (data || []).map((voucher: any) => ({
       id: voucher.id,
       voucher_number: voucher.voucher_number,
       date: voucher.date,
-      type: voucher.type,
+      type: voucher.type as 'receipt' | 'payment',
       entity_type: voucher.entity_type,
       entity_id: voucher.entity_id,
-      entity_name: voucher.entity_name || 
-        (voucher.entity_type === 'customer' 
-          ? voucher.customers?.name 
-          : voucher.suppliers?.name) || '',
+      entity_name: voucher.entity_name || '',
       amount: voucher.amount || 0,
       description: voucher.notes,
       payment_method: voucher.payment_method,
@@ -141,6 +134,9 @@ export const voucherService = {
       throw error;
     }
 
+    // Update entity balance based on voucher type
+    await this.updateEntityBalance(data.entity_type, data.entity_id, data.amount, data.type);
+
     return {
       id: newVoucher.id,
       voucher_number: newVoucher.voucher_number,
@@ -159,6 +155,17 @@ export const voucherService = {
   },
 
   async updateVoucher(id: string, data: Partial<VoucherFormData>): Promise<VoucherData> {
+    // Get the original voucher first
+    const { data: originalVoucher } = await supabase
+      .from('vouchers')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (!originalVoucher) {
+      throw new Error('Voucher not found');
+    }
+
     // Map transfer to bank_transfer for database compatibility
     const updateData: any = { ...data };
     if (data.payment_method === 'transfer') {
@@ -181,6 +188,17 @@ export const voucherService = {
       throw error;
     }
 
+    // If amount changed, update the balance difference
+    if (data.amount !== undefined && data.amount !== originalVoucher.amount) {
+      const balanceDifference = data.amount - originalVoucher.amount;
+      await this.updateEntityBalance(
+        originalVoucher.entity_type,
+        originalVoucher.entity_id,
+        balanceDifference,
+        originalVoucher.type
+      );
+    }
+
     return {
       id: updatedVoucher.id,
       voucher_number: updatedVoucher.voucher_number,
@@ -199,6 +217,24 @@ export const voucherService = {
   },
 
   async deleteVoucher(id: string): Promise<void> {
+    // Get the voucher first to reverse the balance
+    const { data: voucher } = await supabase
+      .from('vouchers')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (voucher) {
+      // Reverse the balance change
+      const reverseType = voucher.type === 'receipt' ? 'payment' : 'receipt';
+      await this.updateEntityBalance(
+        voucher.entity_type,
+        voucher.entity_id,
+        voucher.amount,
+        reverseType
+      );
+    }
+
     const { error } = await supabase
       .from('vouchers')
       .delete()
@@ -207,6 +243,37 @@ export const voucherService = {
     if (error) {
       console.error('Error deleting voucher:', error);
       throw error;
+    }
+  },
+
+  async updateEntityBalance(entityType: 'customer' | 'supplier', entityId: string, amount: number, voucherType: 'receipt' | 'payment'): Promise<void> {
+    const tableName = entityType === 'customer' ? 'customers' : 'suppliers';
+    
+    // For customers: receipt reduces balance (payment received), payment increases balance (credit given)
+    // For suppliers: payment reduces balance (payment made), receipt increases balance (credit received)
+    let balanceChange = 0;
+    
+    if (entityType === 'customer') {
+      balanceChange = voucherType === 'receipt' ? -amount : amount;
+    } else {
+      balanceChange = voucherType === 'payment' ? -amount : amount;
+    }
+
+    // Get current balance
+    const { data: entity } = await supabase
+      .from(tableName)
+      .select('balance')
+      .eq('id', entityId)
+      .single();
+
+    if (entity) {
+      const currentBalance = entity.balance || 0;
+      const newBalance = currentBalance + balanceChange;
+
+      await supabase
+        .from(tableName)
+        .update({ balance: newBalance })
+        .eq('id', entityId);
     }
   }
 };

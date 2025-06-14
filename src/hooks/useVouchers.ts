@@ -14,21 +14,29 @@ export const useVouchers = (page = 1, limit = 50, filters?: FilterOptions) => {
     refetch
   } = useQuery<PaginatedResponse<VoucherData>>({
     queryKey: ['vouchers', page, limit, filters],
-    queryFn: () => voucherService.getVouchers(page, limit, filters)
+    queryFn: () => voucherService.getVouchers(page, limit, filters),
+    refetchOnWindowFocus: false,
+    staleTime: 0, // Always refetch to get latest data
   });
 
   const createVoucherMutation = useMutation<VoucherData, Error, VoucherFormData>({
     mutationFn: (data) => voucherService.createVoucher(data),
     onSuccess: () => {
+      // Invalidate all related queries to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ['vouchers'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      
+      // Force refetch to ensure immediate update
+      refetch();
+      
       toast({
         title: "تم إنشاء السند",
         description: "تم إنشاء السند وتحديث الرصيد بنجاح",
       });
     },
     onError: (error) => {
+      console.error('Create voucher error:', error);
       toast({
         title: "خطأ",
         description: "فشل في إنشاء السند",
@@ -43,12 +51,17 @@ export const useVouchers = (page = 1, limit = 50, filters?: FilterOptions) => {
       queryClient.invalidateQueries({ queryKey: ['vouchers'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      
+      // Force refetch
+      refetch();
+      
       toast({
         title: "تم التحديث",
         description: "تم تحديث السند والرصيد بنجاح",
       });
     },
     onError: (error) => {
+      console.error('Update voucher error:', error);
       toast({
         title: "خطأ",
         description: "فشل في تحديث السند",
@@ -63,12 +76,17 @@ export const useVouchers = (page = 1, limit = 50, filters?: FilterOptions) => {
       queryClient.invalidateQueries({ queryKey: ['vouchers'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      
+      // Force refetch
+      refetch();
+      
       toast({
         title: "تم الحذف",
         description: "تم حذف السند وتحديث الرصيد بنجاح",
       });
     },
     onError: (error) => {
+      console.error('Delete voucher error:', error);
       toast({
         title: "خطأ",
         description: "فشل في حذف السند",
