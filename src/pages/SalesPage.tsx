@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -5,27 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { ShoppingCart, Plus, Search, CreditCard, Banknote, Smartphone, Calendar, Printer, FileText, Edit, Trash2 } from "lucide-react";
+import { ShoppingCart, Plus, Search, CreditCard, Banknote, Smartphone, Calendar, Printer, Edit, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Sale, SaleItem } from "@/types/sales";
 import { printInvoice } from "@/utils/printUtils";
 import { addTransactionToCustomer, updateCustomerBalance, removeCustomerTransaction } from "@/utils/accountUtils";
-
-interface Customer {
-  id: string;
-  customerCode: string;
-  name: string;
-  phone: string;
-  balance: number;
-}
-
-const mockCustomers: Customer[] = [
-  { id: "1", customerCode: "C001", name: "أحمد محمد السعدي", phone: "0501234567", balance: 1200 },
-  { id: "2", customerCode: "C002", name: "فاطمة علي الأحمد", phone: "0507654321", balance: -500 },
-  { id: "3", customerCode: "C003", name: "محمد عبدالله الحربي", phone: "0502345678", balance: 0 },
-];
+import { CustomerSearchDialog } from "@/components/CustomerSearchDialog";
+import { Customer } from "@/types";
 
 const batteryTypes = [
   "بطاريات عادية",
@@ -49,16 +37,10 @@ const SalesPage = () => {
   ]);
   const [discount, setDiscount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("cash");
-  const [searchTerm, setSearchTerm] = useState("");
   const [recentSales, setRecentSales] = useState<Sale[]>([]);
   const [vatEnabled, setVatEnabled] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
-
-  const filteredCustomers = mockCustomers.filter(customer =>
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.phone.includes(searchTerm) ||
-    customer.customerCode.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const [showCustomerDialog, setShowCustomerDialog] = useState(false);
 
   const addSaleItem = () => {
     const newItem: SaleItem = {
@@ -107,7 +89,21 @@ const SalesPage = () => {
 
   const editSale = (sale: Sale) => {
     setEditingSale(sale);
-    setSelectedCustomer(mockCustomers.find(c => c.id === sale.customerId) || null);
+    // Note: We would need to find the customer by ID from the database
+    // For now, we'll create a minimal customer object
+    const customer: Customer = {
+      id: sale.customerId,
+      customerCode: `C${sale.customerId.substring(0, 3).toUpperCase()}`,
+      name: sale.customerName,
+      phone: '',
+      totalPurchases: 0,
+      totalAmount: 0,
+      averagePrice: 0,
+      purchases: [],
+      isBlocked: false,
+      messageSent: false
+    };
+    setSelectedCustomer(customer);
     setSaleItems([...sale.items]);
     setDiscount(sale.discount);
     setPaymentMethod(sale.paymentMethod);
@@ -231,67 +227,10 @@ const SalesPage = () => {
     });
   };
 
-  const CustomerSearchDialog = () => (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="w-full flex items-center gap-2 flex-row-reverse">
-          <Search className="w-4 h-4" />
-          {selectedCustomer ? selectedCustomer.name : "اختر العميل"}
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-md" dir="rtl">
-        <DialogHeader>
-          <DialogTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
-            اختيار العميل
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4">
-          <div className="relative">
-            <Search className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="ابحث عن عميل..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pr-10"
-              style={{ fontFamily: 'Tajawal, sans-serif' }}
-            />
-          </div>
-          
-          <div className="max-h-60 overflow-y-auto space-y-2">
-            {filteredCustomers.map(customer => (
-              <div
-                key={customer.id}
-                onClick={() => {
-                  setSelectedCustomer(customer);
-                  setSearchTerm("");
-                }}
-                className="p-3 border rounded cursor-pointer hover:bg-gray-50"
-              >
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-semibold" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                      {customer.name}
-                    </p>
-                    <p className="text-sm text-gray-600">{customer.phone}</p>
-                    <Badge variant="secondary" className="mt-1">
-                      {customer.customerCode}
-                    </Badge>
-                  </div>
-                  <div className="text-left">
-                    <p className={`font-bold ${customer.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {customer.balance.toLocaleString()} ريال
-                    </p>
-                    <p className="text-xs text-gray-500">الرصيد</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
+  const handleCustomerSelect = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setShowCustomerDialog(false);
+  };
 
   return (
     <div className="space-y-6">
@@ -321,7 +260,14 @@ const SalesPage = () => {
               {/* Customer Selection */}
               <div>
                 <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>العميل</Label>
-                <CustomerSearchDialog />
+                <Button 
+                  variant="outline" 
+                  className="w-full flex items-center gap-2 flex-row-reverse"
+                  onClick={() => setShowCustomerDialog(true)}
+                >
+                  <Search className="w-4 h-4" />
+                  {selectedCustomer ? selectedCustomer.name : "اختر العميل"}
+                </Button>
                 {selectedCustomer && (
                   <div className="mt-2 p-3 bg-blue-50 rounded border">
                     <div className="flex justify-between items-center">
@@ -330,12 +276,15 @@ const SalesPage = () => {
                           {selectedCustomer.name}
                         </p>
                         <p className="text-sm text-gray-600">{selectedCustomer.phone}</p>
+                        <Badge variant="secondary" className="mt-1">
+                          {selectedCustomer.customerCode}
+                        </Badge>
                       </div>
                       <div className="text-left">
-                        <p className={`font-bold ${selectedCustomer.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {selectedCustomer.balance.toLocaleString()} ريال
+                        <p className="font-bold text-green-600">
+                          {selectedCustomer.totalAmount.toLocaleString()} ريال
                         </p>
-                        <p className="text-xs text-gray-500">الرصيد الحالي</p>
+                        <p className="text-xs text-gray-500">إجمالي المشتريات</p>
                       </div>
                     </div>
                   </div>
@@ -580,6 +529,14 @@ const SalesPage = () => {
           )}
         </div>
       </div>
+
+      {/* Customer Search Dialog */}
+      <CustomerSearchDialog
+        open={showCustomerDialog}
+        onClose={() => setShowCustomerDialog(false)}
+        onSelectCustomer={handleCustomerSelect}
+        language="ar"
+      />
     </div>
   );
 };

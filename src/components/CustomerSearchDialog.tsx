@@ -3,59 +3,11 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Search, Plus, User } from "lucide-react";
 import { AddCustomerDialog } from "./AddCustomerDialog";
-
-interface Customer {
-  id: string;
-  customerCode: string;
-  name: string;
-  phone: string;
-  description?: string;
-  lastPurchase: string;
-  totalAmount: number;
-  averagePrice: number;
-  purchases: any[];
-  notes?: string;
-  isBlocked?: boolean;
-  blockReason?: string;
-  last2Quantities?: number[];
-  last2Prices?: number[];
-}
-
-// Mock data - سيتم استبدالها ببيانات Supabase
-const mockCustomers: Customer[] = [
-  { 
-    id: "1", 
-    customerCode: "C001", 
-    name: "أحمد محمد", 
-    phone: "0501234567", 
-    lastPurchase: "2024-01-15",
-    totalAmount: 5000,
-    averagePrice: 1250,
-    purchases: []
-  },
-  { 
-    id: "2", 
-    customerCode: "C002", 
-    name: "فاطمة علي", 
-    phone: "0507654321", 
-    lastPurchase: "2024-01-10",
-    totalAmount: 3000,
-    averagePrice: 1000,
-    purchases: []
-  },
-  { 
-    id: "3", 
-    customerCode: "C003", 
-    name: "خالد أحمد", 
-    phone: "0501111111", 
-    lastPurchase: "2024-01-05",
-    totalAmount: 7500,
-    averagePrice: 1500,
-    purchases: []
-  },
-];
+import { useCustomers } from "@/hooks/useCustomers";
+import { Customer } from "@/types";
 
 interface CustomerSearchDialogProps {
   open: boolean;
@@ -74,24 +26,16 @@ export const CustomerSearchDialog = ({
 }: CustomerSearchDialogProps) => {
   const [internalSearchTerm, setInternalSearchTerm] = useState(searchTerm);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
-  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>(
-    mockCustomers.filter(customer => 
-      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.phone.includes(searchTerm) ||
-      customer.customerCode.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
 
   const isRTL = language === "ar";
 
+  // Use the real customers hook with search filter
+  const { customers, isLoading } = useCustomers(1, 50, {
+    searchTerm: internalSearchTerm
+  });
+
   const handleSearch = (term: string) => {
     setInternalSearchTerm(term);
-    const filtered = mockCustomers.filter(customer => 
-      customer.name.toLowerCase().includes(term.toLowerCase()) ||
-      customer.phone.includes(term) ||
-      customer.customerCode.toLowerCase().includes(term.toLowerCase())
-    );
-    setFilteredCustomers(filtered);
   };
 
   const handleAddNewCustomer = () => {
@@ -132,7 +76,16 @@ export const CustomerSearchDialog = ({
               />
             </div>
 
-            {internalSearchTerm && filteredCustomers.length === 0 && (
+            {isLoading && (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>
+                <p className="mt-2 text-gray-600 text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  {language === "ar" ? "جاري البحث..." : "Searching..."}
+                </p>
+              </div>
+            )}
+
+            {!isLoading && internalSearchTerm && customers.length === 0 && (
               <div className="text-center py-4 border rounded-lg bg-yellow-50">
                 <p className="text-gray-600 mb-3" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                   {language === "ar" ? `العميل "${internalSearchTerm}" غير موجود` : `Customer "${internalSearchTerm}" not found`}
@@ -152,8 +105,8 @@ export const CustomerSearchDialog = ({
             )}
 
             <div className="max-h-60 overflow-y-auto space-y-2">
-              {filteredCustomers.length > 0 ? (
-                filteredCustomers.map(customer => (
+              {!isLoading && customers.length > 0 ? (
+                customers.map(customer => (
                   <div
                     key={customer.id}
                     onClick={() => handleCustomerSelection(customer)}
@@ -166,13 +119,26 @@ export const CustomerSearchDialog = ({
                           <p className="font-semibold" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                             {customer.name}
                           </p>
-                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                          <Badge variant="secondary" className="text-xs">
                             {customer.customerCode}
-                          </span>
+                          </Badge>
+                          {customer.isBlocked && (
+                            <Badge variant="destructive" className="text-xs">
+                              {language === "ar" ? "محظور" : "Blocked"}
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-sm text-gray-600">
                           {customer.phone}
                         </p>
+                        <div className="flex gap-4 mt-1 text-xs text-gray-500">
+                          <span>
+                            {language === "ar" ? "المشتريات:" : "Purchases:"} {customer.totalPurchases}
+                          </span>
+                          <span>
+                            {language === "ar" ? "الإجمالي:" : "Total:"} {customer.totalAmount.toLocaleString()}
+                          </span>
+                        </div>
                         {customer.lastPurchase && (
                           <p className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                             {language === "ar" ? "آخر شراء:" : "Last purchase:"} {customer.lastPurchase}
@@ -182,7 +148,7 @@ export const CustomerSearchDialog = ({
                     </div>
                   </div>
                 ))
-              ) : internalSearchTerm === "" ? (
+              ) : !isLoading && internalSearchTerm === "" ? (
                 <div className="text-center py-8">
                   <p className="text-gray-500 mb-4" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                     {language === "ar" ? "ابدأ بالكتابة للبحث عن عميل" : "Start typing to search for customers"}
@@ -191,7 +157,7 @@ export const CustomerSearchDialog = ({
               ) : null}
             </div>
 
-            {filteredCustomers.length > 0 && (
+            {customers.length > 0 && (
               <Button
                 onClick={handleAddNewCustomer}
                 variant="outline"
