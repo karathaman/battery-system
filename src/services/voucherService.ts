@@ -77,10 +77,11 @@ export const voucherService = {
       type: voucher.type,
       entity_type: voucher.entity_type,
       entity_id: voucher.entity_id,
-      entity_name: voucher.entity_type === 'customer' 
-        ? voucher.customers?.name || voucher.entity_name
-        : voucher.suppliers?.name || voucher.entity_name,
-      amount: voucher.amount,
+      entity_name: voucher.entity_name || 
+        (voucher.entity_type === 'customer' 
+          ? voucher.customers?.name 
+          : voucher.suppliers?.name) || '',
+      amount: voucher.amount || 0,
       description: voucher.notes,
       payment_method: voucher.payment_method,
       status: voucher.status,
@@ -147,8 +148,8 @@ export const voucherService = {
       type: newVoucher.type,
       entity_type: newVoucher.entity_type,
       entity_id: newVoucher.entity_id,
-      entity_name: newVoucher.entity_name,
-      amount: newVoucher.amount,
+      entity_name: newVoucher.entity_name || '',
+      amount: newVoucher.amount || 0,
       description: newVoucher.notes,
       payment_method: newVoucher.payment_method,
       status: newVoucher.status,
@@ -187,8 +188,8 @@ export const voucherService = {
       type: updatedVoucher.type,
       entity_type: updatedVoucher.entity_type,
       entity_id: updatedVoucher.entity_id,
-      entity_name: updatedVoucher.entity_name,
-      amount: updatedVoucher.amount,
+      entity_name: updatedVoucher.entity_name || '',
+      amount: updatedVoucher.amount || 0,
       description: updatedVoucher.notes,
       payment_method: updatedVoucher.payment_method,
       status: updatedVoucher.status,

@@ -539,9 +539,11 @@ export type Database = {
       }
       vouchers: {
         Row: {
+          amount: number
           created_at: string | null
           date: string
           entity_id: string
+          entity_name: string | null
           entity_type: Database["public"]["Enums"]["entity_type"]
           id: string
           notes: string | null
@@ -556,9 +558,11 @@ export type Database = {
           voucher_number: string
         }
         Insert: {
+          amount?: number
           created_at?: string | null
           date: string
           entity_id: string
+          entity_name?: string | null
           entity_type: Database["public"]["Enums"]["entity_type"]
           id?: string
           notes?: string | null
@@ -573,9 +577,11 @@ export type Database = {
           voucher_number: string
         }
         Update: {
+          amount?: number
           created_at?: string | null
           date?: string
           entity_id?: string
+          entity_name?: string | null
           entity_type?: Database["public"]["Enums"]["entity_type"]
           id?: string
           notes?: string | null
