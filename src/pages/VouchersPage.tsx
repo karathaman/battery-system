@@ -119,7 +119,8 @@ const VouchersPage = () => {
     const labels: { [key: string]: string } = {
       cash: 'نقداً',
       card: 'بطاقة',
-      transfer: 'تحويل'
+      bank_transfer: 'تحويل',
+      check: 'شيك'
     };
     return labels[method] || method;
   };
@@ -267,7 +268,8 @@ const VouchersPage = () => {
                 <SelectContent dir="rtl">
                   <SelectItem value="cash" style={{ fontFamily: 'Tajawal, sans-serif' }}>نقداً</SelectItem>
                   <SelectItem value="card" style={{ fontFamily: 'Tajawal, sans-serif' }}>بطاقة</SelectItem>
-                  <SelectItem value="transfer" style={{ fontFamily: 'Tajawal, sans-serif' }}>تحويل</SelectItem>
+                  <SelectItem value="bank_transfer" style={{ fontFamily: 'Tajawal, sans-serif' }}>تحويل</SelectItem>
+                  <SelectItem value="check" style={{ fontFamily: 'Tajawal, sans-serif' }}>شيك</SelectItem>
                 </SelectContent>
               </Select>
             </div>

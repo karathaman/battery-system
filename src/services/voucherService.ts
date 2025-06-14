@@ -12,7 +12,7 @@ export interface VoucherData {
   entity_name: string;
   amount: number;
   description?: string;
-  payment_method: 'cash' | 'card' | 'transfer';
+  payment_method: 'cash' | 'card' | 'bank_transfer' | 'check';
   status: 'pending' | 'completed' | 'cancelled';
   created_at: string;
   updated_at: string;
@@ -26,14 +26,18 @@ export interface VoucherFormData {
   entity_name: string;
   amount: number;
   description?: string;
-  payment_method: 'cash' | 'card' | 'transfer';
+  payment_method: 'cash' | 'card' | 'bank_transfer' | 'check';
 }
 
 export const voucherService = {
   async getVouchers(page = 1, limit = 50, filters?: FilterOptions): Promise<PaginatedResponse<VoucherData>> {
     let query = supabase
       .from('vouchers')
-      .select('*', { count: 'exact' })
+      .select(`
+        *,
+        customers!vouchers_entity_id_fkey(name),
+        suppliers!vouchers_entity_id_fkey(name)
+      `, { count: 'exact' })
       .order('created_at', { ascending: false });
 
     // Apply filters
@@ -42,7 +46,7 @@ export const voucherService = {
     }
 
     if (filters?.type && filters.type !== 'all') {
-      query = query.eq('type', filters.type);
+      query = query.eq('type', filters.type as 'receipt' | 'payment');
     }
 
     if (filters?.dateFrom) {
@@ -65,8 +69,27 @@ export const voucherService = {
       throw error;
     }
 
+    // Transform data to include entity_name and amount
+    const transformedData = (data || []).map((voucher: any) => ({
+      id: voucher.id,
+      voucher_number: voucher.voucher_number,
+      date: voucher.date,
+      type: voucher.type,
+      entity_type: voucher.entity_type,
+      entity_id: voucher.entity_id,
+      entity_name: voucher.entity_type === 'customer' 
+        ? voucher.customers?.name || voucher.entity_name
+        : voucher.suppliers?.name || voucher.entity_name,
+      amount: voucher.amount,
+      description: voucher.notes,
+      payment_method: voucher.payment_method,
+      status: voucher.status,
+      created_at: voucher.created_at,
+      updated_at: voucher.updated_at,
+    }));
+
     return {
-      data: data || [],
+      data: transformedData,
       pagination: {
         page,
         limit,
@@ -92,11 +115,22 @@ export const voucherService = {
 
     const voucher_number = `V${nextNumber.toString().padStart(3, '0')}`;
 
+    // Map transfer to bank_transfer for database compatibility
+    const payment_method = data.payment_method === 'transfer' ? 'bank_transfer' : data.payment_method;
+
     const { data: newVoucher, error } = await supabase
       .from('vouchers')
       .insert([{
-        ...data,
-        voucher_number
+        voucher_number,
+        date: data.date,
+        type: data.type,
+        entity_type: data.entity_type,
+        entity_id: data.entity_id,
+        entity_name: data.entity_name,
+        amount: data.amount,
+        notes: data.description,
+        payment_method: payment_method as 'cash' | 'card' | 'bank_transfer' | 'check',
+        status: 'completed'
       }])
       .select()
       .single();
@@ -106,13 +140,37 @@ export const voucherService = {
       throw error;
     }
 
-    return newVoucher;
+    return {
+      id: newVoucher.id,
+      voucher_number: newVoucher.voucher_number,
+      date: newVoucher.date,
+      type: newVoucher.type,
+      entity_type: newVoucher.entity_type,
+      entity_id: newVoucher.entity_id,
+      entity_name: newVoucher.entity_name,
+      amount: newVoucher.amount,
+      description: newVoucher.notes,
+      payment_method: newVoucher.payment_method === 'bank_transfer' ? 'bank_transfer' : newVoucher.payment_method,
+      status: newVoucher.status,
+      created_at: newVoucher.created_at,
+      updated_at: newVoucher.updated_at,
+    };
   },
 
   async updateVoucher(id: string, data: Partial<VoucherFormData>): Promise<VoucherData> {
+    // Map transfer to bank_transfer for database compatibility
+    const updateData: any = { ...data };
+    if (data.payment_method === 'transfer') {
+      updateData.payment_method = 'bank_transfer';
+    }
+    if (data.description !== undefined) {
+      updateData.notes = data.description;
+      delete updateData.description;
+    }
+
     const { data: updatedVoucher, error } = await supabase
       .from('vouchers')
-      .update(data)
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
@@ -122,7 +180,21 @@ export const voucherService = {
       throw error;
     }
 
-    return updatedVoucher;
+    return {
+      id: updatedVoucher.id,
+      voucher_number: updatedVoucher.voucher_number,
+      date: updatedVoucher.date,
+      type: updatedVoucher.type,
+      entity_type: updatedVoucher.entity_type,
+      entity_id: updatedVoucher.entity_id,
+      entity_name: updatedVoucher.entity_name,
+      amount: updatedVoucher.amount,
+      description: updatedVoucher.notes,
+      payment_method: updatedVoucher.payment_method === 'bank_transfer' ? 'bank_transfer' : updatedVoucher.payment_method,
+      status: updatedVoucher.status,
+      created_at: updatedVoucher.created_at,
+      updated_at: updatedVoucher.updated_at,
+    };
   },
 
   async deleteVoucher(id: string): Promise<void> {
