@@ -12,29 +12,32 @@ export type Database = {
       battery_types: {
         Row: {
           created_at: string | null
+          currentQty: number | null
           description: string | null
           id: string
+          isActive: boolean | null
           name: string
           unit_price: number | null
-          currentQty: number | null
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
+          currentQty?: number | null
           description?: string | null
           id?: string
+          isActive?: boolean | null
           name: string
           unit_price?: number | null
-          currentQty: number | null
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
+          currentQty?: number | null
           description?: string | null
           id?: string
+          isActive?: boolean | null
           name?: string
           unit_price?: number | null
-          currentQty: number | null
           updated_at?: string | null
         }
         Relationships: []
@@ -99,6 +102,7 @@ export type Database = {
       daily_purchases: {
         Row: {
           battery_type: string
+          batteryTypeId: string
           created_at: string | null
           date: string
           discount: number | null
@@ -115,6 +119,7 @@ export type Database = {
         }
         Insert: {
           battery_type: string
+          batteryTypeId?: string
           created_at?: string | null
           date: string
           discount?: number | null
@@ -131,6 +136,7 @@ export type Database = {
         }
         Update: {
           battery_type?: string
+          batteryTypeId?: string
           created_at?: string | null
           date?: string
           discount?: number | null

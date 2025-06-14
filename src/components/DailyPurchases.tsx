@@ -35,7 +35,6 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
   const [focusedCell, setFocusedCell] = useState<{ row: number, col: string } | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
 
-
   const [suppliers, setSuppliers] = useState([]);
   const [batteryTypes, setBatteryTypes] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -182,7 +181,7 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
 
       const { error: updateError } = await supabase
         .from("battery_types")
-        .update({ currentQty: updatedQty })
+        .update({ currentQty: Math.max(0, updatedQty) })
         .eq("id", batteryTypeId);
 
       if (updateError) {
@@ -192,6 +191,89 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
       }
     } catch (err) {
       console.error("Unexpected error updating battery type quantity:", err);
+    }
+  };
+
+  const updateSupplierStats = async (supplierCode: string, purchase: DailyPurchase) => {
+    try {
+      // Get supplier by code
+      const { data: supplier, error: supplierError } = await supabase
+        .from("suppliers")
+        .select("id, total_purchases, total_amount, balance")
+        .eq("supplier_code", supplierCode)
+        .single();
+
+      if (supplierError || !supplier) {
+        console.error("Error fetching supplier:", supplierError);
+        return;
+      }
+
+      // Calculate new totals
+      const newTotalPurchases = (supplier.total_purchases || 0) + purchase.quantity;
+      const newTotalAmount = (supplier.total_amount || 0) + purchase.finalTotal;
+      const newAveragePrice = newTotalPurchases > 0 ? newTotalAmount / newTotalPurchases : 0;
+      
+      // Update balance if it's credit purchase (we'll assume daily purchases are credit by default)
+      const newBalance = (supplier.balance || 0) + purchase.finalTotal;
+
+      const { error: updateError } = await supabase
+        .from("suppliers")
+        .update({
+          last_purchase: purchase.date,
+          total_purchases: newTotalPurchases,
+          total_amount: newTotalAmount,
+          average_price: newAveragePrice,
+          balance: newBalance
+        })
+        .eq("supplier_code", supplierCode);
+
+      if (updateError) {
+        console.error("Error updating supplier stats:", updateError);
+      } else {
+        console.log("Supplier stats updated successfully");
+      }
+    } catch (err) {
+      console.error("Unexpected error updating supplier stats:", err);
+    }
+  };
+
+  const revertSupplierStats = async (supplierCode: string, purchase: DailyPurchase) => {
+    try {
+      // Get supplier by code
+      const { data: supplier, error: supplierError } = await supabase
+        .from("suppliers")
+        .select("id, total_purchases, total_amount, balance")
+        .eq("supplier_code", supplierCode)
+        .single();
+
+      if (supplierError || !supplier) {
+        console.error("Error fetching supplier:", supplierError);
+        return;
+      }
+
+      // Calculate reverted totals
+      const newTotalPurchases = Math.max(0, (supplier.total_purchases || 0) - purchase.quantity);
+      const newTotalAmount = Math.max(0, (supplier.total_amount || 0) - purchase.finalTotal);
+      const newAveragePrice = newTotalPurchases > 0 ? newTotalAmount / newTotalPurchases : 0;
+      const newBalance = Math.max(0, (supplier.balance || 0) - purchase.finalTotal);
+
+      const { error: updateError } = await supabase
+        .from("suppliers")
+        .update({
+          total_purchases: newTotalPurchases,
+          total_amount: newTotalAmount,
+          average_price: newAveragePrice,
+          balance: newBalance
+        })
+        .eq("supplier_code", supplierCode);
+
+      if (updateError) {
+        console.error("Error reverting supplier stats:", updateError);
+      } else {
+        console.log("Supplier stats reverted successfully");
+      }
+    } catch (err) {
+      console.error("Unexpected error reverting supplier stats:", err);
     }
   };
 
@@ -243,41 +325,16 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
         return;
       } else {
         console.log("Purchase deleted successfully from database.");
+        
+        // Revert battery type quantity
         await updateBatteryTypeQuantity(purchase.batteryTypeId, -purchase.quantity);
-
-        // تحديث بيانات المورد بعد الحذف
-        try {
-          const { data: supplierData, error: fetchError } = await supabase
-            .from("suppliers")
-            .select("total_purchases, total_amount, last_purchase")
-            .eq("supplier_code", purchase.supplierCode)
-            .single();
-
-          if (!fetchError && supplierData) {
-            const totalPurchases = (supplierData?.total_purchases || 0) - purchase.quantity;
-            const totalAmount = (supplierData?.total_amount || 0) - purchase.finalTotal;
-            const averagePrice = totalPurchases > 0 ? totalAmount / totalPurchases : 0;
-
-            const { error: updateError } = await supabase
-              .from("suppliers")
-              .update({
-                total_purchases: totalPurchases > 0 ? totalPurchases : 0,
-                total_amount: totalAmount > 0 ? totalAmount : 0,
-                average_price: averagePrice > 0 ? averagePrice : 0,
-              })
-              .eq("supplier_code", purchase.supplierCode);
-
-            if (updateError) {
-              console.error("Error updating supplier data after delete:", updateError);
-            }
-          }
-        } catch (err) {
-          console.error("Unexpected error updating supplier data after delete:", err);
-        }
+        
+        // Revert supplier stats
+        await revertSupplierStats(purchase.supplierCode, purchase);
 
         toast({
           title: language === "ar" ? "تم الحذف" : "Deleted",
-          description: language === "ar" ? "تم حذف السطر بنجاح" : "Row deleted successfully",
+          description: language === "ar" ? "تم حذف السطر بنجاح وتحديث بيانات المورد" : "Row deleted successfully and supplier data updated",
           duration: 2000,
         });
       }
@@ -300,6 +357,7 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
     }
 
     if (purchase.id && !purchase.id.startsWith("temp-")) {
+      // Update existing purchase
       const { error } = await supabase
         .from("daily_purchases")
         .update({
@@ -326,46 +384,21 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
         });
       } else {
         console.log("Purchase updated successfully:", purchase);
+        
+        // Update battery type quantity
         await updateBatteryTypeQuantity(purchase.batteryTypeId, purchase.quantity);
-
-        // تحديث بيانات المورد بعد الحفظ
-        try {
-          const { data: supplierData, error: fetchError } = await supabase
-            .from("suppliers")
-            .select("total_purchases, total_amount, last_purchase")
-            .eq("supplier_code", purchase.supplierCode)
-            .single();
-
-          if (!fetchError && supplierData) {
-            const totalPurchases = (supplierData?.total_purchases || 0) + purchase.quantity;
-            const totalAmount = (supplierData?.total_amount || 0) + purchase.finalTotal;
-            const averagePrice = totalAmount / totalPurchases;
-
-            const { error: updateError } = await supabase
-              .from("suppliers")
-              .update({
-                last_purchase: purchase.date,
-                total_purchases: totalPurchases,
-                total_amount: totalAmount,
-                average_price: averagePrice,
-              })
-              .eq("supplier_code", purchase.supplierCode);
-
-            if (updateError) {
-              console.error("Error updating supplier data:", updateError);
-            }
-          }
-        } catch (err) {
-          console.error("Unexpected error updating supplier data:", err);
-        }
+        
+        // Update supplier stats
+        await updateSupplierStats(purchase.supplierCode, purchase);
 
         toast({
           title: language === "ar" ? "تم التحديث" : "Updated",
-          description: language === "ar" ? "تم تحديث البيانات بنجاح" : "Data updated successfully",
+          description: language === "ar" ? "تم تحديث البيانات وبيانات المورد بنجاح" : "Data and supplier information updated successfully",
           duration: 2000,
         });
       }
     } else {
+      // Create new purchase
       const { data, error } = await supabase
         .from("daily_purchases")
         .insert([
@@ -398,42 +431,16 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
         if (data && data.length > 0) {
           updateLocalPurchase(index, "isSaved", true);
           updateLocalPurchase(index, "id", data[0].id);
+          
+          // Update battery type quantity
           await updateBatteryTypeQuantity(purchase.batteryTypeId, purchase.quantity);
-
-          // تحديث بيانات المورد بعد الحفظ
-          try {
-            const { data: supplierData, error: fetchError } = await supabase
-              .from("suppliers")
-              .select("total_purchases, total_amount, last_purchase")
-              .eq("supplier_code", purchase.supplierCode)
-              .single();
-
-            if (!fetchError && supplierData) {
-              const totalPurchases = (supplierData?.total_purchases || 0) + purchase.quantity;
-              const totalAmount = (supplierData?.total_amount || 0) + purchase.finalTotal;
-              const averagePrice = totalAmount / totalPurchases;
-
-              const { error: updateError } = await supabase
-                .from("suppliers")
-                .update({
-                  last_purchase: purchase.date,
-                  total_purchases: totalPurchases,
-                  total_amount: totalAmount,
-                  average_price: averagePrice,
-                })
-                .eq("supplier_code", purchase.supplierCode);
-
-              if (updateError) {
-                console.error("Error updating supplier data:", updateError);
-              }
-            }
-          } catch (err) {
-            console.error("Unexpected error updating supplier data:", err);
-          }
+          
+          // Update supplier stats
+          await updateSupplierStats(purchase.supplierCode, purchase);
 
           toast({
             title: language === "ar" ? "تم الحفظ" : "Saved",
-            description: language === "ar" ? "تم حفظ البيانات بنجاح" : "Data saved successfully",
+            description: language === "ar" ? "تم حفظ البيانات وتحديث بيانات المورد بنجاح" : "Data saved and supplier information updated successfully",
             duration: 2000,
           });
         }
@@ -526,9 +533,6 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
     }
   };
 
-
-
-
   const totalDailyAmount = localPurchases.reduce((sum, purchase) => sum + purchase.finalTotal, 0);
 
   useEffect(() => {
@@ -546,7 +550,6 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
       }
     }
   }, [focusedCell]);
-
 
   const fetchBatteryTypes = async () => {
     const { data, error } = await supabase
