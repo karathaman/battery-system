@@ -1,4 +1,3 @@
-
 // Customer types
 export interface Customer {
   id: string;
@@ -19,6 +18,7 @@ export interface Customer {
   blockReason?: string;
   messageSent?: boolean;
   lastMessageSent?: string;
+  balance?: number;
 }
 
 export interface CustomerFormData {

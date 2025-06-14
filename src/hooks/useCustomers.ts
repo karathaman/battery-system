@@ -48,7 +48,8 @@ const customerService = {
       last2BatteryTypes: [],
       isBlocked: customer.is_blocked || false,
       blockReason: customer.block_reason,
-      messageSent: customer.message_sent || false
+      messageSent: customer.message_sent || false,
+      balance: customer.balance || 0
     }));
 
     return {
@@ -103,19 +104,23 @@ const customerService = {
       averagePrice: 0,
       purchases: [],
       isBlocked: false,
-      messageSent: false
+      messageSent: false,
+      balance: newCustomer.balance || 0
     };
   },
 
-  updateCustomer: async (id: string, data: Partial<CustomerFormData>): Promise<Customer> => {
+  updateCustomer: async (id: string, data: Partial<CustomerFormData & { balance?: number }>): Promise<Customer> => {
+    const updateData: any = {};
+    
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.phone !== undefined) updateData.phone = data.phone;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.notes !== undefined) updateData.notes = data.notes;
+    if (data.balance !== undefined) updateData.balance = data.balance;
+
     const { data: updatedCustomer, error } = await supabase
       .from('customers')
-      .update({
-        name: data.name,
-        phone: data.phone,
-        description: data.description,
-        notes: data.notes
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
@@ -138,7 +143,8 @@ const customerService = {
       purchases: [],
       isBlocked: updatedCustomer.is_blocked || false,
       blockReason: updatedCustomer.block_reason,
-      messageSent: updatedCustomer.message_sent || false
+      messageSent: updatedCustomer.message_sent || false,
+      balance: updatedCustomer.balance || 0
     };
   },
 
@@ -245,7 +251,8 @@ const customerService = {
       purchases: [],
       isBlocked: updatedCustomer.is_blocked || false,
       blockReason: updatedCustomer.block_reason,
-      messageSent: updatedCustomer.message_sent || false
+      messageSent: updatedCustomer.message_sent || false,
+      balance: updatedCustomer.balance || 0
     };
   },
 
@@ -274,7 +281,8 @@ const customerService = {
       purchases: [],
       isBlocked: customer.is_blocked || false,
       blockReason: customer.block_reason,
-      messageSent: customer.message_sent || false
+      messageSent: customer.message_sent || false,
+      balance: customer.balance || 0
     }));
   }
 };
@@ -310,7 +318,7 @@ export const useCustomers = (page = 1, limit = 10, filters?: FilterOptions) => {
     }
   });
 
-  const updateCustomerMutation = useMutation<Customer, Error, { id: string; data: Partial<CustomerFormData> }>({
+  const updateCustomerMutation = useMutation<Customer, Error, { id: string; data: Partial<CustomerFormData & { balance?: number }> }>({
     mutationFn: ({ id, data }) => customerService.updateCustomer(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
