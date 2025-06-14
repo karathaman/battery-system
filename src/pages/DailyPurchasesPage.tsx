@@ -267,15 +267,25 @@ const DailyPurchasesPage = () => {
         </CardContent>
       </Card>
 
-      {/* Daily Purchases List */}
-      <DailyPurchases 
-        dailyPurchases={purchases}
-        onEdit={handleEdit}
-        onDelete={deletePurchase}
-        onClearDay={handleClearDay}
-        isDeleting={isDeleting}
-        isClearing={isClearing}
-      />
+      {/* Daily Purchases List - Pass a single purchase object with the correct props */}
+      {purchases.length > 0 && (
+        <DailyPurchases 
+          id={purchases[0].id}
+          date={purchases[0].date}
+          supplierName={purchases[0].supplierName}
+          supplierCode={purchases[0].supplierCode}
+          supplierPhone={purchases[0].supplierPhone}
+          batteryType={purchases[0].batteryType}
+          batteryTypeId={purchases[0].batteryTypeId}
+          quantity={purchases[0].quantity}
+          pricePerKg={purchases[0].pricePerKg}
+          total={purchases[0].total}
+          discount={purchases[0].discount}
+          finalTotal={purchases[0].finalTotal}
+          isSaved={purchases[0].isSaved}
+          language="ar"
+        />
+      )}
 
       {/* Daily Notes and Tasks */}
       <DailyNotesAndTasks date={selectedDate} />
