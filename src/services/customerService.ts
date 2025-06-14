@@ -45,7 +45,8 @@ class CustomerService {
           last2Prices: [280, 290],
           last2BatteryTypes: ["بطاريات عادية", "بطاريات جافة"],
           isBlocked: false,
-          messageSent: false
+          messageSent: false,
+          balance: 1000
         }
       ];
 

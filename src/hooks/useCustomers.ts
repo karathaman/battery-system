@@ -189,7 +189,8 @@ const customerService = {
       purchases: [],
       isBlocked: true,
       blockReason: reason,
-      messageSent: blockedCustomer.message_sent || false
+      messageSent: blockedCustomer.message_sent || false,
+      balance: blockedCustomer.balance || 0
     };
   },
 
@@ -221,7 +222,8 @@ const customerService = {
       averagePrice: unblockedCustomer.average_price || 0,
       purchases: [],
       isBlocked: false,
-      messageSent: unblockedCustomer.message_sent || false
+      messageSent: unblockedCustomer.message_sent || false,
+      balance: unblockedCustomer.balance || 0
     };
   },
 
