@@ -98,8 +98,8 @@ const updateSupplierStats = async (supplierId: string) => {
       // Sum total amounts
       totalAmount += purchase.total || 0;
       
-      // Add to balance if payment method is credit
-      if (purchase.payment_method === 'check' || purchase.payment_method === 'bank_transfer') {
+      // Add to balance ONLY if payment method is credit/deferred
+      if (purchase.payment_method === 'credit' || purchase.payment_method === 'check' || purchase.payment_method === 'bank_transfer') {
         balance += purchase.total || 0;
       }
       
@@ -276,7 +276,7 @@ const purchaseService = {
         }
       }
 
-      // Update supplier stats
+      // Update supplier stats (this will handle balance correctly based on payment method)
       await updateSupplierStats(purchaseData.supplier_id);
 
       console.log('Purchase creation completed successfully');
@@ -393,7 +393,7 @@ const purchaseService = {
         }
       }
 
-      // Update supplier stats for both old and new supplier
+      // Update supplier stats for both old and new supplier (this will recalculate balance correctly)
       await updateSupplierStats(originalPurchase.supplier_id);
       if (purchaseData.supplier_id && purchaseData.supplier_id !== originalPurchase.supplier_id) {
         await updateSupplierStats(purchaseData.supplier_id);
@@ -435,7 +435,7 @@ const purchaseService = {
 
       console.log('Purchase data for deletion:', purchase);
 
-      // Revert battery type quantities
+      // Revert battery type quantities BEFORE deleting the purchase
       if (purchase.purchase_items && Array.isArray(purchase.purchase_items)) {
         console.log('Reverting battery type quantities for deleted purchase');
         for (const item of purchase.purchase_items) {
@@ -456,7 +456,7 @@ const purchaseService = {
 
       console.log('Purchase deleted successfully');
 
-      // Update supplier stats
+      // Update supplier stats (this will recalculate balance and remove this purchase from calculations)
       await updateSupplierStats(purchase.supplier_id);
 
       console.log('Purchase deletion completed successfully');
