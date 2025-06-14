@@ -7,11 +7,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ShoppingCart, Search, Plus, Calendar, DollarSign, TrendingUp, Users, Edit, Printer, Trash2, Banknote, CreditCard, Smartphone } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { BatteryTypeSelector } from "@/components/BatteryTypeSelector";
-import { PurchaseItem, Purchase } from "@/types/purchases";
+import { PurchaseItem } from "@/types/purchases";
 import { useEffect, useState } from "react"; 
 import { supabase } from "@/integrations/supabase/client";
 import { usePurchases } from "@/hooks/usePurchases";
-import { PurchaseFormData } from "@/services/purchaseService";
+import { Purchase as ServicePurchase, PurchaseFormData } from "@/services/purchaseService";
 
 const paymentMethodMap: Record<string, "cash" | "card" | "bank_transfer" | "check"> = {
   "نقداً": "cash",
@@ -30,7 +30,7 @@ const PurchasesPage = () => {
   const { purchases, isLoading, createPurchase, updatePurchase, deletePurchase, isCreating, isUpdating, isDeleting } = usePurchases();
   const [searchTerm, setSearchTerm] = useState("");
   const [showSupplierDialog, setShowSupplierDialog] = useState(false);
-  const [editingPurchase, setEditingPurchase] = useState<Purchase | null>(null);
+  const [editingPurchase, setEditingPurchase] = useState<ServicePurchase | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [newPurchase, setNewPurchase] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -49,7 +49,7 @@ const PurchasesPage = () => {
     total_amount: number;
   } | null>(null);
 
-  const filteredPurchases = purchases.filter((purchase: Purchase) =>
+  const filteredPurchases = purchases.filter((purchase: ServicePurchase) =>
     purchase.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (purchase.suppliers?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -160,12 +160,12 @@ const PurchasesPage = () => {
     }
   };
 
-  const handleEditPurchase = (purchase: Purchase) => {
+  const handleEditPurchase = (purchase: ServicePurchase) => {
     setEditingPurchase(purchase);
     setShowEditDialog(true);
   };
 
-  const handlePrintPurchase = (purchase: Purchase) => {
+  const handlePrintPurchase = (purchase: ServicePurchase) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
@@ -244,7 +244,7 @@ const PurchasesPage = () => {
     printWindow.print();
   };
  
-  const handleDeletePurchase = async (purchase: Purchase) => {
+  const handleDeletePurchase = async (purchase: ServicePurchase) => {
     try {
       await deletePurchase(purchase.id);
     } catch (err: any) {
@@ -723,14 +723,14 @@ const PurchasesPage = () => {
 
 // EditPurchaseForm component definition
 type EditPurchaseFormProps = {
-  purchase: Purchase;
-  onSave: (updatedPurchase: Purchase) => void;
+  purchase: ServicePurchase;
+  onSave: (updatedPurchase: ServicePurchase) => void;
   onCancel: () => void;
 };
 
 const EditPurchaseForm = ({ purchase, onSave, onCancel }: EditPurchaseFormProps) => {
   const { updatePurchase } = usePurchases();
-  const [editedPurchase, setEditedPurchase] = useState<Purchase>({ ...purchase });
+  const [editedPurchase, setEditedPurchase] = useState<ServicePurchase>({ ...purchase });
 
   const handleItemChange = (index: number, field: keyof PurchaseItem, value: any) => {
     const updatedItems = [...(editedPurchase.items || editedPurchase.purchase_items || [])];

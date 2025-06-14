@@ -5,6 +5,8 @@ export interface PurchaseItem {
   quantity: number;
   price: number;
   total: number;
+  battery_type_id?: string;
+  price_per_kg?: number;
 }
 
 export interface Purchase {
@@ -12,7 +14,7 @@ export interface Purchase {
   invoice_number: string;
   date: string;
   supplier_id: string;
-  items: PurchaseItem[];
+  items?: PurchaseItem[];
   subtotal: number;
   discount: number;
   tax: number;
