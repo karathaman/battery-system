@@ -4,37 +4,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, UserPlus } from "lucide-react";
-
-interface Supplier {
-  id: string;
-  supplierCode: string;
-  name: string;
-  phone: string;
-  lastPurchase?: string;
-}
-
-const mockSuppliers: Supplier[] = [
-  {
-    id: "1",
-    supplierCode: "S001",
-    name: "مورد البطاريات الذهبية",
-    phone: "0501234567",
-    lastPurchase: "2024-01-15"
-  },
-  {
-    id: "2",
-    supplierCode: "S002", 
-    name: "شركة البطاريات المتطورة",
-    phone: "0507654321",
-    lastPurchase: "2024-01-10"
-  }
-];
+import { Search, UserPlus, User } from "lucide-react";
+import { useSuppliers } from "@/hooks/useSuppliers";
 
 interface SupplierSearchDialogProps {
   open: boolean;
   onClose: () => void;
-  onSupplierSelect: (supplier: Supplier) => void;
+  onSupplierSelect: (supplier: { id: string; name: string; supplierCode: string; phone: string }) => void;
   searchTerm: string;
   language?: string;
 }
@@ -48,13 +24,22 @@ export const SupplierSearchDialog = ({
 }: SupplierSearchDialogProps) => {
   const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
 
-  const filteredSuppliers = mockSuppliers.filter(supplier =>
-    supplier.name.toLowerCase().includes(localSearchTerm.toLowerCase()) ||
-    supplier.phone.includes(localSearchTerm) ||
-    supplier.supplierCode.toLowerCase().includes(localSearchTerm.toLowerCase())
-  );
+  // Use the real suppliers hook with search filter
+  const { suppliers, isLoading } = useSuppliers(1, 50, {
+    searchTerm: localSearchTerm
+  });
 
   const isRTL = language === "ar";
+
+  const handleSupplierSelection = (supplier: any) => {
+    onSupplierSelect({
+      id: supplier.id,
+      name: supplier.name,
+      supplierCode: supplier.supplierCode,
+      phone: supplier.phone || ''
+    });
+    onClose();
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -67,65 +52,115 @@ export const SupplierSearchDialog = ({
 
         <div className="space-y-4">
           <div className="relative">
-            <Search className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
+            <Search className={`absolute top-3 h-4 w-4 text-gray-400 ${isRTL ? 'right-3' : 'left-3'}`} />
             <Input
-              placeholder={language === "ar" ? "ابحث عن مورد..." : "Search supplier..."}
+              placeholder={language === "ar" ? "ابحث بالاسم، رقم الجوال، أو رمز المورد..." : "Search by name, phone, or supplier code..."}
               value={localSearchTerm}
               onChange={(e) => setLocalSearchTerm(e.target.value)}
-              className="pr-10"
+              className={isRTL ? 'pr-10' : 'pl-10'}
               style={{ fontFamily: 'Tajawal, sans-serif' }}
               autoFocus
             />
           </div>
 
+          {isLoading && (
+            <div className="text-center py-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>
+              <p className="mt-2 text-gray-600 text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                {language === "ar" ? "جاري البحث..." : "Searching..."}
+              </p>
+            </div>
+          )}
+
+          {!isLoading && localSearchTerm && suppliers.length === 0 && (
+            <div className="text-center py-4 border rounded-lg bg-yellow-50">
+              <p className="text-gray-600 mb-3" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                {language === "ar" ? `المورد "${localSearchTerm}" غير موجود` : `Supplier "${localSearchTerm}" not found`}
+              </p>
+              <p className="text-sm text-gray-500 mb-4" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                {language === "ar" ? "هل تريد إضافته كمورد جديد؟" : "Would you like to add them as a new supplier?"}
+              </p>
+              <Button
+                onClick={() => {
+                  // Here you would typically open an "Add Supplier" dialog
+                  onClose();
+                }}
+                className="flex items-center gap-2"
+                style={{ fontFamily: 'Tajawal, sans-serif' }}
+              >
+                <UserPlus className="w-4 h-4" />
+                {language === "ar" ? "إضافة مورد جديد" : "Add New Supplier"}
+              </Button>
+            </div>
+          )}
+
           <div className="max-h-60 overflow-y-auto space-y-2">
-            {filteredSuppliers.length === 0 ? (
-              <div className="text-center py-4">
-                <p className="text-gray-500 mb-4" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                  {language === "ar" ? "لم يتم العثور على موردين" : "No suppliers found"}
-                </p>
-                <Button
-                  onClick={() => {
-                    // Here you would typically open an "Add Supplier" dialog
-                    onClose();
-                  }}
-                  className="flex items-center gap-2"
-                  style={{ fontFamily: 'Tajawal, sans-serif' }}
-                >
-                  <UserPlus className="w-4 h-4" />
-                  {language === "ar" ? "إضافة مورد جديد" : "Add New Supplier"}
-                </Button>
-              </div>
-            ) : (
-              filteredSuppliers.map(supplier => (
+            {!isLoading && suppliers.length > 0 ? (
+              suppliers.map(supplier => (
                 <div
                   key={supplier.id}
-                  onClick={() => onSupplierSelect(supplier)}
-                  className="p-3 border rounded cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => handleSupplierSelection(supplier)}
+                  className="p-3 border rounded-lg cursor-pointer hover:bg-blue-50 transition-colors"
                 >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-semibold" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                        {supplier.name}
-                      </p>
-                      <p className="text-sm text-gray-600">{supplier.phone}</p>
-                      <Badge variant="secondary" className="mt-1">
-                        {supplier.supplierCode}
-                      </Badge>
-                    </div>
-                    {supplier.lastPurchase && (
-                      <div className="text-left">
-                        <p className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                          {language === "ar" ? "آخر توريد" : "Last Purchase"}
+                  <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                    <User className="w-5 h-5 text-blue-600" />
+                    <div className="flex-1">
+                      <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                        <p className="font-semibold" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                          {supplier.name}
                         </p>
-                        <p className="text-sm font-medium">{supplier.lastPurchase}</p>
+                        <Badge variant="secondary" className="text-xs">
+                          {supplier.supplierCode}
+                        </Badge>
+                        {supplier.isBlocked && (
+                          <Badge variant="destructive" className="text-xs">
+                            {language === "ar" ? "محظور" : "Blocked"}
+                          </Badge>
+                        )}
                       </div>
-                    )}
+                      <p className="text-sm text-gray-600">
+                        {supplier.phone}
+                      </p>
+                      <div className="flex gap-4 mt-1 text-xs text-gray-500">
+                        <span>
+                          {language === "ar" ? "المشتريات:" : "Purchases:"} {supplier.totalPurchases}
+                        </span>
+                        <span>
+                          {language === "ar" ? "الإجمالي:" : "Total:"} {supplier.totalAmount.toLocaleString()}
+                        </span>
+                      </div>
+                      {supplier.lastPurchase && (
+                        <p className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                          {language === "ar" ? "آخر توريد:" : "Last purchase:"} {supplier.lastPurchase}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))
-            )}
+            ) : !isLoading && localSearchTerm === "" ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500 mb-4" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  {language === "ar" ? "ابدأ بالكتابة للبحث عن مورد" : "Start typing to search for suppliers"}
+                </p>
+              </div>
+            ) : null}
           </div>
+
+          {suppliers.length > 0 && (
+            <Button
+              onClick={() => {
+                // Here you would typically open an "Add Supplier" dialog
+                onClose();
+              }}
+              variant="outline"
+              className="w-full flex items-center gap-2"
+              style={{ fontFamily: 'Tajawal, sans-serif' }}
+            >
+              <UserPlus className="w-4 h-4" />
+              {language === "ar" ? "إضافة مورد جديد" : "Add New Supplier"}
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>

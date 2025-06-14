@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ import { SupplierSearchDialog } from "@/components/SupplierSearchDialog";
 import { EditVoucherDialog } from "@/components/EditVoucherDialog";
 import { printVoucher } from "@/utils/voucherPrintUtils";
 import { addTransactionToCustomer, addTransactionToSupplier, removeCustomerTransaction, removeSupplierTransaction, removeCustomerTransactionByVoucher, removeSupplierTransactionByVoucher } from "@/utils/accountUtils";
+import { Customer } from "@/types";
 
 interface Voucher {
   id: string;
@@ -93,7 +95,7 @@ const VouchersPage = () => {
     return `V${number.toString().padStart(3, '0')}`;
   };
 
-  const handleCustomerSelect = (customer: { id: string; name: string }) => {
+  const handleCustomerSelect = (customer: Customer) => {
     setNewVoucher(prev => ({
       ...prev,
       entityType: "customer",
@@ -111,6 +113,33 @@ const VouchersPage = () => {
       entityName: supplier.name
     }));
     setShowSupplierSearchDialog(false);
+  };
+
+  const handleEntityTypeChange = (entityType: "customer" | "supplier") => {
+    setNewVoucher(prev => ({
+      ...prev,
+      entityType,
+      entityId: "",
+      entityName: ""
+    }));
+  };
+
+  const handleVoucherTypeChange = (type: "receipt" | "payment") => {
+    setNewVoucher(prev => ({
+      ...prev,
+      type,
+      // Reset entity selection when changing voucher type
+      entityId: "",
+      entityName: ""
+    }));
+  };
+
+  const openEntityDialog = () => {
+    if (newVoucher.entityType === "customer") {
+      setShowCustomerSearchDialog(true);
+    } else {
+      setShowSupplierSearchDialog(true);
+    }
   };
 
   const handleAddVoucher = () => {
@@ -274,7 +303,7 @@ const VouchersPage = () => {
             </div>
             <div>
               <Label htmlFor="type" style={{ fontFamily: 'Tajawal, sans-serif' }}>النوع</Label>
-              <Select value={newVoucher.type} onValueChange={(value) => setNewVoucher({ ...newVoucher, type: value as "receipt" | "payment" })}>
+              <Select value={newVoucher.type} onValueChange={handleVoucherTypeChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="اختر نوع السند" style={{ fontFamily: 'Tajawal, sans-serif' }} />
                 </SelectTrigger>
@@ -285,38 +314,40 @@ const VouchersPage = () => {
               </Select>
             </div>
             <div>
-              <Label htmlFor="entity" style={{ fontFamily: 'Tajawal, sans-serif' }}>العميل/المورد</Label>
+              <Label htmlFor="entityType" style={{ fontFamily: 'Tajawal, sans-serif' }}>نوع الجهة</Label>
+              <Select value={newVoucher.entityType} onValueChange={handleEntityTypeChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر نوع الجهة" style={{ fontFamily: 'Tajawal, sans-serif' }} />
+                </SelectTrigger>
+                <SelectContent dir="rtl">
+                  <SelectItem value="customer" style={{ fontFamily: 'Tajawal, sans-serif' }}>عميل</SelectItem>
+                  <SelectItem value="supplier" style={{ fontFamily: 'Tajawal, sans-serif' }}>مورد</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="entity" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                {newVoucher.entityType === "customer" ? "العميل" : "المورد"}
+              </Label>
               <div className="flex gap-2">
                 <Input
                   type="text"
                   id="entity"
-                  placeholder="اختر عميل أو مورد"
+                  placeholder={`اختر ${newVoucher.entityType === "customer" ? "عميل" : "مورد"}`}
                   value={newVoucher.entityName}
                   readOnly
                   className="text-sm flex-1"
                   style={{ fontFamily: 'Tajawal, sans-serif' }}
                 />
-                {newVoucher.type === "receipt" ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowCustomerSearchDialog(true)}
-                    style={{ fontFamily: 'Tajawal, sans-serif' }}
-                  >
-                    <Users className="w-4 h-4 ml-2" />
-                    عميل
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowSupplierSearchDialog(true)}
-                    style={{ fontFamily: 'Tajawal, sans-serif' }}
-                  >
-                    <Users className="w-4 h-4 ml-2" />
-                    مورد
-                  </Button>
-                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={openEntityDialog}
+                  style={{ fontFamily: 'Tajawal, sans-serif' }}
+                >
+                  <Users className="w-4 h-4 ml-2" />
+                  اختيار
+                </Button>
               </div>
             </div>
             <div>
@@ -327,17 +358,6 @@ const VouchersPage = () => {
                 value={newVoucher.amount}
                 onChange={(e) => setNewVoucher({ ...newVoucher, amount: parseFloat(e.target.value) })}
                 className="text-sm"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <Label htmlFor="description" style={{ fontFamily: 'Tajawal, sans-serif' }}>البيان</Label>
-              <Textarea
-                id="description"
-                placeholder="أدخل البيان"
-                value={newVoucher.description}
-                onChange={(e) => setNewVoucher({ ...newVoucher, description: e.target.value })}
-                className="text-sm"
-                style={{ fontFamily: 'Tajawal, sans-serif' }}
               />
             </div>
             <div>
@@ -353,7 +373,18 @@ const VouchersPage = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="md:col-span-1 flex items-end justify-end">
+            <div className="md:col-span-2">
+              <Label htmlFor="description" style={{ fontFamily: 'Tajawal, sans-serif' }}>البيان</Label>
+              <Textarea
+                id="description"
+                placeholder="أدخل البيان"
+                value={newVoucher.description}
+                onChange={(e) => setNewVoucher({ ...newVoucher, description: e.target.value })}
+                className="text-sm"
+                style={{ fontFamily: 'Tajawal, sans-serif' }}
+              />
+            </div>
+            <div className="md:col-span-2 flex justify-end">
               <Button onClick={handleAddVoucher} className="bg-blue-600 hover:bg-blue-700 text-white" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                 <Plus className="w-4 h-4 ml-2" />
                 إضافة سند
@@ -413,7 +444,7 @@ const VouchersPage = () => {
                   <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>رقم السند</th>
                   <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>النوع</th>
                   <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>التاريخ</th>
-                  <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>العميل/المورد</th>
+                  <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الجهة</th>
                   <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>المبلغ</th>
                   <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>طريقة الدفع</th>
                   <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجراءات</th>
@@ -492,6 +523,7 @@ const VouchersPage = () => {
         open={showCustomerSearchDialog}
         onClose={() => setShowCustomerSearchDialog(false)}
         onSelectCustomer={handleCustomerSelect}
+        language="ar"
       />
 
       <SupplierSearchDialog
@@ -499,6 +531,7 @@ const VouchersPage = () => {
         onClose={() => setShowSupplierSearchDialog(false)}
         onSupplierSelect={handleSupplierSelect}
         searchTerm=""
+        language="ar"
       />
 
       <EditVoucherDialog
