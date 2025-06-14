@@ -42,6 +42,38 @@ export type Database = {
         }
         Relationships: []
       }
+      checklist_items: {
+        Row: {
+          completed: boolean | null
+          created_at: string | null
+          id: string
+          note_id: string
+          text: string
+        }
+        Insert: {
+          completed?: boolean | null
+          created_at?: string | null
+          id?: string
+          note_id: string
+          text: string
+        }
+        Update: {
+          completed?: boolean | null
+          created_at?: string | null
+          id?: string
+          note_id?: string
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_items_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           average_price: number | null
@@ -152,6 +184,42 @@ export type Database = {
           supplier_name?: string
           supplier_phone?: string | null
           total?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      notes: {
+        Row: {
+          color: string | null
+          completed: boolean | null
+          content: string | null
+          created_at: string | null
+          date: string
+          id: string
+          title: string
+          type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          completed?: boolean | null
+          content?: string | null
+          created_at?: string | null
+          date: string
+          id?: string
+          title: string
+          type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          completed?: boolean | null
+          content?: string | null
+          created_at?: string | null
+          date?: string
+          id?: string
+          title?: string
+          type?: string | null
           updated_at?: string | null
         }
         Relationships: []

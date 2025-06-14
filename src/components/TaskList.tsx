@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, CheckSquare, Palette } from "lucide-react";
+import { Plus, Trash2, CheckSquare } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client.ts";
 
 interface Task {
@@ -31,28 +30,56 @@ const groupColors = [
 ];
 
 export const TaskList = () => {
-    const [taskGroups, setTaskGroups] = useState<TaskGroup[]>([]); // إزالة البيانات الافتراضية
-
+  const [taskGroups, setTaskGroups] = useState<TaskGroup[]>([]);
   const [newGroupTitle, setNewGroupTitle] = useState("");
   const [newGroupColor, setNewGroupColor] = useState("yellow");
 
-    useEffect(() => {
+  // Fetch task groups from database
+  useEffect(() => {
     const fetchTaskGroups = async () => {
-      const { data, error } = await supabase.from("task_groups").select("*");
-      if (error) console.error(error);
-      else setTaskGroups(
-        (data || []).map((group: any) => ({
-          id: group.id,
-          title: group.title,
-          color: group.color || "yellow",
-          tasks: [],
-        }))
+      const { data, error } = await supabase
+        .from("task_groups")
+        .select("*")
+        .order('created_date', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching task groups:', error);
+        return;
+      }
+
+      const groupsWithTasks = await Promise.all(
+        (data || []).map(async (group: any) => {
+          const { data: tasks, error: tasksError } = await supabase
+            .from("tasks")
+            .select("*")
+            .eq("task_group_id", group.id)
+            .order('created_date', { ascending: false });
+
+          if (tasksError) {
+            console.error('Error fetching tasks for group:', tasksError);
+          }
+
+          return {
+            id: group.id,
+            title: group.title,
+            color: group.color || "yellow",
+            tasks: (tasks || []).map((task: any) => ({
+              id: task.id,
+              title: task.title,
+              completed: task.completed || false,
+              createdDate: task.created_date
+            }))
+          };
+        })
       );
+
+      setTaskGroups(groupsWithTasks);
     };
+    
     fetchTaskGroups();
   }, []);
 
-  const addTaskGroup = () => {
+  const addTaskGroup = async () => {
     if (!newGroupTitle.trim()) {
       toast({
         title: "خطأ",
@@ -62,23 +89,43 @@ export const TaskList = () => {
       return;
     }
 
+    const { data, error } = await supabase
+      .from("task_groups")
+      .insert({
+        title: newGroupTitle.trim(),
+        color: newGroupColor
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating task group:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في إنشاء مجموعة المهام",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const newGroup: TaskGroup = {
-      id: Date.now().toString(),
-      title: newGroupTitle.trim(),
-      color: newGroupColor,
+      id: data.id,
+      title: data.title,
+      color: data.color,
       tasks: [],
     };
 
-    setTaskGroups((prev) => [...prev, newGroup]);
+    setTaskGroups(prev => [newGroup, ...prev]);
     setNewGroupTitle("");
     setNewGroupColor("yellow");
+    
     toast({
       title: "تمت الإضافة",
       description: "تمت إضافة مجموعة المهام بنجاح",
     });
   };
 
-  const addTaskToGroup = (groupId: string, taskTitle: string) => {
+  const addTaskToGroup = async (groupId: string, taskTitle: string) => {
     if (!taskTitle.trim()) {
       toast({
         title: "خطأ",
@@ -88,34 +135,69 @@ export const TaskList = () => {
       return;
     }
 
-    setTaskGroups((prev) =>
-      prev.map((group) =>
+    const { data, error } = await supabase
+      .from("tasks")
+      .insert({
+        title: taskTitle.trim(),
+        task_group_id: groupId,
+        completed: false
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating task:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في إنشاء المهمة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newTask: Task = {
+      id: data.id,
+      title: data.title,
+      completed: data.completed,
+      createdDate: data.created_date
+    };
+
+    setTaskGroups(prev =>
+      prev.map(group =>
         group.id === groupId
-          ? {
-              ...group,
-              tasks: [
-                ...group.tasks,
-                {
-                  id: Date.now().toString(),
-                  title: taskTitle.trim(),
-                  completed: false,
-                  color: "bg-white",
-                  createdDate: new Date().toISOString().split("T")[0],
-                },
-              ],
-            }
+          ? { ...group, tasks: [newTask, ...group.tasks] }
           : group
       )
     );
   };
 
-  const toggleTaskCompletion = (groupId: string, taskId: string) => {
-    setTaskGroups((prev) =>
-      prev.map((group) =>
+  const toggleTaskCompletion = async (groupId: string, taskId: string) => {
+    const group = taskGroups.find(g => g.id === groupId);
+    const task = group?.tasks.find(t => t.id === taskId);
+    
+    if (!task) return;
+
+    const { error } = await supabase
+      .from("tasks")
+      .update({ completed: !task.completed })
+      .eq("id", taskId);
+
+    if (error) {
+      console.error('Error updating task:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في تحديث المهمة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setTaskGroups(prev =>
+      prev.map(group =>
         group.id === groupId
           ? {
               ...group,
-              tasks: group.tasks.map((task) =>
+              tasks: group.tasks.map(task =>
                 task.id === taskId ? { ...task, completed: !task.completed } : task
               ),
             }
@@ -124,18 +206,48 @@ export const TaskList = () => {
     );
   };
 
-  const deleteTask = (groupId: string, taskId: string) => {
-    setTaskGroups((prev) =>
-      prev.map((group) =>
+  const deleteTask = async (groupId: string, taskId: string) => {
+    const { error } = await supabase
+      .from("tasks")
+      .delete()
+      .eq("id", taskId);
+
+    if (error) {
+      console.error('Error deleting task:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في حذف المهمة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setTaskGroups(prev =>
+      prev.map(group =>
         group.id === groupId
-          ? { ...group, tasks: group.tasks.filter((task) => task.id !== taskId) }
+          ? { ...group, tasks: group.tasks.filter(task => task.id !== taskId) }
           : group
       )
     );
   };
 
-  const deleteTaskGroup = (groupId: string) => {
-    setTaskGroups((prev) => prev.filter((group) => group.id !== groupId));
+  const deleteTaskGroup = async (groupId: string) => {
+    const { error } = await supabase
+      .from("task_groups")
+      .delete()
+      .eq("id", groupId);
+
+    if (error) {
+      console.error('Error deleting task group:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في حذف مجموعة المهام",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setTaskGroups(prev => prev.filter(group => group.id !== groupId));
   };
 
   return (
