@@ -110,6 +110,7 @@ const DailyPurchasesPage = () => {
       <DateNavigation 
         currentDate={selectedDate}
         onDateChange={setSelectedDate}
+        onClearData={handleClearDay}
       />
 
       {/* Add New Purchase Form */}

@@ -37,14 +37,6 @@ export const TaskList = () => {
   // Fetch task groups from database
   useEffect(() => {
     const fetchTaskGroups = async () => {
-      // First add color column if it doesn't exist
-      const { error: alterError } = await supabase.rpc('exec', {
-        sql: `ALTER TABLE task_groups ADD COLUMN IF NOT EXISTS color VARCHAR(50) DEFAULT 'yellow';`
-      }).catch(() => {
-        // If RPC doesn't work, try direct query
-        return supabase.from('task_groups').select('color').limit(1);
-      });
-
       const { data, error } = await supabase
         .from("task_groups")
         .select("*")

@@ -524,16 +524,19 @@ export type Database = {
       }
       task_groups: {
         Row: {
+          color: string | null
           created_date: string | null
           id: string
           title: string
         }
         Insert: {
+          color?: string | null
           created_date?: string | null
           id?: string
           title: string
         }
         Update: {
+          color?: string | null
           created_date?: string | null
           id?: string
           title?: string
@@ -547,6 +550,7 @@ export type Database = {
           completed_date: string | null
           created_date: string | null
           id: string
+          task_group_id: string | null
           title: string
         }
         Insert: {
@@ -555,6 +559,7 @@ export type Database = {
           completed_date?: string | null
           created_date?: string | null
           id?: string
+          task_group_id?: string | null
           title: string
         }
         Update: {
@@ -563,9 +568,18 @@ export type Database = {
           completed_date?: string | null
           created_date?: string | null
           id?: string
+          task_group_id?: string | null
           title?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tasks_task_group_id_fkey"
+            columns: ["task_group_id"]
+            isOneToOne: false
+            referencedRelation: "task_groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       voucher_items: {
         Row: {
