@@ -166,6 +166,8 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
 
   const updateBatteryTypeQuantity = async (batteryTypeId: string, quantityChange: number) => {
     try {
+      console.log('Updating battery type quantity:', { batteryTypeId, quantityChange });
+      
       const { data, error } = await supabase
         .from("battery_types")
         .select("currentQty")
@@ -187,7 +189,12 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
       if (updateError) {
         console.error("Error updating battery type quantity:", updateError);
       } else {
-        console.log("Battery type quantity updated successfully.");
+        console.log("Battery type quantity updated successfully:", { 
+          batteryTypeId, 
+          previousQty: data?.currentQty || 0, 
+          change: quantityChange, 
+          newQty: updatedQty 
+        });
       }
     } catch (err) {
       console.error("Unexpected error updating battery type quantity:", err);
@@ -196,6 +203,8 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
 
   const updateSupplierStats = async (supplierCode: string, purchase: DailyPurchase) => {
     try {
+      console.log('Updating supplier stats for:', supplierCode, purchase);
+      
       // Get supplier by code
       const { data: supplier, error: supplierError } = await supabase
         .from("suppliers")
@@ -213,8 +222,16 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
       const newTotalAmount = (supplier.total_amount || 0) + purchase.finalTotal;
       const newAveragePrice = newTotalPurchases > 0 ? newTotalAmount / newTotalPurchases : 0;
       
-      // Update balance if it's credit purchase (we'll assume daily purchases are credit by default)
+      // Update balance for credit purchases
       const newBalance = (supplier.balance || 0) + purchase.finalTotal;
+
+      console.log('Calculated supplier stats:', {
+        oldStats: supplier,
+        newTotalPurchases,
+        newTotalAmount,
+        newAveragePrice,
+        newBalance
+      });
 
       const { error: updateError } = await supabase
         .from("suppliers")
@@ -239,6 +256,8 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
 
   const revertSupplierStats = async (supplierCode: string, purchase: DailyPurchase) => {
     try {
+      console.log('Reverting supplier stats for:', supplierCode, purchase);
+      
       // Get supplier by code
       const { data: supplier, error: supplierError } = await supabase
         .from("suppliers")
@@ -256,6 +275,14 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
       const newTotalAmount = Math.max(0, (supplier.total_amount || 0) - purchase.finalTotal);
       const newAveragePrice = newTotalPurchases > 0 ? newTotalAmount / newTotalPurchases : 0;
       const newBalance = Math.max(0, (supplier.balance || 0) - purchase.finalTotal);
+
+      console.log('Calculated reverted supplier stats:', {
+        oldStats: supplier,
+        newTotalPurchases,
+        newTotalAmount,
+        newAveragePrice,
+        newBalance
+      });
 
       const { error: updateError } = await supabase
         .from("suppliers")
@@ -308,29 +335,35 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
       return;
     }
 
-    if (!purchase.id.startsWith("temp-")) {
-      const { error } = await supabase
-        .from("daily_purchases")
-        .delete()
-        .eq("id", purchase.id);
+    try {
+      if (!purchase.id.startsWith("temp-")) {
+        const { error } = await supabase
+          .from("daily_purchases")
+          .delete()
+          .eq("id", purchase.id);
 
-      if (error) {
-        console.error("Error deleting purchase from database:", error);
-        toast({
-          title: language === "ar" ? "خطأ" : "Error",
-          description: language === "ar" ? "فشل في حذف الصف" : "Failed to delete row",
-          variant: "destructive",
-          duration: 2000,
-        });
-        return;
-      } else {
+        if (error) {
+          console.error("Error deleting purchase from database:", error);
+          toast({
+            title: language === "ar" ? "خطأ" : "Error",
+            description: language === "ar" ? "فشل في حذف الصف" : "Failed to delete row",
+            variant: "destructive",
+            duration: 2000,
+          });
+          return;
+        }
+
         console.log("Purchase deleted successfully from database.");
         
         // Revert battery type quantity
-        await updateBatteryTypeQuantity(purchase.batteryTypeId, -purchase.quantity);
+        if (purchase.batteryTypeId) {
+          await updateBatteryTypeQuantity(purchase.batteryTypeId, -purchase.quantity);
+        }
         
         // Revert supplier stats
-        await revertSupplierStats(purchase.supplierCode, purchase);
+        if (purchase.supplierCode) {
+          await revertSupplierStats(purchase.supplierCode, purchase);
+        }
 
         toast({
           title: language === "ar" ? "تم الحذف" : "Deleted",
@@ -338,9 +371,17 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
           duration: 2000,
         });
       }
-    }
 
-    setLocalPurchases((prev) => prev.filter((_, i) => i !== index));
+      setLocalPurchases((prev) => prev.filter((_, i) => i !== index));
+    } catch (error) {
+      console.error("Error in deleteRow:", error);
+      toast({
+        title: language === "ar" ? "خطأ" : "Error",
+        description: language === "ar" ? "حدث خطأ أثناء الحذف" : "An error occurred while deleting",
+        variant: "destructive",
+        duration: 2000,
+      });
+    }
   };
 
   const savePurchaseRow = async (index: number) => {
@@ -356,54 +397,12 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
       return;
     }
 
-    if (purchase.id && !purchase.id.startsWith("temp-")) {
-      // Update existing purchase
-      const { error } = await supabase
-        .from("daily_purchases")
-        .update({
-          supplier_name: purchase.supplierName,
-          supplier_code: purchase.supplierCode,
-          supplier_phone: purchase.supplierPhone,
-          battery_type: purchase.batteryType,
-          batteryTypeId: purchase.batteryTypeId,
-          quantity: purchase.quantity,
-          price_per_kg: purchase.pricePerKg,
-          total: purchase.total,
-          discount: purchase.discount,
-          final_total: purchase.finalTotal,
-        })
-        .eq("id", purchase.id);
-
-      if (error) {
-        console.error("Error updating purchase:", error);
-        toast({
-          title: language === "ar" ? "خطأ" : "Error",
-          description: language === "ar" ? "فشل في تحديث البيانات" : "Failed to update data",
-          variant: "destructive",
-          duration: 2000,
-        });
-      } else {
-        console.log("Purchase updated successfully:", purchase);
-        
-        // Update battery type quantity
-        await updateBatteryTypeQuantity(purchase.batteryTypeId, purchase.quantity);
-        
-        // Update supplier stats
-        await updateSupplierStats(purchase.supplierCode, purchase);
-
-        toast({
-          title: language === "ar" ? "تم التحديث" : "Updated",
-          description: language === "ar" ? "تم تحديث البيانات وبيانات المورد بنجاح" : "Data and supplier information updated successfully",
-          duration: 2000,
-        });
-      }
-    } else {
-      // Create new purchase
-      const { data, error } = await supabase
-        .from("daily_purchases")
-        .insert([
-          {
-            date: currentDate,
+    try {
+      if (purchase.id && !purchase.id.startsWith("temp-")) {
+        // Update existing purchase
+        const { error } = await supabase
+          .from("daily_purchases")
+          .update({
             supplier_name: purchase.supplierName,
             supplier_code: purchase.supplierCode,
             supplier_phone: purchase.supplierPhone,
@@ -414,37 +413,84 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
             total: purchase.total,
             discount: purchase.discount,
             final_total: purchase.finalTotal,
-          },
-        ])
-        .select();
+          })
+          .eq("id", purchase.id);
 
-      if (error) {
-        console.error("Error saving purchase:", error);
-        toast({
-          title: language === "ar" ? "خطأ" : "Error",
-          description: language === "ar" ? "فشل في حفظ البيانات" : "Failed to save data",
-          variant: "destructive",
-          duration: 2000,
-        });
+        if (error) {
+          console.error("Error updating purchase:", error);
+          toast({
+            title: language === "ar" ? "خطأ" : "Error",
+            description: language === "ar" ? "فشل في تحديث البيانات" : "Failed to update data",
+            variant: "destructive",
+            duration: 2000,
+          });
+          return;
+        }
+
+        console.log("Purchase updated successfully:", purchase);
       } else {
+        // Create new purchase
+        const { data, error } = await supabase
+          .from("daily_purchases")
+          .insert([
+            {
+              date: currentDate,
+              supplier_name: purchase.supplierName,
+              supplier_code: purchase.supplierCode,
+              supplier_phone: purchase.supplierPhone,
+              battery_type: purchase.batteryType,
+              batteryTypeId: purchase.batteryTypeId,
+              quantity: purchase.quantity,
+              price_per_kg: purchase.pricePerKg,
+              total: purchase.total,
+              discount: purchase.discount,
+              final_total: purchase.finalTotal,
+            },
+          ])
+          .select();
+
+        if (error) {
+          console.error("Error saving purchase:", error);
+          toast({
+            title: language === "ar" ? "خطأ" : "Error",
+            description: language === "ar" ? "فشل في حفظ البيانات" : "Failed to save data",
+            variant: "destructive",
+            duration: 2000,
+          });
+          return;
+        }
+
         console.log("Purchase saved successfully:", data);
         if (data && data.length > 0) {
           updateLocalPurchase(index, "isSaved", true);
           updateLocalPurchase(index, "id", data[0].id);
-          
-          // Update battery type quantity
-          await updateBatteryTypeQuantity(purchase.batteryTypeId, purchase.quantity);
-          
-          // Update supplier stats
-          await updateSupplierStats(purchase.supplierCode, purchase);
-
-          toast({
-            title: language === "ar" ? "تم الحفظ" : "Saved",
-            description: language === "ar" ? "تم حفظ البيانات وتحديث بيانات المورد بنجاح" : "Data saved and supplier information updated successfully",
-            duration: 2000,
-          });
         }
       }
+
+      // Update battery type quantity
+      if (purchase.batteryTypeId) {
+        await updateBatteryTypeQuantity(purchase.batteryTypeId, purchase.quantity);
+      }
+      
+      // Update supplier stats
+      if (purchase.supplierCode) {
+        await updateSupplierStats(purchase.supplierCode, purchase);
+      }
+
+      toast({
+        title: language === "ar" ? "تم الحفظ" : "Saved",
+        description: language === "ar" ? "تم حفظ البيانات وتحديث بيانات المورد بنجاح" : "Data saved and supplier information updated successfully",
+        duration: 2000,
+      });
+
+    } catch (error) {
+      console.error("Error in savePurchaseRow:", error);
+      toast({
+        title: language === "ar" ? "خطأ" : "Error",
+        description: language === "ar" ? "حدث خطأ أثناء الحفظ" : "An error occurred while saving",
+        variant: "destructive",
+        duration: 2000,
+      });
     }
   };
 

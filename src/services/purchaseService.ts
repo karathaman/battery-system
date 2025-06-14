@@ -40,6 +40,8 @@ interface Purchase {
 
 const updateSupplierStats = async (supplierId: string) => {
   try {
+    console.log('Updating supplier stats for:', supplierId);
+    
     // Get all purchases for this supplier
     const { data: purchases, error: purchasesError } = await supabase
       .from('purchases')
@@ -62,7 +64,7 @@ const updateSupplierStats = async (supplierId: string) => {
 
     if (!purchases || purchases.length === 0) {
       // Reset supplier stats if no purchases
-      await supabase
+      const { error: resetError } = await supabase
         .from('suppliers')
         .update({
           total_purchases: 0,
@@ -72,6 +74,12 @@ const updateSupplierStats = async (supplierId: string) => {
           balance: 0
         })
         .eq('id', supplierId);
+      
+      if (resetError) {
+        console.error('Error resetting supplier stats:', resetError);
+      } else {
+        console.log('Supplier stats reset successfully');
+      }
       return;
     }
 
@@ -83,16 +91,16 @@ const updateSupplierStats = async (supplierId: string) => {
 
     purchases.forEach(purchase => {
       // Sum quantities from purchase items
-      if (purchase.purchase_items) {
-        totalQuantity += purchase.purchase_items.reduce((sum, item) => sum + item.quantity, 0);
+      if (purchase.purchase_items && Array.isArray(purchase.purchase_items)) {
+        totalQuantity += purchase.purchase_items.reduce((sum, item) => sum + (item.quantity || 0), 0);
       }
       
       // Sum total amounts
-      totalAmount += purchase.total;
+      totalAmount += purchase.total || 0;
       
-      // Add to balance if payment method is credit (checking for both credit and اجل)
+      // Add to balance if payment method is credit
       if (purchase.payment_method === 'check' || purchase.payment_method === 'bank_transfer') {
-        balance += purchase.total;
+        balance += purchase.total || 0;
       }
       
       // Find latest purchase date
@@ -102,6 +110,14 @@ const updateSupplierStats = async (supplierId: string) => {
     });
 
     const averagePrice = totalQuantity > 0 ? totalAmount / totalQuantity : 0;
+
+    console.log('Calculated stats:', {
+      totalQuantity,
+      totalAmount,
+      averagePrice,
+      lastPurchaseDate,
+      balance
+    });
 
     // Update supplier stats
     const { error: updateError } = await supabase
@@ -117,6 +133,8 @@ const updateSupplierStats = async (supplierId: string) => {
 
     if (updateError) {
       console.error('Error updating supplier stats:', updateError);
+    } else {
+      console.log('Supplier stats updated successfully');
     }
   } catch (error) {
     console.error('Error in updateSupplierStats:', error);
@@ -125,6 +143,8 @@ const updateSupplierStats = async (supplierId: string) => {
 
 const updateBatteryTypeQuantity = async (batteryTypeId: string, quantityChange: number) => {
   try {
+    console.log('Updating battery type quantity:', { batteryTypeId, quantityChange });
+    
     // Get current quantity
     const { data: batteryType, error: fetchError } = await supabase
       .from('battery_types')
@@ -140,6 +160,12 @@ const updateBatteryTypeQuantity = async (batteryTypeId: string, quantityChange: 
     const currentQty = batteryType?.currentQty || 0;
     const newQty = currentQty + quantityChange;
 
+    console.log('Battery type quantity update:', {
+      currentQty,
+      quantityChange,
+      newQty: Math.max(0, newQty)
+    });
+
     // Update quantity
     const { error: updateError } = await supabase
       .from('battery_types')
@@ -148,6 +174,8 @@ const updateBatteryTypeQuantity = async (batteryTypeId: string, quantityChange: 
 
     if (updateError) {
       console.error('Error updating battery type quantity:', updateError);
+    } else {
+      console.log('Battery type quantity updated successfully');
     }
   } catch (error) {
     console.error('Error in updateBatteryTypeQuantity:', error);
@@ -190,6 +218,8 @@ const purchaseService = {
 
   createPurchase: async (purchaseData: PurchaseFormData): Promise<Purchase> => {
     try {
+      console.log('Creating purchase with data:', purchaseData);
+      
       // Create purchase
       const { data: newPurchase, error: purchaseError } = await supabase
         .from('purchases')
@@ -209,8 +239,11 @@ const purchaseService = {
         .single();
 
       if (purchaseError) {
+        console.error('Error creating purchase:', purchaseError);
         throw new Error(purchaseError.message);
       }
+
+      console.log('Purchase created successfully:', newPurchase);
 
       // Create purchase items
       if (purchaseData.items && purchaseData.items.length > 0) {
@@ -222,15 +255,20 @@ const purchaseService = {
           total: item.total
         }));
 
+        console.log('Creating purchase items:', itemsToInsert);
+
         const { error: itemsError } = await supabase
           .from('purchase_items')
           .insert(itemsToInsert);
 
         if (itemsError) {
+          console.error('Error creating purchase items:', itemsError);
           // If items creation fails, delete the purchase
           await supabase.from('purchases').delete().eq('id', newPurchase.id);
           throw new Error(itemsError.message);
         }
+
+        console.log('Purchase items created successfully');
 
         // Update battery type quantities
         for (const item of purchaseData.items) {
@@ -240,6 +278,8 @@ const purchaseService = {
 
       // Update supplier stats
       await updateSupplierStats(purchaseData.supplier_id);
+
+      console.log('Purchase creation completed successfully');
 
       return {
         ...newPurchase,
@@ -253,6 +293,8 @@ const purchaseService = {
 
   updatePurchase: async (id: string, purchaseData: Partial<PurchaseFormData>): Promise<Purchase> => {
     try {
+      console.log('Updating purchase:', id, purchaseData);
+      
       // Get original purchase data for comparison
       const { data: originalPurchase, error: fetchError } = await supabase
         .from('purchases')
@@ -270,8 +312,11 @@ const purchaseService = {
         .single();
 
       if (fetchError) {
+        console.error('Error fetching original purchase:', fetchError);
         throw new Error(fetchError.message);
       }
+
+      console.log('Original purchase data:', originalPurchase);
 
       // Update purchase
       const { data: updatedPurchase, error: updateError } = await supabase
@@ -293,18 +338,31 @@ const purchaseService = {
         .single();
 
       if (updateError) {
+        console.error('Error updating purchase:', updateError);
         throw new Error(updateError.message);
       }
 
+      console.log('Purchase updated successfully:', updatedPurchase);
+
       // Revert old battery type quantities
-      if (originalPurchase.purchase_items) {
+      if (originalPurchase.purchase_items && Array.isArray(originalPurchase.purchase_items)) {
+        console.log('Reverting old battery type quantities');
         for (const item of originalPurchase.purchase_items) {
           await updateBatteryTypeQuantity(item.battery_type_id, -item.quantity);
         }
       }
 
       // Delete old purchase items
-      await supabase.from('purchase_items').delete().eq('purchase_id', id);
+      const { error: deleteItemsError } = await supabase
+        .from('purchase_items')
+        .delete()
+        .eq('purchase_id', id);
+
+      if (deleteItemsError) {
+        console.error('Error deleting old purchase items:', deleteItemsError);
+      } else {
+        console.log('Old purchase items deleted successfully');
+      }
 
       // Create new purchase items
       if (purchaseData.items && purchaseData.items.length > 0) {
@@ -316,13 +374,18 @@ const purchaseService = {
           total: item.total
         }));
 
+        console.log('Creating new purchase items:', itemsToInsert);
+
         const { error: itemsError } = await supabase
           .from('purchase_items')
           .insert(itemsToInsert);
 
         if (itemsError) {
+          console.error('Error creating new purchase items:', itemsError);
           throw new Error(itemsError.message);
         }
+
+        console.log('New purchase items created successfully');
 
         // Update battery type quantities with new values
         for (const item of purchaseData.items) {
@@ -336,6 +399,8 @@ const purchaseService = {
         await updateSupplierStats(purchaseData.supplier_id);
       }
 
+      console.log('Purchase update completed successfully');
+
       return {
         ...updatedPurchase,
         items: purchaseData.items || []
@@ -348,6 +413,8 @@ const purchaseService = {
 
   deletePurchase: async (id: string): Promise<void> => {
     try {
+      console.log('Deleting purchase:', id);
+      
       // Get purchase data before deletion
       const { data: purchase, error: fetchError } = await supabase
         .from('purchases')
@@ -362,11 +429,15 @@ const purchaseService = {
         .single();
 
       if (fetchError) {
+        console.error('Error fetching purchase for deletion:', fetchError);
         throw new Error(fetchError.message);
       }
 
+      console.log('Purchase data for deletion:', purchase);
+
       // Revert battery type quantities
-      if (purchase.purchase_items) {
+      if (purchase.purchase_items && Array.isArray(purchase.purchase_items)) {
+        console.log('Reverting battery type quantities for deleted purchase');
         for (const item of purchase.purchase_items) {
           await updateBatteryTypeQuantity(item.battery_type_id, -item.quantity);
         }
@@ -379,11 +450,16 @@ const purchaseService = {
         .eq('id', id);
 
       if (deleteError) {
+        console.error('Error deleting purchase:', deleteError);
         throw new Error(deleteError.message);
       }
 
+      console.log('Purchase deleted successfully');
+
       // Update supplier stats
       await updateSupplierStats(purchase.supplier_id);
+
+      console.log('Purchase deletion completed successfully');
     } catch (error) {
       console.error('Error deleting purchase:', error);
       throw error;

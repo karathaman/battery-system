@@ -20,6 +20,7 @@ export const useBatteryTypes = () => {
     mutationFn: (data) => batteryTypeService.createBatteryType(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['batteryTypes'] });
+      queryClient.invalidateQueries({ queryKey: ['battery-types'] });
       toast({
         title: "تم إضافة النوع",
         description: "تم إضافة نوع البطارية بنجاح",
@@ -38,6 +39,7 @@ export const useBatteryTypes = () => {
     mutationFn: ({ id, data }) => batteryTypeService.updateBatteryType(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['batteryTypes'] });
+      queryClient.invalidateQueries({ queryKey: ['battery-types'] });
       toast({
         title: "تم التحديث",
         description: "تم تحديث نوع البطارية بنجاح",
@@ -56,6 +58,7 @@ export const useBatteryTypes = () => {
     mutationFn: (id) => batteryTypeService.deleteBatteryType(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['batteryTypes'] });
+      queryClient.invalidateQueries({ queryKey: ['battery-types'] });
       toast({
         title: "تم الحذف",
         description: "تم حذف نوع البطارية بنجاح",
