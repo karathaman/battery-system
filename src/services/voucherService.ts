@@ -26,7 +26,7 @@ export interface VoucherFormData {
   entity_name: string;
   amount: number;
   description?: string;
-  payment_method: 'cash' | 'card' | 'bank_transfer' | 'check';
+  payment_method: 'cash' | 'card' | 'bank_transfer' | 'check' | 'transfer';
 }
 
 export const voucherService = {
@@ -69,7 +69,7 @@ export const voucherService = {
       throw error;
     }
 
-    // Transform data to include entity_name and amount
+    // Transform data to include entity_name and amount from joined tables
     const transformedData = (data || []).map((voucher: any) => ({
       id: voucher.id,
       voucher_number: voucher.voucher_number,
@@ -150,7 +150,7 @@ export const voucherService = {
       entity_name: newVoucher.entity_name,
       amount: newVoucher.amount,
       description: newVoucher.notes,
-      payment_method: newVoucher.payment_method === 'bank_transfer' ? 'bank_transfer' : newVoucher.payment_method,
+      payment_method: newVoucher.payment_method,
       status: newVoucher.status,
       created_at: newVoucher.created_at,
       updated_at: newVoucher.updated_at,
@@ -190,7 +190,7 @@ export const voucherService = {
       entity_name: updatedVoucher.entity_name,
       amount: updatedVoucher.amount,
       description: updatedVoucher.notes,
-      payment_method: updatedVoucher.payment_method === 'bank_transfer' ? 'bank_transfer' : updatedVoucher.payment_method,
+      payment_method: updatedVoucher.payment_method,
       status: updatedVoucher.status,
       created_at: updatedVoucher.created_at,
       updated_at: updatedVoucher.updated_at,
