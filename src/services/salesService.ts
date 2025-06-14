@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Sale } from '@/types/sales';
 
@@ -51,6 +50,61 @@ const mapPaymentMethod = (paymentMethod: string): "cash" | "card" | "bank_transf
       return 'check';
     default:
       return 'cash';
+  }
+};
+
+// Helper function to update customer balance for credit sales
+const updateCustomerBalance = async (customerId: string, amount: number, isAdd: boolean = true) => {
+  const { data: customer, error: fetchError } = await supabase
+    .from('customers')
+    .select('balance')
+    .eq('id', customerId)
+    .single();
+
+  if (fetchError) {
+    console.error('Error fetching customer:', fetchError);
+    throw new Error('فشل في جلب بيانات العميل');
+  }
+
+  const currentBalance = customer.balance || 0;
+  const newBalance = isAdd ? currentBalance + amount : currentBalance - amount;
+
+  const { error: updateError } = await supabase
+    .from('customers')
+    .update({ balance: newBalance })
+    .eq('id', customerId);
+
+  if (updateError) {
+    console.error('Error updating customer balance:', updateError);
+    throw new Error('فشل في تحديث رصيد العميل');
+  }
+};
+
+// Helper function to update battery type quantities
+const updateBatteryTypeQuantities = async (items: Array<{battery_type_id: string, quantity: number}>, isDecrease: boolean = true) => {
+  for (const item of items) {
+    const { data: batteryType, error: fetchError } = await supabase
+      .from('battery_types')
+      .select('currentQty')
+      .eq('id', item.battery_type_id)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching battery type:', fetchError);
+      continue; // Don't stop the whole process for one item
+    }
+
+    const currentQty = batteryType.currentQty || 0;
+    const newQty = isDecrease ? currentQty - item.quantity : currentQty + item.quantity;
+
+    const { error: updateError } = await supabase
+      .from('battery_types')
+      .update({ currentQty: Math.max(0, newQty) }) // Ensure quantity doesn't go negative
+      .eq('id', item.battery_type_id);
+
+    if (updateError) {
+      console.error('Error updating battery type quantity:', updateError);
+    }
   }
 };
 
@@ -146,6 +200,14 @@ const salesService = {
       throw new Error(itemsError.message);
     }
 
+    // Update customer balance if payment method is credit
+    if (data.payment_method === 'credit') {
+      await updateCustomerBalance(data.customer_id, data.total, true);
+    }
+
+    // Update battery type quantities (decrease for sales)
+    await updateBatteryTypeQuantities(data.items, true);
+
     // Fetch the created sale with all details
     const { data: completeSale, error: fetchError } = await supabase
       .from('sales')
@@ -194,6 +256,35 @@ const salesService = {
   },
 
   updateSale: async (id: string, data: Partial<SaleFormData>): Promise<ExtendedSale> => {
+    // First, get the original sale data to revert changes
+    const { data: originalSale, error: fetchOriginalError } = await supabase
+      .from('sales')
+      .select(`
+        *,
+        sale_items(*)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (fetchOriginalError) {
+      console.error('Error fetching original sale:', fetchOriginalError);
+      throw new Error('فشل في جلب بيانات الفاتورة الأصلية');
+    }
+
+    // Revert the original sale effects
+    if (originalSale.payment_method === 'check') { // credit sales
+      await updateCustomerBalance(originalSale.customer_id, originalSale.total, false);
+    }
+
+    // Revert battery quantities (add back the sold quantities)
+    if (originalSale.sale_items) {
+      const originalItems = originalSale.sale_items.map(item => ({
+        battery_type_id: item.battery_type_id,
+        quantity: item.quantity
+      }));
+      await updateBatteryTypeQuantities(originalItems, false);
+    }
+
     // Update the sale
     const { error: saleError } = await supabase
       .from('sales')
@@ -243,6 +334,14 @@ const salesService = {
         console.error('Error creating sale items:', itemsError);
         throw new Error(itemsError.message);
       }
+
+      // Apply new sale effects
+      if (data.payment_method === 'credit' && data.customer_id && data.total) {
+        await updateCustomerBalance(data.customer_id, data.total, true);
+      }
+
+      // Update battery quantities for new items
+      await updateBatteryTypeQuantities(data.items, true);
     }
 
     // Fetch the updated sale with all details
@@ -293,6 +392,35 @@ const salesService = {
   },
 
   deleteSale: async (id: string): Promise<void> => {
+    // First, get the sale data to revert its effects
+    const { data: saleToDelete, error: fetchError } = await supabase
+      .from('sales')
+      .select(`
+        *,
+        sale_items(*)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching sale to delete:', fetchError);
+      throw new Error('فشل في جلب بيانات الفاتورة');
+    }
+
+    // Revert customer balance if it was a credit sale
+    if (saleToDelete.payment_method === 'check') { // credit sales
+      await updateCustomerBalance(saleToDelete.customer_id, saleToDelete.total, false);
+    }
+
+    // Revert battery quantities (add back the sold quantities)
+    if (saleToDelete.sale_items) {
+      const items = saleToDelete.sale_items.map(item => ({
+        battery_type_id: item.battery_type_id,
+        quantity: item.quantity
+      }));
+      await updateBatteryTypeQuantities(items, false);
+    }
+
     // Delete sale items first
     const { error: itemsError } = await supabase
       .from('sale_items')
