@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,17 +11,15 @@ import { ShoppingCart, Plus, Search, CreditCard, Banknote, Smartphone, Calendar,
 import { toast } from "@/hooks/use-toast";
 import { Sale, SaleItem } from "@/types/sales";
 import { printInvoice } from "@/utils/printUtils";
-import { addTransactionToCustomer, updateCustomerBalance, removeCustomerTransaction } from "@/utils/accountUtils";
 import { CustomerSearchDialog } from "@/components/CustomerSearchDialog";
 import { Customer } from "@/types";
+import { useSales } from "@/hooks/useSales";
+import { useBatteryTypes } from "@/hooks/useBatteryTypes";
+import { SaleFormData } from "@/services/salesService";
 
-const batteryTypes = [
-  "بطاريات عادية",
-  "بطاريات جافة",
-  "بطاريات زجاج",
-  "بطاريات تعبئة",
-  "رصاص"
-];
+interface ExtendedSaleItem extends SaleItem {
+  batteryTypeId: string;
+}
 
 const paymentMethods = [
   { value: "cash", label: "نقداً", icon: Banknote },
@@ -32,20 +30,23 @@ const paymentMethods = [
 
 const SalesPage = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [saleItems, setSaleItems] = useState<SaleItem[]>([
-    { id: "1", batteryType: "بطاريات عادية", quantity: 0, price: 0, total: 0 }
+  const [saleItems, setSaleItems] = useState<ExtendedSaleItem[]>([
+    { id: "1", batteryType: "", batteryTypeId: "", quantity: 0, price: 0, total: 0 }
   ]);
   const [discount, setDiscount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("cash");
-  const [recentSales, setRecentSales] = useState<Sale[]>([]);
   const [vatEnabled, setVatEnabled] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
 
+  const { sales, createSale, updateSale, deleteSale, isCreating, isUpdating, isDeleting } = useSales();
+  const { batteryTypes, isLoading: batteryTypesLoading } = useBatteryTypes();
+
   const addSaleItem = () => {
-    const newItem: SaleItem = {
+    const newItem: ExtendedSaleItem = {
       id: Date.now().toString(),
-      batteryType: "بطاريات عادية",
+      batteryType: "",
+      batteryTypeId: "",
       quantity: 0,
       price: 0,
       total: 0
@@ -53,9 +54,18 @@ const SalesPage = () => {
     setSaleItems([...saleItems, newItem]);
   };
 
-  const updateSaleItem = (index: number, field: keyof SaleItem, value: any) => {
+  const updateSaleItem = (index: number, field: keyof ExtendedSaleItem, value: any) => {
     const updatedItems = [...saleItems];
     updatedItems[index] = { ...updatedItems[index], [field]: value };
+    
+    // Update battery type name when battery type ID changes
+    if (field === 'batteryTypeId') {
+      const selectedBatteryType = batteryTypes.find(bt => bt.id === value);
+      if (selectedBatteryType) {
+        updatedItems[index].batteryType = selectedBatteryType.name;
+        updatedItems[index].price = selectedBatteryType.unit_price;
+      }
+    }
     
     if (field === 'quantity' || field === 'price') {
       updatedItems[index].total = updatedItems[index].quantity * updatedItems[index].price;
@@ -87,10 +97,64 @@ const SalesPage = () => {
     printInvoice(sale);
   };
 
+  const resetForm = () => {
+    setSelectedCustomer(null);
+    setSaleItems([{ id: "1", batteryType: "", batteryTypeId: "", quantity: 0, price: 0, total: 0 }]);
+    setDiscount(0);
+    setPaymentMethod("cash");
+    setVatEnabled(false);
+    setEditingSale(null);
+  };
+
+  const generateInvoice = () => {
+    if (!selectedCustomer) {
+      toast({
+        title: "خطأ",
+        description: "يرجى اختيار العميل أولاً",
+        variant: "destructive",
+        duration: 2000,
+      });
+      return;
+    }
+
+    if (saleItems.some(item => !item.quantity || !item.price || !item.batteryTypeId)) {
+      toast({
+        title: "خطأ",
+        description: "يرجى ملء جميع بيانات الأصناف",
+        variant: "destructive",
+        duration: 2000,
+      });
+      return;
+    }
+
+    const saleData: SaleFormData = {
+      customer_id: selectedCustomer.id,
+      date: new Date().toISOString().split('T')[0],
+      items: saleItems.map(item => ({
+        battery_type_id: item.batteryTypeId,
+        quantity: item.quantity,
+        price_per_kg: item.price
+      })),
+      subtotal: calculateSubtotal(),
+      discount,
+      tax: calculateTax(),
+      total: calculateTotal(),
+      payment_method: paymentMethod,
+      notes: ""
+    };
+
+    if (editingSale) {
+      updateSale({ id: editingSale.id, data: saleData });
+    } else {
+      createSale(saleData);
+    }
+
+    resetForm();
+  };
+
   const editSale = (sale: Sale) => {
     setEditingSale(sale);
-    // Note: We would need to find the customer by ID from the database
-    // For now, we'll create a minimal customer object
+    // Find customer from the sale data
     const customer: Customer = {
       id: sale.customerId,
       customerCode: `C${sale.customerId.substring(0, 3).toUpperCase()}`,
@@ -105,127 +169,23 @@ const SalesPage = () => {
       balance: 0
     };
     setSelectedCustomer(customer);
-    setSaleItems([...sale.items]);
+    
+    // Convert sale items to extended sale items
+    const extendedItems: ExtendedSaleItem[] = sale.items.map(item => {
+      const batteryType = batteryTypes.find(bt => bt.name === item.batteryType);
+      return {
+        ...item,
+        batteryTypeId: batteryType?.id || ""
+      };
+    });
+    setSaleItems(extendedItems);
     setDiscount(sale.discount);
     setPaymentMethod(sale.paymentMethod);
     setVatEnabled(sale.tax > 0);
   };
 
-  const updateSale = () => {
-    if (!editingSale || !selectedCustomer) return;
-
-    const updatedSale: Sale = {
-      ...editingSale,
-      customerId: selectedCustomer.id,
-      customerName: selectedCustomer.name,
-      items: [...saleItems],
-      subtotal: calculateSubtotal(),
-      discount,
-      tax: calculateTax(),
-      total: calculateTotal(),
-      paymentMethod,
-    };
-
-    setRecentSales(recentSales.map(sale => 
-      sale.id === editingSale.id ? updatedSale : sale
-    ));
-
-    toast({
-      title: "تم تحديث الفاتورة",
-      description: `تم تحديث فاتورة رقم ${editingSale.invoiceNumber} بنجاح`,
-      duration: 2000,
-    });
-
-    // Reset form
-    setEditingSale(null);
-    resetForm();
-  };
-
-  const resetForm = () => {
-    setSelectedCustomer(null);
-    setSaleItems([{ id: "1", batteryType: "بطاريات عادية", quantity: 0, price: 0, total: 0 }]);
-    setDiscount(0);
-    setPaymentMethod("cash");
-    setVatEnabled(false);
-  };
-
-  const generateInvoice = () => {
-    if (!selectedCustomer) {
-      toast({
-        title: "خطأ",
-        description: "يرجى اختيار العميل أولاً",
-        variant: "destructive",
-        duration: 2000,
-      });
-      return;
-    }
-
-    if (saleItems.some(item => !item.quantity || !item.price)) {
-      toast({
-        title: "خطأ",
-        description: "يرجى ملء جميع بيانات الأصناف",
-        variant: "destructive",
-        duration: 2000,
-      });
-      return;
-    }
-
-    const invoiceNumber = `INV-${Date.now()}`;
-    const newSale: Sale = {
-      id: Date.now().toString(),
-      invoiceNumber,
-      date: new Date().toISOString().split('T')[0],
-      customerId: selectedCustomer.id,
-      customerName: selectedCustomer.name,
-      items: [...saleItems],
-      subtotal: calculateSubtotal(),
-      discount,
-      tax: calculateTax(),
-      total: calculateTotal(),
-      paymentMethod,
-      status: "completed"
-    };
-
-    // Add to recent sales
-    setRecentSales([newSale, ...recentSales]);
-
-    // Handle customer balance and account statement for credit sales
-    if (paymentMethod === 'credit') {
-      addTransactionToCustomer(selectedCustomer.id, {
-        date: newSale.date,
-        type: 'sale',
-        description: `فاتورة مبيعات رقم ${invoiceNumber}`,
-        amount: newSale.total,
-        invoiceNumber,
-        vatAmount: newSale.tax
-      });
-    }
-
-    toast({
-      title: "تم إنشاء الفاتورة",
-      description: `تم إنشاء فاتورة رقم ${invoiceNumber} بنجاح`,
-      duration: 2000,
-    });
-
-    // Reset form
-    resetForm();
-  };
-
   const handleDeleteSale = (sale: Sale) => {
-    // Remove from recent sales
-    setRecentSales(prev => prev.filter(s => s.id !== sale.id));
-    
-    // Remove transaction from customer account if it was a credit sale
-    if (sale.paymentMethod === 'credit') {
-      // Find the transaction and remove it
-      removeCustomerTransaction(sale.customerId, sale.id);
-    }
-
-    toast({
-      title: "تم حذف الفاتورة",
-      description: `تم حذف فاتورة رقم ${sale.invoiceNumber} وتحديث الحساب`,
-      duration: 2000,
-    });
+    deleteSale(sale.id);
   };
 
   const handleCustomerSelect = (customer: Customer) => {
@@ -238,13 +198,13 @@ const SalesPage = () => {
       {/* Header */}
       <Card className="shadow-lg">
         <CardHeader className="bg-[#f0fdf4] text-[#53864d]">
-            <CardTitle
+          <CardTitle
             className="flex items-center justify-center gap-2 flex-row-reverse text-lg sm:text-xl"
             style={{ fontFamily: 'Tajawal, sans-serif' }}
-            >
+          >
             {editingSale ? 'تعديل فاتورة المبيعات' : 'نظام المبيعات'}
             <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
-            </CardTitle>
+          </CardTitle>
         </CardHeader>
       </Card>
 
@@ -300,16 +260,17 @@ const SalesPage = () => {
                     <div key={item.id} className="grid grid-cols-12 gap-2 items-end">
                       <div className="col-span-4">
                         <Select
-                          value={item.batteryType}
-                          onValueChange={(value) => updateSaleItem(index, 'batteryType', value)}
+                          value={item.batteryTypeId}
+                          onValueChange={(value) => updateSaleItem(index, 'batteryTypeId', value)}
+                          disabled={batteryTypesLoading}
                         >
                           <SelectTrigger>
-                            <SelectValue />
+                            <SelectValue placeholder="اختر نوع البطارية" />
                           </SelectTrigger>
                           <SelectContent>
                             {batteryTypes.map(type => (
-                              <SelectItem key={type} value={type} style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                                {type}
+                              <SelectItem key={type.id} value={type.id} style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                                {type.name} - {type.unit_price} ريال
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -407,18 +368,16 @@ const SalesPage = () => {
               {/* Action Buttons */}
               <div className="flex gap-2">
                 <Button
-                  onClick={editingSale ? updateSale : generateInvoice}
+                  onClick={generateInvoice}
                   className="flex-1"
+                  disabled={isCreating || isUpdating}
                   style={{ fontFamily: 'Tajawal, sans-serif' }}
                 >
                   {editingSale ? 'تحديث الفاتورة' : 'إنشاء الفاتورة'}
                 </Button>
                 {editingSale && (
                   <Button
-                    onClick={() => {
-                      setEditingSale(null);
-                      resetForm();
-                    }}
+                    onClick={resetForm}
                     variant="outline"
                     style={{ fontFamily: 'Tajawal, sans-serif' }}
                   >
@@ -471,7 +430,7 @@ const SalesPage = () => {
           </Card>
 
           {/* Recent Sales */}
-          {recentSales.length > 0 && (
+          {sales.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
@@ -480,7 +439,7 @@ const SalesPage = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {recentSales.slice(0, 5).map(sale => (
+                  {sales.slice(0, 5).map(sale => (
                     <div key={sale.id} className="p-3 border rounded">
                       <div className="flex justify-between items-center">
                         <div>
@@ -516,6 +475,7 @@ const SalesPage = () => {
                               size="sm" 
                               onClick={() => handleDeleteSale(sale)}
                               title="حذف"
+                              disabled={isDeleting}
                             >
                               <Trash2 className="w-3 h-3" />
                             </Button>
