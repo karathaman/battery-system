@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { PaginatedResponse, FilterOptions } from '@/types';
 
@@ -134,10 +133,8 @@ export const voucherService = {
       throw error;
     }
 
-    // Update entity balance based on voucher type (only for suppliers)
-    if (data.entity_type === 'supplier') {
-      await this.updateSupplierBalance(data.entity_id, data.amount, data.type);
-    }
+    // Update entity balance based on voucher type
+    await this.updateEntityBalance(data.entity_type, data.entity_id, data.amount, data.type);
 
     return {
       id: newVoucher.id,
@@ -190,10 +187,11 @@ export const voucherService = {
       throw error;
     }
 
-    // If amount changed and entity is supplier, update the balance difference
-    if (data.amount !== undefined && data.amount !== originalVoucher.amount && originalVoucher.entity_type === 'supplier') {
+    // If amount changed, update the balance difference
+    if (data.amount !== undefined && data.amount !== originalVoucher.amount) {
       const balanceDifference = data.amount - originalVoucher.amount;
-      await this.updateSupplierBalance(
+      await this.updateEntityBalance(
+        originalVoucher.entity_type,
         originalVoucher.entity_id,
         balanceDifference,
         originalVoucher.type
@@ -218,17 +216,18 @@ export const voucherService = {
   },
 
   async deleteVoucher(id: string): Promise<void> {
-    // Get the voucher first to reverse the balance (only for suppliers)
+    // Get the voucher first to reverse the balance
     const { data: voucher } = await supabase
       .from('vouchers')
       .select('*')
       .eq('id', id)
       .single();
 
-    if (voucher && voucher.entity_type === 'supplier') {
+    if (voucher) {
       // Reverse the balance change
       const reverseType = voucher.type === 'receipt' ? 'payment' : 'receipt';
-      await this.updateSupplierBalance(
+      await this.updateEntityBalance(
+        voucher.entity_type,
         voucher.entity_id,
         voucher.amount,
         reverseType
@@ -243,6 +242,37 @@ export const voucherService = {
     if (error) {
       console.error('Error deleting voucher:', error);
       throw error;
+    }
+  },
+
+  async updateEntityBalance(entityType: 'customer' | 'supplier', entityId: string, amount: number, voucherType: 'receipt' | 'payment'): Promise<void> {
+    const tableName = entityType === 'customer' ? 'customers' : 'suppliers';
+    
+    // For customers: receipt reduces balance (payment received), payment increases balance (credit given)
+    // For suppliers: payment reduces balance (payment made), receipt increases balance (credit received)
+    let balanceChange = 0;
+    
+    if (entityType === 'customer') {
+      balanceChange = voucherType === 'receipt' ? -amount : amount;
+    } else {
+      balanceChange = voucherType === 'payment' ? -amount : amount;
+    }
+
+    // Get current balance
+    const { data: entity } = await supabase
+      .from(tableName)
+      .select('balance')
+      .eq('id', entityId)
+      .single();
+
+    if (entity) {
+      const currentBalance = entity.balance || 0;
+      const newBalance = currentBalance + balanceChange;
+
+      await supabase
+        .from(tableName)
+        .update({ balance: newBalance })
+        .eq('id', entityId);
     }
   },
 

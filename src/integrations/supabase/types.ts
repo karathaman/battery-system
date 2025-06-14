@@ -45,6 +45,7 @@ export type Database = {
       customers: {
         Row: {
           average_price: number | null
+          balance: number | null
           block_reason: string | null
           created_at: string | null
           customer_code: string
@@ -63,6 +64,7 @@ export type Database = {
         }
         Insert: {
           average_price?: number | null
+          balance?: number | null
           block_reason?: string | null
           created_at?: string | null
           customer_code: string
@@ -81,6 +83,7 @@ export type Database = {
         }
         Update: {
           average_price?: number | null
+          balance?: number | null
           block_reason?: string | null
           created_at?: string | null
           customer_code?: string
