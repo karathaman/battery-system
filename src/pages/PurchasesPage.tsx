@@ -837,7 +837,7 @@ const EditPurchaseForm = ({ purchase, onSave, onCancel }: EditPurchaseFormProps)
                 <Input
                   type="number"
                   placeholder="السعر"
-                  value={item.price || item.price_per_kg || ''}
+                  value={item.price_per_kg || ''}
                   onChange={(e) => handleItemChange(index, "price", Number(e.target.value) || 0)}
                 />
               </div>
