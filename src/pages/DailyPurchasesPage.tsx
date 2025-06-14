@@ -108,7 +108,7 @@ const DailyPurchasesPage = () => {
 
       {/* Date Navigation */}
       <DateNavigation 
-        selectedDate={selectedDate}
+        currentDate={selectedDate}
         onDateChange={setSelectedDate}
       />
 
@@ -268,7 +268,7 @@ const DailyPurchasesPage = () => {
 
       {/* Daily Purchases List */}
       <DailyPurchases 
-        purchases={purchases}
+        dailyPurchases={purchases}
         onEdit={handleEdit}
         onDelete={deletePurchase}
         onClearDay={handleClearDay}

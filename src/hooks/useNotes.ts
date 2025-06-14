@@ -49,7 +49,18 @@ const notesService = {
       throw new Error(error.message);
     }
 
-    return data || [];
+    return (data || []).map(note => ({
+      id: note.id,
+      title: note.title,
+      content: note.content,
+      date: note.date,
+      color: note.color,
+      type: note.type as 'note' | 'checklist',
+      completed: note.completed,
+      created_at: note.created_at,
+      updated_at: note.updated_at,
+      checklist_items: note.checklist_items || []
+    }));
   },
 
   createNote: async (data: NoteFormData): Promise<Note> => {
@@ -88,7 +99,17 @@ const notesService = {
       }
     }
 
-    return noteData;
+    return {
+      id: noteData.id,
+      title: noteData.title,
+      content: noteData.content,
+      date: noteData.date,
+      color: noteData.color,
+      type: noteData.type as 'note' | 'checklist',
+      completed: noteData.completed,
+      created_at: noteData.created_at,
+      updated_at: noteData.updated_at
+    };
   },
 
   updateNote: async (id: string, data: Partial<NoteFormData>): Promise<Note> => {
@@ -109,7 +130,17 @@ const notesService = {
       throw new Error(noteError.message);
     }
 
-    return noteData;
+    return {
+      id: noteData.id,
+      title: noteData.title,
+      content: noteData.content,
+      date: noteData.date,
+      color: noteData.color,
+      type: noteData.type as 'note' | 'checklist',
+      completed: noteData.completed,
+      created_at: noteData.created_at,
+      updated_at: noteData.updated_at
+    };
   },
 
   deleteNote: async (id: string): Promise<void> => {
