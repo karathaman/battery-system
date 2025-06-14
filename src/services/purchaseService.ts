@@ -98,8 +98,8 @@ const updateSupplierStats = async (supplierId: string) => {
       // Sum total amounts
       totalAmount += purchase.total || 0;
       
-      // Add to balance ONLY if payment method is credit/deferred
-      if (purchase.payment_method === 'credit' || purchase.payment_method === 'check' || purchase.payment_method === 'bank_transfer') {
+      // Add to balance ONLY if payment method is check or bank_transfer (deferred payments)
+      if (purchase.payment_method === 'check' || purchase.payment_method === 'bank_transfer') {
         balance += purchase.total || 0;
       }
       
