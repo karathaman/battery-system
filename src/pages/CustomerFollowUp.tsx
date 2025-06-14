@@ -10,6 +10,7 @@ import { useCustomers } from "@/hooks/useCustomers";
 import { Customer, FilterOptions } from "@/types";
 import { AddCustomerDialog } from "@/components/AddCustomerDialog";
 import { EditCustomerDialog } from "@/components/EditCustomerDialog";
+import { CustomerDetailsDialog } from "@/components/CustomerDetailsDialog";
 
 const CustomerFollowUp = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -17,6 +18,8 @@ const CustomerFollowUp = () => {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
 
   const filters: FilterOptions = {
     searchTerm,
@@ -87,6 +90,11 @@ const CustomerFollowUp = () => {
         data: { balance: 0 }
       });
     }
+  };
+
+  const handleShowDetails = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setShowDetailsDialog(true);
   };
 
   if (isLoading) {
@@ -320,6 +328,7 @@ const CustomerFollowUp = () => {
                 {/* Action buttons */}
                 <div className="space-y-2">
                   <Button
+                    onClick={() => handleShowDetails(customer)}
                     variant="outline"
                     size="sm"
                     className="w-full flex items-center gap-2 flex-row-reverse text-xs text-blue-600 hover:bg-blue-50 hover:border-blue-300"
@@ -409,6 +418,12 @@ const CustomerFollowUp = () => {
         onClose={() => setShowEditDialog(false)}
         customer={editingCustomer}
         onCustomerUpdated={handleCustomerUpdated}
+      />
+
+      <CustomerDetailsDialog
+        open={showDetailsDialog}
+        onClose={() => setShowDetailsDialog(false)}
+        customer={selectedCustomer}
       />
     </div>
   );
