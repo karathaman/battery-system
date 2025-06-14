@@ -25,6 +25,7 @@ const mockCustomers: Customer[] = [
     totalAmount: 4500,
     averagePrice: 300,
     notes: "عميل مميز، يشتري بانتظام كل شهر",
+    balance: 1000, // Added balance property
     purchases: [
       { id: "s1", date: "2024-01-15", batteryType: "بطاريات عادية", quantity: 12, pricePerKg: 25, total: 300, discount: 0, finalTotal: 300 },
       { id: "s2", date: "2024-01-10", batteryType: "بطاريات جافة", quantity: 8, pricePerKg: 30, total: 240, discount: 20, finalTotal: 220 }
@@ -44,6 +45,7 @@ const mockCustomers: Customer[] = [
     totalAmount: 2400,
     averagePrice: 300,
     notes: "تفضل البطاريات اليابانية",
+    balance: -500, // Added balance property
     purchases: [
       { id: "s3", date: "2024-01-10", batteryType: "بطاريات زجاج", quantity: 15, pricePerKg: 35, total: 525, discount: 50, finalTotal: 475 },
       { id: "s4", date: "2024-01-05", batteryType: "بطاريات عادية", quantity: 10, pricePerKg: 28, total: 280, discount: 0, finalTotal: 280 }
@@ -63,6 +65,7 @@ const mockCustomers: Customer[] = [
     averagePrice: 300,
     isBlocked: true,
     blockReason: "مشاكل في الدفع",
+    balance: 0, // Added balance property
     purchases: [],
     last2Quantities: [0, 0],
     last2Prices: [0, 0],
@@ -110,6 +113,7 @@ const CustomerFollowUp = () => {
       totalPurchases: 0,
       totalAmount: 0,
       averagePrice: 0,
+      balance: 0, // Add default balance
       purchases: []
     };
     setCustomers(prev => [...prev, customerWithDefaults]);

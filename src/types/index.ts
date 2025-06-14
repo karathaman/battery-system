@@ -18,7 +18,7 @@ export interface Customer {
   blockReason?: string;
   messageSent?: boolean;
   lastMessageSent?: string;
-  balance?: number;
+  balance: number; // Made required to match usage
 }
 
 export interface CustomerFormData {
