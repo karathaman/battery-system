@@ -7,100 +7,51 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { FileText, Search, Plus, Calendar, DollarSign, TrendingUp, Users, Edit, Printer, Trash2 } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { FileText, Search, Plus, Edit, Printer, Trash2 } from "lucide-react";
 import { CustomerSearchDialog } from "@/components/CustomerSearchDialog";
 import { SupplierSearchDialog } from "@/components/SupplierSearchDialog";
 import { EditVoucherDialog } from "@/components/EditVoucherDialog";
 import { printVoucher } from "@/utils/voucherPrintUtils";
-import { addTransactionToCustomer, addTransactionToSupplier, removeCustomerTransaction, removeSupplierTransaction, removeCustomerTransactionByVoucher, removeSupplierTransactionByVoucher } from "@/utils/accountUtils";
+import { useVouchers } from "@/hooks/useVouchers";
+import { VoucherFormData } from "@/services/voucherService";
 import { Customer } from "@/types";
 
-interface Voucher {
-  id: string;
-  voucherNumber: string;
-  date: string;
-  type: "receipt" | "payment";
-  entityType: "customer" | "supplier";
-  entityId: string;
-  entityName: string;
-  amount: number;
-  description: string;
-  paymentMethod: string;
-}
-
-// Mock data - سيتم استبدالها ببيانات Supabase
-const mockVouchers: Voucher[] = [
-  {
-    id: "1",
-    voucherNumber: "V001",
-    date: "2024-01-20",
-    type: "receipt",
-    entityType: "customer",
-    entityId: "C001",
-    entityName: "أحمد محمد",
-    amount: 500,
-    description: "دفعة من العميل",
-    paymentMethod: "cash"
-  },
-  {
-    id: "2",
-    voucherNumber: "V002",
-    date: "2024-01-18",
-    type: "payment",
-    entityType: "supplier",
-    entityId: "S001",
-    entityName: "مورد البطاريات",
-    amount: 300,
-    description: "دفعة للمورد",
-    paymentMethod: "transfer"
-  }
-];
-
 const VouchersPage = () => {
-  const [vouchers, setVouchers] = useState<Voucher[]>(mockVouchers);
   const [searchTerm, setSearchTerm] = useState("");
   const [voucherTypeFilter, setVoucherTypeFilter] = useState<"all" | "receipt" | "payment">("all");
   const [showCustomerSearchDialog, setShowCustomerSearchDialog] = useState(false);
   const [showSupplierSearchDialog, setShowSupplierSearchDialog] = useState(false);
-  const [newVoucher, setNewVoucher] = useState<Omit<Voucher, 'id' | 'voucherNumber'>>({
+  const [newVoucher, setNewVoucher] = useState<Omit<VoucherFormData, 'voucher_number'>>({
     date: new Date().toISOString().split('T')[0],
     type: "receipt",
-    entityType: "customer",
-    entityId: "",
-    entityName: "",
+    entity_type: "customer",
+    entity_id: "",
+    entity_name: "",
     amount: 0,
     description: "",
-    paymentMethod: "cash"
+    payment_method: "cash"
   });
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [editingVoucher, setEditingVoucher] = useState<Voucher | null>(null);
+  const [editingVoucher, setEditingVoucher] = useState<any>(null);
 
-  const filteredVouchers = vouchers.filter(voucher => {
-    const searchTermMatch =
-      voucher.voucherNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      voucher.entityName.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const typeMatch =
-      voucherTypeFilter === "all" || voucher.type === voucherTypeFilter;
-
-    return searchTermMatch && typeMatch;
+  const {
+    vouchers,
+    isLoading,
+    createVoucher,
+    updateVoucher,
+    deleteVoucher,
+    isCreating
+  } = useVouchers(1, 50, {
+    searchTerm,
+    type: voucherTypeFilter
   });
-
-  const generateNextVoucherNumber = () => {
-    if (vouchers.length === 0) return "V001";
-    const lastVoucherNumber = vouchers[vouchers.length - 1].voucherNumber;
-    const number = parseInt(lastVoucherNumber.slice(1)) + 1;
-    return `V${number.toString().padStart(3, '0')}`;
-  };
 
   const handleCustomerSelect = (customer: Customer) => {
     setNewVoucher(prev => ({
       ...prev,
-      entityType: "customer",
-      entityId: customer.id,
-      entityName: customer.name
+      entity_type: "customer",
+      entity_id: customer.id,
+      entity_name: customer.name
     }));
     setShowCustomerSearchDialog(false);
   };
@@ -108,9 +59,9 @@ const VouchersPage = () => {
   const handleSupplierSelect = (supplier: { id: string; name: string }) => {
     setNewVoucher(prev => ({
       ...prev,
-      entityType: "supplier",
-      entityId: supplier.id,
-      entityName: supplier.name
+      entity_type: "supplier",
+      entity_id: supplier.id,
+      entity_name: supplier.name
     }));
     setShowSupplierSearchDialog(false);
   };
@@ -118,9 +69,9 @@ const VouchersPage = () => {
   const handleEntityTypeChange = (entityType: "customer" | "supplier") => {
     setNewVoucher(prev => ({
       ...prev,
-      entityType,
-      entityId: "",
-      entityName: ""
+      entity_type: entityType,
+      entity_id: "",
+      entity_name: ""
     }));
   };
 
@@ -128,14 +79,13 @@ const VouchersPage = () => {
     setNewVoucher(prev => ({
       ...prev,
       type,
-      // Reset entity selection when changing voucher type
-      entityId: "",
-      entityName: ""
+      entity_id: "",
+      entity_name: ""
     }));
   };
 
   const openEntityDialog = () => {
-    if (newVoucher.entityType === "customer") {
+    if (newVoucher.entity_type === "customer") {
       setShowCustomerSearchDialog(true);
     } else {
       setShowSupplierSearchDialog(true);
@@ -143,65 +93,25 @@ const VouchersPage = () => {
   };
 
   const handleAddVoucher = () => {
-    if (!newVoucher.entityId || !newVoucher.entityName) {
-      toast({
-        title: "خطأ",
-        description: "الرجاء تحديد العميل أو المورد",
-        variant: "destructive"
-      });
+    if (!newVoucher.entity_id || !newVoucher.entity_name) {
       return;
     }
 
     if (newVoucher.amount <= 0) {
-      toast({
-        title: "خطأ",
-        description: "الرجاء إدخال مبلغ صحيح",
-        variant: "destructive"
-      });
       return;
     }
 
-    const voucher: Voucher = {
-      id: Date.now().toString(),
-      voucherNumber: generateNextVoucherNumber(),
-      ...newVoucher
-    };
-
-    setVouchers(prev => [...prev, voucher]);
-
-    // Add transaction to account
-    if (newVoucher.entityType === "customer") {
-      addTransactionToCustomer(newVoucher.entityId, {
-        date: voucher.date,
-        type: voucher.type,
-        description: `${voucher.type === "receipt" ? "سند قبض" : "سند دفع"} رقم ${voucher.voucherNumber}`,
-        amount: voucher.amount,
-        voucherNumber: voucher.voucherNumber
-      });
-    } else {
-      addTransactionToSupplier(newVoucher.entityId, {
-        date: voucher.date,
-        type: voucher.type === "payment" ? "payment" : "receipt",
-        description: `${voucher.type === "receipt" ? "سند قبض" : "سند دفع"} رقم ${voucher.voucherNumber}`,
-        amount: voucher.amount,
-        voucherNumber: voucher.voucherNumber
-      });
-    }
+    createVoucher(newVoucher);
 
     setNewVoucher({
       date: new Date().toISOString().split('T')[0],
       type: "receipt",
-      entityType: "customer",
-      entityId: "",
-      entityName: "",
+      entity_type: "customer",
+      entity_id: "",
+      entity_name: "",
       amount: 0,
       description: "",
-      paymentMethod: "cash"
-    });
-
-    toast({
-      title: "تمت الإضافة",
-      description: "تمت إضافة السند بنجاح",
+      payment_method: "cash"
     });
   };
 
@@ -214,41 +124,30 @@ const VouchersPage = () => {
     return labels[method] || method;
   };
 
-  const handleEditVoucher = (voucher: Voucher) => {
+  const handleEditVoucher = (voucher: any) => {
     setEditingVoucher(voucher);
     setShowEditDialog(true);
   };
 
-  const handleVoucherUpdated = (updatedVoucher: Voucher) => {
-    setVouchers(prev => prev.map(v => 
-      v.id === updatedVoucher.id ? updatedVoucher : v
-    ));
+  const handleVoucherUpdated = (updatedVoucher: any) => {
+    // The hook will handle the update automatically
   };
 
-  const handlePrintVoucher = (voucher: Voucher) => {
+  const handlePrintVoucher = (voucher: any) => {
     printVoucher(voucher);
-    toast({
-      title: "طباعة السند",
-      description: "تم إرسال السند للطباعة",
-    });
   };
 
-  const handleDeleteVoucher = (voucher: Voucher) => {
-    // Remove from vouchers list
-    setVouchers(prev => prev.filter(v => v.id !== voucher.id));
-    
-    // Remove transaction from account
-    if (voucher.entityType === "customer") {
-      removeCustomerTransactionByVoucher(voucher.entityId, voucher.voucherNumber);
-    } else {
-      removeSupplierTransactionByVoucher(voucher.entityId, voucher.voucherNumber);
-    }
-
-    toast({
-      title: "تم الحذف",
-      description: "تم حذف السند وتحديث الحساب بنجاح",
-    });
+  const handleDeleteVoucher = (voucher: any) => {
+    deleteVoucher(voucher.id);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -315,7 +214,7 @@ const VouchersPage = () => {
             </div>
             <div>
               <Label htmlFor="entityType" style={{ fontFamily: 'Tajawal, sans-serif' }}>نوع الجهة</Label>
-              <Select value={newVoucher.entityType} onValueChange={handleEntityTypeChange}>
+              <Select value={newVoucher.entity_type} onValueChange={handleEntityTypeChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="اختر نوع الجهة" style={{ fontFamily: 'Tajawal, sans-serif' }} />
                 </SelectTrigger>
@@ -327,14 +226,14 @@ const VouchersPage = () => {
             </div>
             <div>
               <Label htmlFor="entity" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                {newVoucher.entityType === "customer" ? "العميل" : "المورد"}
+                {newVoucher.entity_type === "customer" ? "العميل" : "المورد"}
               </Label>
               <div className="flex gap-2">
                 <Input
                   type="text"
                   id="entity"
-                  placeholder={`اختر ${newVoucher.entityType === "customer" ? "عميل" : "مورد"}`}
-                  value={newVoucher.entityName}
+                  placeholder={`اختر ${newVoucher.entity_type === "customer" ? "عميل" : "مورد"}`}
+                  value={newVoucher.entity_name}
                   readOnly
                   className="text-sm flex-1"
                   style={{ fontFamily: 'Tajawal, sans-serif' }}
@@ -345,7 +244,6 @@ const VouchersPage = () => {
                   onClick={openEntityDialog}
                   style={{ fontFamily: 'Tajawal, sans-serif' }}
                 >
-                  <Users className="w-4 h-4 ml-2" />
                   اختيار
                 </Button>
               </div>
@@ -362,7 +260,7 @@ const VouchersPage = () => {
             </div>
             <div>
               <Label htmlFor="paymentMethod" style={{ fontFamily: 'Tajawal, sans-serif' }}>طريقة الدفع</Label>
-              <Select value={newVoucher.paymentMethod} onValueChange={(value) => setNewVoucher({ ...newVoucher, paymentMethod: value })}>
+              <Select value={newVoucher.payment_method} onValueChange={(value) => setNewVoucher({ ...newVoucher, payment_method: value as any })}>
                 <SelectTrigger>
                   <SelectValue placeholder="اختر طريقة الدفع" style={{ fontFamily: 'Tajawal, sans-serif' }} />
                 </SelectTrigger>
@@ -385,9 +283,14 @@ const VouchersPage = () => {
               />
             </div>
             <div className="md:col-span-2 flex justify-end">
-              <Button onClick={handleAddVoucher} className="bg-blue-600 hover:bg-blue-700 text-white" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+              <Button 
+                onClick={handleAddVoucher} 
+                className="bg-blue-600 hover:bg-blue-700 text-white" 
+                style={{ fontFamily: 'Tajawal, sans-serif' }}
+                disabled={isCreating}
+              >
                 <Plus className="w-4 h-4 ml-2" />
-                إضافة سند
+                {isCreating ? "جاري الإضافة..." : "إضافة سند"}
               </Button>
             </div>
           </div>
@@ -406,7 +309,7 @@ const VouchersPage = () => {
             
             <Card>
               <CardContent className="p-3 sm:p-4 text-center">
-              <img src="/assets/icons/SaudiRG.svg" alt="Custom Icon" className="w-8 h-8 mx-auto mb-2" />
+                <img src="/assets/icons/SaudiRG.svg" alt="Custom Icon" className="w-8 h-8 mx-auto mb-2" />
                 <p className="text-lg sm:text-2xl font-bold">
                   {vouchers.reduce((sum, v) => sum + v.amount, 0).toLocaleString()}
                 </p>
@@ -418,7 +321,9 @@ const VouchersPage = () => {
             
             <Card>
               <CardContent className="p-3 sm:p-4 text-center">
-                <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-blue-600" />
+                <div className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-blue-600 flex items-center justify-center">
+                  📊
+                </div>
                 <p className="text-lg sm:text-2xl font-bold">
                   {vouchers.filter(v => v.type === "receipt").length} / {vouchers.filter(v => v.type === "payment").length}
                 </p>
@@ -450,10 +355,10 @@ const VouchersPage = () => {
                   <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجراءات</th>
                 </tr>
               </thead>
-              <tbody >
-                {filteredVouchers.map((voucher) => (
+              <tbody>
+                {vouchers.map((voucher) => (
                   <tr key={voucher.id} className="border-b hover:bg-gray-50 text-center">
-                    <td className="p-3 font-semibold">{voucher.voucherNumber}</td>
+                    <td className="p-3 font-semibold">{voucher.voucher_number}</td>
                     <td className="p-3">
                       <Badge 
                         variant={voucher.type === "receipt" ? "default" : "secondary"}
@@ -464,20 +369,20 @@ const VouchersPage = () => {
                     </td>
                     <td className="p-3">{voucher.date}</td>
                     <td className="p-3" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                      {voucher.entityName}
+                      {voucher.entity_name}
                       <br />
                       <span className="text-xs text-gray-500">
-                        {voucher.entityType === "customer" ? "عميل" : "مورد"}
+                        {voucher.entity_type === "customer" ? "عميل" : "مورد"}
                       </span>
                     </td>
-                    <td className="p-3 font-bold text-green-600 ">
+                    <td className="p-3 font-bold text-green-600">
                       <span className="flex items-center gap-1 justify-end">
                         {voucher.amount.toLocaleString()}
                         <img src="/assets/icons/SaudiRG.svg" alt="Custom Icon" className="w-4 h-4" />
                       </span>
                     </td>
                     <td className="p-3" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                      {getPaymentMethodLabel(voucher.paymentMethod)}
+                      {getPaymentMethodLabel(voucher.payment_method)}
                     </td>
                     <td className="p-3">
                       <div className="flex gap-1">
