@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Users, Search, Filter, UserPlus, TrendingUp, Calendar, Edit3, Trash2, Ban, UnlockIcon, Phone, User } from "lucide-react";
+import { Users, Search, Filter, UserPlus, TrendingUp, Calendar, Edit3, Trash2, Ban, UnlockIcon, Phone, User, DollarSign, RotateCcw } from "lucide-react";
 import { useCustomers } from "@/hooks/useCustomers";
 import { Customer, FilterOptions } from "@/types";
 import { AddCustomerDialog } from "@/components/AddCustomerDialog";
@@ -78,6 +77,15 @@ const CustomerFollowUp = () => {
   const handleUnblockCustomer = (customerId: string) => {
     if (confirm('هل أنت متأكد من إلغاء حظر هذا العميل؟')) {
       unblockCustomer(customerId);
+    }
+  };
+
+  const handleResetBalance = (customerId: string, customerName: string) => {
+    if (confirm(`هل أنت متأكد من تصفير رصيد العميل: ${customerName}؟`)) {
+      updateCustomer({
+        id: customerId,
+        data: { balance: 0 }
+      });
     }
   };
 
@@ -244,12 +252,63 @@ const CustomerFollowUp = () => {
                   </div>
                 )}
 
+                {/* Last Sale Info */}
+                <div className="bg-purple-50 rounded-lg p-3">
+                  <div className="flex items-center gap-2 flex-row-reverse mb-2">
+                    <Calendar className="w-4 h-4 text-purple-600" />
+                    <span className="text-sm font-semibold text-purple-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      آخر بيع
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-700 text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                    {customer.lastPurchase || "لا يوجد"}
+                  </p>
+                </div>
+
+                {/* Balance Info */}
+                <div className="bg-green-50 rounded-lg p-3">
+                  <div className="flex items-center justify-between flex-row-reverse mb-2">
+                    <div className="flex items-center gap-2 flex-row-reverse">
+                      <DollarSign className="w-4 h-4 text-green-600" />
+                      <span className="text-sm font-semibold text-green-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                        الرصيد
+                      </span>
+                    </div>
+                    {(customer.balance || 0) !== 0 && (
+                      <Button
+                        onClick={() => handleResetBalance(customer.id, customer.name)}
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                        title="تصفير الرصيد"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-sm font-bold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                    {(customer.balance || 0).toLocaleString()} ريال
+                  </p>
+                  {(customer.balance || 0) !== 0 && (
+                    <Button
+                      onClick={() => handleResetBalance(customer.id, customer.name)}
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-2 text-xs flex items-center gap-1 flex-row-reverse text-red-600 hover:bg-red-50 hover:border-red-300"
+                      style={{ fontFamily: 'Tajawal, sans-serif' }}
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      تصفير الرصيد
+                    </Button>
+                  )}
+                </div>
+
                 {/* Statistics */}
                 <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-3">
                   <div className="grid grid-cols-2 gap-3 text-center">
                     <div>
                       <div className="text-lg font-bold text-green-600">{customer.totalPurchases}</div>
-                      <div className="text-xs text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>المشتريات</div>
+                      <div className="text-xs text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>الكميات</div>
                     </div>
                     <div>
                       <div className="text-lg font-bold text-blue-600">{customer.totalAmount.toLocaleString()}</div>
@@ -260,6 +319,15 @@ const CustomerFollowUp = () => {
 
                 {/* Action buttons */}
                 <div className="space-y-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full flex items-center gap-2 flex-row-reverse text-xs text-blue-600 hover:bg-blue-50 hover:border-blue-300"
+                    style={{ fontFamily: 'Tajawal, sans-serif' }}
+                  >
+                    عرض التفاصيل وكشف الحساب
+                  </Button>
+
                   <div className="flex gap-2">
                     <Button
                       onClick={() => handleEditCustomer(customer)}
