@@ -9,15 +9,18 @@ export interface PurchaseItem {
 
 export interface Purchase {
   id: string;
-  invoiceNumber: string;
+  invoice_number: string;
   date: string;
-  supplierId: string;
-  supplierName: string;
+  supplier_id: string;
   items: PurchaseItem[];
   subtotal: number;
   discount: number;
   tax: number;
   total: number;
-  paymentMethod: string;
+  payment_method: string;
   status: string;
+  suppliers?: {
+    name: string;
+    supplier_code?: string;
+  };
 }
