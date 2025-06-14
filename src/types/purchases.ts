@@ -23,4 +23,5 @@ export interface Purchase {
     name: string;
     supplier_code?: string;
   };
+  purchase_items?: PurchaseItem[];
 }
