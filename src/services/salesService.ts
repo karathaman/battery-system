@@ -37,6 +37,23 @@ export interface ExtendedSale extends Sale {
   }>;
 }
 
+// Map UI payment methods to database enum values
+const mapPaymentMethod = (paymentMethod: string): "cash" | "card" | "bank_transfer" | "check" => {
+  switch (paymentMethod) {
+    case 'cash':
+      return 'cash';
+    case 'card':
+      return 'card';
+    case 'transfer':
+      return 'bank_transfer';
+    case 'credit':
+    case 'check':
+      return 'check';
+    default:
+      return 'cash';
+  }
+};
+
 const salesService = {
   getSales: async (): Promise<ExtendedSale[]> => {
     const { data, error } = await supabase
@@ -62,7 +79,7 @@ const salesService = {
 
     return (data || []).map(sale => ({
       id: sale.id,
-      invoiceNumber: sale.invoice_number,
+      invoiceNumber: sale.invoice_number || `INV-${sale.id?.substring(0, 8)}`,
       date: sale.date,
       customerId: sale.customer_id,
       customerName: sale.customers?.name || '',
@@ -85,7 +102,6 @@ const salesService = {
   },
 
   createSale: async (data: SaleFormData): Promise<ExtendedSale> => {
-    // For now, we'll create the sale manually until the RPC functions are created
     // Generate invoice number
     const invoiceNumber = `INV-${Date.now()}`;
     
@@ -100,7 +116,7 @@ const salesService = {
         discount: data.discount,
         tax: data.tax,
         total: data.total,
-        payment_method: data.payment_method,
+        payment_method: mapPaymentMethod(data.payment_method),
         notes: data.notes,
         status: 'completed'
       })
@@ -155,7 +171,7 @@ const salesService = {
 
     return {
       id: completeSale.id,
-      invoiceNumber: completeSale.invoice_number,
+      invoiceNumber: completeSale.invoice_number || `INV-${completeSale.id?.substring(0, 8)}`,
       date: completeSale.date,
       customerId: completeSale.customer_id,
       customerName: completeSale.customers?.name || '',
@@ -188,7 +204,7 @@ const salesService = {
         discount: data.discount,
         tax: data.tax,
         total: data.total,
-        payment_method: data.payment_method,
+        payment_method: data.payment_method ? mapPaymentMethod(data.payment_method) : undefined,
         notes: data.notes
       })
       .eq('id', id);
@@ -254,7 +270,7 @@ const salesService = {
 
     return {
       id: saleData.id,
-      invoiceNumber: saleData.invoice_number,
+      invoiceNumber: saleData.invoice_number || `INV-${saleData.id?.substring(0, 8)}`,
       date: saleData.date,
       customerId: saleData.customer_id,
       customerName: saleData.customers?.name || '',
@@ -301,4 +317,4 @@ const salesService = {
   }
 };
 
-export { salesService, type ExtendedSale, type SaleFormData };
+export { salesService };
