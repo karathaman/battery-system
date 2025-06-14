@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -35,7 +34,12 @@ interface Purchase {
   payment_method: string;
   status: string;
   notes?: string;
-  items: PurchaseItem[];
+  items?: PurchaseItem[];
+  suppliers?: {
+    name: string;
+    supplier_code?: string;
+  };
+  purchase_items?: PurchaseItem[];
 }
 
 const updateSupplierStats = async (supplierId: string) => {
