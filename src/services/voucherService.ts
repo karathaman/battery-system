@@ -134,8 +134,10 @@ export const voucherService = {
       throw error;
     }
 
-    // Update entity balance based on voucher type
-    await this.updateEntityBalance(data.entity_type, data.entity_id, data.amount, data.type);
+    // Update entity balance based on voucher type (only for suppliers)
+    if (data.entity_type === 'supplier') {
+      await this.updateSupplierBalance(data.entity_id, data.amount, data.type);
+    }
 
     return {
       id: newVoucher.id,
@@ -188,11 +190,10 @@ export const voucherService = {
       throw error;
     }
 
-    // If amount changed, update the balance difference
-    if (data.amount !== undefined && data.amount !== originalVoucher.amount) {
+    // If amount changed and entity is supplier, update the balance difference
+    if (data.amount !== undefined && data.amount !== originalVoucher.amount && originalVoucher.entity_type === 'supplier') {
       const balanceDifference = data.amount - originalVoucher.amount;
-      await this.updateEntityBalance(
-        originalVoucher.entity_type,
+      await this.updateSupplierBalance(
         originalVoucher.entity_id,
         balanceDifference,
         originalVoucher.type
@@ -217,18 +218,17 @@ export const voucherService = {
   },
 
   async deleteVoucher(id: string): Promise<void> {
-    // Get the voucher first to reverse the balance
+    // Get the voucher first to reverse the balance (only for suppliers)
     const { data: voucher } = await supabase
       .from('vouchers')
       .select('*')
       .eq('id', id)
       .single();
 
-    if (voucher) {
+    if (voucher && voucher.entity_type === 'supplier') {
       // Reverse the balance change
       const reverseType = voucher.type === 'receipt' ? 'payment' : 'receipt';
-      await this.updateEntityBalance(
-        voucher.entity_type,
+      await this.updateSupplierBalance(
         voucher.entity_id,
         voucher.amount,
         reverseType
@@ -246,34 +246,26 @@ export const voucherService = {
     }
   },
 
-  async updateEntityBalance(entityType: 'customer' | 'supplier', entityId: string, amount: number, voucherType: 'receipt' | 'payment'): Promise<void> {
-    const tableName = entityType === 'customer' ? 'customers' : 'suppliers';
-    
-    // For customers: receipt reduces balance (payment received), payment increases balance (credit given)
+  async updateSupplierBalance(supplierId: string, amount: number, voucherType: 'receipt' | 'payment'): Promise<void> {
     // For suppliers: payment reduces balance (payment made), receipt increases balance (credit received)
     let balanceChange = 0;
-    
-    if (entityType === 'customer') {
-      balanceChange = voucherType === 'receipt' ? -amount : amount;
-    } else {
-      balanceChange = voucherType === 'payment' ? -amount : amount;
-    }
+    balanceChange = voucherType === 'payment' ? -amount : amount;
 
     // Get current balance
-    const { data: entity } = await supabase
-      .from(tableName)
+    const { data: supplier } = await supabase
+      .from('suppliers')
       .select('balance')
-      .eq('id', entityId)
+      .eq('id', supplierId)
       .single();
 
-    if (entity) {
-      const currentBalance = entity.balance || 0;
+    if (supplier) {
+      const currentBalance = supplier.balance || 0;
       const newBalance = currentBalance + balanceChange;
 
       await supabase
-        .from(tableName)
+        .from('suppliers')
         .update({ balance: newBalance })
-        .eq('id', entityId);
+        .eq('id', supplierId);
     }
   }
 };
