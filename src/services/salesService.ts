@@ -18,7 +18,7 @@ export interface SaleFormData {
   notes?: string;
 }
 
-export interface SaleData extends Sale {
+export interface ExtendedSale extends Sale {
   customer?: {
     id: string;
     name: string;
@@ -38,7 +38,7 @@ export interface SaleData extends Sale {
 }
 
 const salesService = {
-  getSales: async (): Promise<SaleData[]> => {
+  getSales: async (): Promise<ExtendedSale[]> => {
     const { data, error } = await supabase
       .from('sales')
       .select(`
@@ -84,26 +84,54 @@ const salesService = {
     }));
   },
 
-  createSale: async (data: SaleFormData): Promise<SaleData> => {
-    const { data: result, error } = await supabase.rpc('create_sale_with_items', {
-      p_customer_id: data.customer_id,
-      p_date: data.date,
-      p_items: data.items,
-      p_subtotal: data.subtotal,
-      p_discount: data.discount,
-      p_tax: data.tax,
-      p_total: data.total,
-      p_payment_method: data.payment_method,
-      p_notes: data.notes
-    });
+  createSale: async (data: SaleFormData): Promise<ExtendedSale> => {
+    // For now, we'll create the sale manually until the RPC functions are created
+    // Generate invoice number
+    const invoiceNumber = `INV-${Date.now()}`;
+    
+    // Create the sale
+    const { data: saleData, error: saleError } = await supabase
+      .from('sales')
+      .insert({
+        invoice_number: invoiceNumber,
+        customer_id: data.customer_id,
+        date: data.date,
+        subtotal: data.subtotal,
+        discount: data.discount,
+        tax: data.tax,
+        total: data.total,
+        payment_method: data.payment_method,
+        notes: data.notes,
+        status: 'completed'
+      })
+      .select()
+      .single();
 
-    if (error) {
-      console.error('Error creating sale:', error);
-      throw new Error(error.message);
+    if (saleError) {
+      console.error('Error creating sale:', saleError);
+      throw new Error(saleError.message);
+    }
+
+    // Create sale items
+    const saleItems = data.items.map(item => ({
+      sale_id: saleData.id,
+      battery_type_id: item.battery_type_id,
+      quantity: item.quantity,
+      price_per_kg: item.price_per_kg,
+      total: item.quantity * item.price_per_kg
+    }));
+
+    const { error: itemsError } = await supabase
+      .from('sale_items')
+      .insert(saleItems);
+
+    if (itemsError) {
+      console.error('Error creating sale items:', itemsError);
+      throw new Error(itemsError.message);
     }
 
     // Fetch the created sale with all details
-    const { data: saleData, error: fetchError } = await supabase
+    const { data: completeSale, error: fetchError } = await supabase
       .from('sales')
       .select(`
         *,
@@ -117,7 +145,7 @@ const salesService = {
           battery_types(name)
         )
       `)
-      .eq('id', result)
+      .eq('id', saleData.id)
       .single();
 
     if (fetchError) {
@@ -126,46 +154,79 @@ const salesService = {
     }
 
     return {
-      id: saleData.id,
-      invoiceNumber: saleData.invoice_number,
-      date: saleData.date,
-      customerId: saleData.customer_id,
-      customerName: saleData.customers?.name || '',
-      items: (saleData.sale_items || []).map(item => ({
+      id: completeSale.id,
+      invoiceNumber: completeSale.invoice_number,
+      date: completeSale.date,
+      customerId: completeSale.customer_id,
+      customerName: completeSale.customers?.name || '',
+      items: (completeSale.sale_items || []).map(item => ({
         id: item.id,
         batteryType: item.battery_types?.name || '',
         quantity: item.quantity,
         price: item.price_per_kg,
         total: item.total
       })),
-      subtotal: saleData.subtotal,
-      discount: saleData.discount || 0,
-      tax: saleData.tax || 0,
-      total: saleData.total,
-      paymentMethod: saleData.payment_method,
-      status: saleData.status || 'completed',
-      customer: saleData.customers,
-      sale_items: saleData.sale_items
+      subtotal: completeSale.subtotal,
+      discount: completeSale.discount || 0,
+      tax: completeSale.tax || 0,
+      total: completeSale.total,
+      paymentMethod: completeSale.payment_method,
+      status: completeSale.status || 'completed',
+      customer: completeSale.customers,
+      sale_items: completeSale.sale_items
     };
   },
 
-  updateSale: async (id: string, data: Partial<SaleFormData>): Promise<SaleData> => {
-    const { data: result, error } = await supabase.rpc('update_sale_with_items', {
-      p_sale_id: id,
-      p_customer_id: data.customer_id,
-      p_date: data.date,
-      p_items: data.items,
-      p_subtotal: data.subtotal,
-      p_discount: data.discount,
-      p_tax: data.tax,
-      p_total: data.total,
-      p_payment_method: data.payment_method,
-      p_notes: data.notes
-    });
+  updateSale: async (id: string, data: Partial<SaleFormData>): Promise<ExtendedSale> => {
+    // Update the sale
+    const { error: saleError } = await supabase
+      .from('sales')
+      .update({
+        customer_id: data.customer_id,
+        date: data.date,
+        subtotal: data.subtotal,
+        discount: data.discount,
+        tax: data.tax,
+        total: data.total,
+        payment_method: data.payment_method,
+        notes: data.notes
+      })
+      .eq('id', id);
 
-    if (error) {
-      console.error('Error updating sale:', error);
-      throw new Error(error.message);
+    if (saleError) {
+      console.error('Error updating sale:', saleError);
+      throw new Error(saleError.message);
+    }
+
+    // Delete existing sale items
+    const { error: deleteError } = await supabase
+      .from('sale_items')
+      .delete()
+      .eq('sale_id', id);
+
+    if (deleteError) {
+      console.error('Error deleting sale items:', deleteError);
+      throw new Error(deleteError.message);
+    }
+
+    // Create new sale items
+    if (data.items) {
+      const saleItems = data.items.map(item => ({
+        sale_id: id,
+        battery_type_id: item.battery_type_id,
+        quantity: item.quantity,
+        price_per_kg: item.price_per_kg,
+        total: item.quantity * item.price_per_kg
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('sale_items')
+        .insert(saleItems);
+
+      if (itemsError) {
+        console.error('Error creating sale items:', itemsError);
+        throw new Error(itemsError.message);
+      }
     }
 
     // Fetch the updated sale with all details
@@ -216,15 +277,28 @@ const salesService = {
   },
 
   deleteSale: async (id: string): Promise<void> => {
-    const { error } = await supabase.rpc('delete_sale_with_revert', {
-      p_sale_id: id
-    });
+    // Delete sale items first
+    const { error: itemsError } = await supabase
+      .from('sale_items')
+      .delete()
+      .eq('sale_id', id);
 
-    if (error) {
-      console.error('Error deleting sale:', error);
-      throw new Error(error.message);
+    if (itemsError) {
+      console.error('Error deleting sale items:', itemsError);
+      throw new Error(itemsError.message);
+    }
+
+    // Delete the sale
+    const { error: saleError } = await supabase
+      .from('sales')
+      .delete()
+      .eq('id', id);
+
+    if (saleError) {
+      console.error('Error deleting sale:', saleError);
+      throw new Error(saleError.message);
     }
   }
 };
 
-export { salesService, type SaleData, type SaleFormData };
+export { salesService, type ExtendedSale, type SaleFormData };

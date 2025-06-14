@@ -15,7 +15,7 @@ import { CustomerSearchDialog } from "@/components/CustomerSearchDialog";
 import { Customer } from "@/types";
 import { useSales } from "@/hooks/useSales";
 import { useBatteryTypes } from "@/hooks/useBatteryTypes";
-import { SaleFormData } from "@/services/salesService";
+import { SaleFormData, ExtendedSale } from "@/services/salesService";
 
 interface ExtendedSaleItem extends SaleItem {
   batteryTypeId: string;
@@ -36,7 +36,7 @@ const SalesPage = () => {
   const [discount, setDiscount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [vatEnabled, setVatEnabled] = useState(false);
-  const [editingSale, setEditingSale] = useState<Sale | null>(null);
+  const [editingSale, setEditingSale] = useState<ExtendedSale | null>(null);
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
 
   const { sales, createSale, updateSale, deleteSale, isCreating, isUpdating, isDeleting } = useSales();
@@ -152,7 +152,7 @@ const SalesPage = () => {
     resetForm();
   };
 
-  const editSale = (sale: Sale) => {
+  const editSale = (sale: ExtendedSale) => {
     setEditingSale(sale);
     // Find customer from the sale data
     const customer: Customer = {
@@ -184,7 +184,7 @@ const SalesPage = () => {
     setVatEnabled(sale.tax > 0);
   };
 
-  const handleDeleteSale = (sale: Sale) => {
+  const handleDeleteSale = (sale: ExtendedSale) => {
     deleteSale(sale.id);
   };
 
