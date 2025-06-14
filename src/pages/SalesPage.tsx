@@ -101,7 +101,8 @@ const SalesPage = () => {
       averagePrice: 0,
       purchases: [],
       isBlocked: false,
-      messageSent: false
+      messageSent: false,
+      balance: 0
     };
     setSelectedCustomer(customer);
     setSaleItems([...sale.items]);
