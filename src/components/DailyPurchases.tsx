@@ -3,66 +3,136 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarDays, Plus, Trash2, Check } from "lucide-react";
+import { CalendarDays, Plus, Trash2, Check, Minus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { DateNavigation } from "./DateNavigation";
 import { useDailyPurchases, DailyPurchase } from "@/hooks/useDailyPurchases";
+import { supabase } from "@/integrations/supabase/client";
+import { fetchBatteryTypes } from "@/services/batteryTypeService";
+import { fetchSuppliers } from "@/services/supplierService";
 
-const batteryTypes = [
-  "بطاريات عادية",
-  "بطاريات جافة", 
-  "بطاريات زجاج",
-  "بطاريات تعبئة",
-  "رصاص"
-];
-
-// Mock supplier data for testing direct selection
-const mockSuppliers = [
-  {
-    id: "1",
-    supplierCode: "S001",
-    name: "مورد البطاريات الذهبية",
-    phone: "0501234567",
-    lastPurchase: "2024-01-15"
-  },
-  {
-    id: "2",
-    supplierCode: "S002", 
-    name: "شركة البطاريات المتطورة",
-    phone: "0507654321",
-    lastPurchase: "2024-01-10"
-  }
-];
 
 interface DailyPurchasesProps {
+  id: string;
+  date: string;
+  supplierName: string;
+  supplierCode: string;
+  supplierPhone: string;
+  batteryType: string;
+  batteryTypeId: string;
+  quantity: number;
+  pricePerKg: number;
+  total: number;
+  discount: number;
+  finalTotal: number;
+  isSaved: boolean;
   language?: string;
 }
 
-export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
+export const DailyPurchases = ({ language, id, date, supplierName, supplierCode, supplierPhone, batteryType, quantity, pricePerKg, total, discount, finalTotal, isSaved }: DailyPurchasesProps) => {
   const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
   const [localPurchases, setLocalPurchases] = useState<DailyPurchase[]>([]);
-  const [focusedCell, setFocusedCell] = useState<{row: number, col: string} | null>(null);
+  const [focusedCell, setFocusedCell] = useState<{ row: number, col: string } | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
-  
+
+
+  const [suppliers, setSuppliers] = useState([]);
+  const [batteryTypes, setBatteryTypes] = useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // جلب الموردين وأنواع البطاريات معًا
+        const [suppliersData, batteryTypesData] = await Promise.all([
+          fetchSuppliers(),
+          fetchBatteryTypes(),
+        ]);
+        setSuppliers(suppliersData);
+        setBatteryTypes(batteryTypesData);
+      } catch (err) {
+        setError(language === "ar" ? "فشل في جلب البيانات" : "Failed to fetch data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+
+  const findSupplierBySearch = (searchTerm: string) => {
+    const term = searchTerm.toLowerCase().trim();
+    console.log("Searching for:", term);
+    console.log("Suppliers:", suppliers);
+
+    return suppliers.find((supplier) => {
+      console.log("Checking supplier:", supplier); // طباعة المورد للتحقق
+      return (
+        (supplier.name && supplier.name.toLowerCase().includes(term)) ||
+        (supplier.phone && supplier.phone.includes(term)) ||
+        (supplier.supplier_code && supplier.supplier_code.toLowerCase() === term)
+      );
+    });
+  };
+
+  // Removed useEffect that referenced undefined 'value' variable
+
   const isRTL = language === "ar";
-  
-  const { 
-    purchases: dbPurchases, 
-    isLoading, 
-    savePurchase, 
-    deletePurchase, 
+
+  const {
+    purchases: dbPurchases,
+    isLoading,
+    savePurchase,
+    deletePurchase,
     clearDay,
     isSaving,
-    isDeleting 
+    isDeleting
   } = useDailyPurchases(currentDate);
 
-  // Initialize local purchases when db data loads
   useEffect(() => {
-    if (dbPurchases.length > 0) {
-      setLocalPurchases(dbPurchases);
-    } else {
-      // If no saved data, start with one empty row
-      setLocalPurchases([{
+    const fetchData = async () => {
+      try {
+        // جلب البيانات من قاعدة البيانات
+        const { data, error } = await supabase
+          .from("daily_purchases")
+          .select("*")
+          .eq("date", currentDate);  // جلب البيانات للـ date الحالي فقط (يمكن تعديل هذا الشرط حسب الحاجة)
+
+        if (error) {
+          console.error("Error fetching purchases:", error);
+        } else {
+          // تحديث بيانات المحلي بمشتريات اليوم
+          setLocalPurchases(
+            (data || []).map((item: any) => ({
+              id: item.id,
+              date: item.date,
+              supplierName: item.supplier_name,
+              supplierCode: item.supplier_code,
+              supplierPhone: item.supplier_phone,
+              batteryType: item.battery_type,
+              batteryTypeId: item.batteryTypeId, // Add this line
+              quantity: item.quantity,
+              pricePerKg: item.price_per_kg,
+              total: item.total,
+              discount: item.discount,
+              finalTotal: item.final_total,
+              isSaved: item.is_saved,
+            }))
+          );
+        }
+      } catch (err) {
+        console.error("Error fetching data:", err);
+      }
+    };
+
+    fetchData();
+  }, [currentDate]);
+
+  // Initialize local purchases when db data loads
+  /*   useEffect(() => {
+      const initialPurchases = dbPurchases.length > 0 ? dbPurchases : [{
         id: "temp-1",
         date: currentDate,
         supplierName: "",
@@ -75,9 +145,10 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
         discount: 0,
         finalTotal: 0,
         isSaved: false
-      }]);
-    }
-  }, [dbPurchases, currentDate]);
+      }];
+      setLocalPurchases(initialPurchases);
+    }, [dbPurchases, currentDate]);
+     */
 
   const calculateTotals = (purchase: DailyPurchase): DailyPurchase => {
     const total = Math.round(purchase.quantity * purchase.pricePerKg);
@@ -94,59 +165,130 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
     });
   };
 
-  const findSupplierBySearch = (searchTerm: string) => {
-    const term = searchTerm.toLowerCase().trim();
-    return mockSuppliers.find(supplier => 
-      supplier.phone === term || 
-      supplier.supplierCode.toLowerCase() === term ||
-      supplier.name.toLowerCase().includes(term)
-    );
+  const updateBatteryTypeQuantity = async (batteryTypeId: string, quantityChange: number) => {
+    try {
+      const { data, error } = await supabase
+        .from("battery_types")
+        .select("currentQty")
+        .eq("id", batteryTypeId)
+        .single();
+
+      if (error) {
+        console.error("Error fetching battery type:", error);
+        return;
+      }
+
+      const updatedQty = (data?.currentQty || 0) + quantityChange;
+
+      const { error: updateError } = await supabase
+        .from("battery_types")
+        .update({ currentQty: updatedQty })
+        .eq("id", batteryTypeId);
+
+      if (updateError) {
+        console.error("Error updating battery type quantity:", updateError);
+      } else {
+        console.log("Battery type quantity updated successfully.");
+      }
+    } catch (err) {
+      console.error("Unexpected error updating battery type quantity:", err);
+    }
   };
 
   const addRow = () => {
+    // تحديد النوع الافتراضي
+    const defaultBatteryType = batteryTypes[0] || { id: "", name: "بطاريات عادية" }; // النوع الأول أو نوع افتراضي
+
     const newPurchase: DailyPurchase = {
       id: `temp-${Date.now()}`,
       date: currentDate,
       supplierName: "",
       supplierCode: "",
       supplierPhone: "",
-      batteryType: "بطاريات عادية",
+      batteryType: defaultBatteryType.name, // تعيين الاسم الافتراضي
+      batteryTypeId: defaultBatteryType.id, // تعيين المعرف الافتراضي
       quantity: 0,
       pricePerKg: 0,
       total: 0,
       discount: 0,
       finalTotal: 0,
-      isSaved: false
+      isSaved: false,
     };
-    setLocalPurchases(prev => [...prev, newPurchase]);
+
+    setLocalPurchases((prev) => [...prev, newPurchase]);
   };
 
-  const deleteRow = (index: number) => {
+  const deleteRow = async (index: number) => {
     const purchase = localPurchases[index];
-    
-    if (localPurchases.length > 1) {
-      if (purchase.isSaved && !purchase.id.startsWith('temp-')) {
-        // Delete from database
-        deletePurchase(purchase.id);
-      }
-      
-      // Remove from local state
-      setLocalPurchases(prev => prev.filter((_, i) => i !== index));
-      
-      if (!purchase.isSaved) {
+
+    if (!purchase) {
+      console.error("Purchase not found at index:", index);
+      return;
+    }
+
+    if (!purchase.id.startsWith("temp-")) {
+      const { error } = await supabase
+        .from("daily_purchases")
+        .delete()
+        .eq("id", purchase.id);
+
+      if (error) {
+        console.error("Error deleting purchase from database:", error);
         toast({
-          title: language === "ar" ? "تم حذف السطر" : "Row Deleted",
+          title: language === "ar" ? "خطأ" : "Error",
+          description: language === "ar" ? "فشل في حذف الصف" : "Failed to delete row",
+          variant: "destructive",
+          duration: 2000,
+        });
+        return;
+      } else {
+        console.log("Purchase deleted successfully from database.");
+        await updateBatteryTypeQuantity(purchase.batteryTypeId, -purchase.quantity);
+
+        // تحديث بيانات المورد بعد الحذف
+        try {
+          const { data: supplierData, error: fetchError } = await supabase
+            .from("suppliers")
+            .select("total_purchases, total_amount, last_purchase")
+            .eq("supplier_code", purchase.supplierCode)
+            .single();
+
+          if (!fetchError && supplierData) {
+            const totalPurchases = (supplierData?.total_purchases || 0) - purchase.quantity;
+            const totalAmount = (supplierData?.total_amount || 0) - purchase.finalTotal;
+            const averagePrice = totalPurchases > 0 ? totalAmount / totalPurchases : 0;
+
+            const { error: updateError } = await supabase
+              .from("suppliers")
+              .update({
+                total_purchases: totalPurchases > 0 ? totalPurchases : 0,
+                total_amount: totalAmount > 0 ? totalAmount : 0,
+                average_price: averagePrice > 0 ? averagePrice : 0,
+              })
+              .eq("supplier_code", purchase.supplierCode);
+
+            if (updateError) {
+              console.error("Error updating supplier data after delete:", updateError);
+            }
+          }
+        } catch (err) {
+          console.error("Unexpected error updating supplier data after delete:", err);
+        }
+
+        toast({
+          title: language === "ar" ? "تم الحذف" : "Deleted",
           description: language === "ar" ? "تم حذف السطر بنجاح" : "Row deleted successfully",
           duration: 2000,
         });
       }
     }
+
+    setLocalPurchases((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const savePurchaseRow = (index: number) => {
+  const savePurchaseRow = async (index: number) => {
     const purchase = localPurchases[index];
-    
-    // Validate required fields
+
     if (!purchase.supplierName || !purchase.quantity || !purchase.pricePerKg) {
       toast({
         title: language === "ar" ? "خطأ" : "Error",
@@ -157,28 +299,146 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
       return;
     }
 
-    // Save to database
-    savePurchase({
-      date: currentDate,
-      supplierName: purchase.supplierName,
-      supplierCode: purchase.supplierCode,
-      supplierPhone: purchase.supplierPhone,
-      batteryType: purchase.batteryType,
-      quantity: purchase.quantity,
-      pricePerKg: purchase.pricePerKg,
-      total: purchase.total,
-      discount: purchase.discount,
-      finalTotal: purchase.finalTotal
-    });
+    if (purchase.id && !purchase.id.startsWith("temp-")) {
+      const { error } = await supabase
+        .from("daily_purchases")
+        .update({
+          supplier_name: purchase.supplierName,
+          supplier_code: purchase.supplierCode,
+          supplier_phone: purchase.supplierPhone,
+          battery_type: purchase.batteryType,
+          batteryTypeId: purchase.batteryTypeId,
+          quantity: purchase.quantity,
+          price_per_kg: purchase.pricePerKg,
+          total: purchase.total,
+          discount: purchase.discount,
+          final_total: purchase.finalTotal,
+        })
+        .eq("id", purchase.id);
 
-    // Mark as saved locally
-    updateLocalPurchase(index, 'isSaved', true);
+      if (error) {
+        console.error("Error updating purchase:", error);
+        toast({
+          title: language === "ar" ? "خطأ" : "Error",
+          description: language === "ar" ? "فشل في تحديث البيانات" : "Failed to update data",
+          variant: "destructive",
+          duration: 2000,
+        });
+      } else {
+        console.log("Purchase updated successfully:", purchase);
+        await updateBatteryTypeQuantity(purchase.batteryTypeId, purchase.quantity);
 
-    // Add new row and focus on it
-    addRow();
-    setTimeout(() => {
-      setFocusedCell({ row: localPurchases.length, col: 'supplierName' });
-    }, 100);
+        // تحديث بيانات المورد بعد الحفظ
+        try {
+          const { data: supplierData, error: fetchError } = await supabase
+            .from("suppliers")
+            .select("total_purchases, total_amount, last_purchase")
+            .eq("supplier_code", purchase.supplierCode)
+            .single();
+
+          if (!fetchError && supplierData) {
+            const totalPurchases = (supplierData?.total_purchases || 0) + purchase.quantity;
+            const totalAmount = (supplierData?.total_amount || 0) + purchase.finalTotal;
+            const averagePrice = totalAmount / totalPurchases;
+
+            const { error: updateError } = await supabase
+              .from("suppliers")
+              .update({
+                last_purchase: purchase.date,
+                total_purchases: totalPurchases,
+                total_amount: totalAmount,
+                average_price: averagePrice,
+              })
+              .eq("supplier_code", purchase.supplierCode);
+
+            if (updateError) {
+              console.error("Error updating supplier data:", updateError);
+            }
+          }
+        } catch (err) {
+          console.error("Unexpected error updating supplier data:", err);
+        }
+
+        toast({
+          title: language === "ar" ? "تم التحديث" : "Updated",
+          description: language === "ar" ? "تم تحديث البيانات بنجاح" : "Data updated successfully",
+          duration: 2000,
+        });
+      }
+    } else {
+      const { data, error } = await supabase
+        .from("daily_purchases")
+        .insert([
+          {
+            date: currentDate,
+            supplier_name: purchase.supplierName,
+            supplier_code: purchase.supplierCode,
+            supplier_phone: purchase.supplierPhone,
+            battery_type: purchase.batteryType,
+            batteryTypeId: purchase.batteryTypeId,
+            quantity: purchase.quantity,
+            price_per_kg: purchase.pricePerKg,
+            total: purchase.total,
+            discount: purchase.discount,
+            final_total: purchase.finalTotal,
+          },
+        ])
+        .select();
+
+      if (error) {
+        console.error("Error saving purchase:", error);
+        toast({
+          title: language === "ar" ? "خطأ" : "Error",
+          description: language === "ar" ? "فشل في حفظ البيانات" : "Failed to save data",
+          variant: "destructive",
+          duration: 2000,
+        });
+      } else {
+        console.log("Purchase saved successfully:", data);
+        if (data && data.length > 0) {
+          updateLocalPurchase(index, "isSaved", true);
+          updateLocalPurchase(index, "id", data[0].id);
+          await updateBatteryTypeQuantity(purchase.batteryTypeId, purchase.quantity);
+
+          // تحديث بيانات المورد بعد الحفظ
+          try {
+            const { data: supplierData, error: fetchError } = await supabase
+              .from("suppliers")
+              .select("total_purchases, total_amount, last_purchase")
+              .eq("supplier_code", purchase.supplierCode)
+              .single();
+
+            if (!fetchError && supplierData) {
+              const totalPurchases = (supplierData?.total_purchases || 0) + purchase.quantity;
+              const totalAmount = (supplierData?.total_amount || 0) + purchase.finalTotal;
+              const averagePrice = totalAmount / totalPurchases;
+
+              const { error: updateError } = await supabase
+                .from("suppliers")
+                .update({
+                  last_purchase: purchase.date,
+                  total_purchases: totalPurchases,
+                  total_amount: totalAmount,
+                  average_price: averagePrice,
+                })
+                .eq("supplier_code", purchase.supplierCode);
+
+              if (updateError) {
+                console.error("Error updating supplier data:", updateError);
+              }
+            }
+          } catch (err) {
+            console.error("Unexpected error updating supplier data:", err);
+          }
+
+          toast({
+            title: language === "ar" ? "تم الحفظ" : "Saved",
+            description: language === "ar" ? "تم حفظ البيانات بنجاح" : "Data saved successfully",
+            duration: 2000,
+          });
+        }
+      }
+    }
   };
 
   const clearAllData = () => {
@@ -189,13 +449,14 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
       supplierName: "",
       supplierCode: "",
       supplierPhone: "",
-      batteryType: "بطاريات عادية",
+      batteryType: "",
       quantity: 0,
       pricePerKg: 0,
       total: 0,
       discount: 0,
       finalTotal: 0,
-      isSaved: false
+      isSaved: false,
+      batteryTypeId: undefined
     }]);
   };
 
@@ -206,7 +467,7 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
 
     if (e.key === 'Enter' || e.key === 'Tab') {
       e.preventDefault();
-      
+
       if (field === 'discount') {
         setFocusedCell({ row: rowIndex, col: 'save' });
       } else if (field === 'save') {
@@ -237,26 +498,36 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
   };
 
   const handleSupplierInput = (value: string, rowIndex: number) => {
+    console.log("Input value:", value);
     const foundSupplier = findSupplierBySearch(value);
-    
+
     if (foundSupplier) {
+      console.log("Found supplier:", foundSupplier); // طباعة الكائن بالكامل
+      console.log("Supplier code is:", foundSupplier.supplier_code); // طباعة كود المورد بالاسم الصحيح
+
       updateLocalPurchase(rowIndex, 'supplierName', foundSupplier.name);
-      updateLocalPurchase(rowIndex, 'supplierCode', foundSupplier.supplierCode);
+      updateLocalPurchase(rowIndex, 'supplierCode', foundSupplier.supplier_code); // التأكد من الحقل الصحيح
       updateLocalPurchase(rowIndex, 'supplierPhone', foundSupplier.phone);
-      
+
       toast({
         title: language === "ar" ? "تم العثور على المورد" : "Supplier Found",
         description: language === "ar" ? `تم اختيار ${foundSupplier.name}` : `Selected ${foundSupplier.name}`,
         duration: 2000,
       });
-      
+
       setTimeout(() => {
         setFocusedCell({ row: rowIndex, col: 'batteryType' });
       }, 100);
     } else {
+      console.log("Supplier not found");
       updateLocalPurchase(rowIndex, 'supplierName', value);
+      updateLocalPurchase(rowIndex, 'supplierCode', ""); // تعيين كود المورد كقيمة فارغة
+      updateLocalPurchase(rowIndex, 'supplierPhone', "");
     }
   };
+
+
+
 
   const totalDailyAmount = localPurchases.reduce((sum, purchase) => sum + purchase.finalTotal, 0);
 
@@ -276,6 +547,133 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
     }
   }, [focusedCell]);
 
+
+  const fetchBatteryTypes = async () => {
+    const { data, error } = await supabase
+      .from("battery_types")
+      .select("id, name"); // جلب id و name
+
+    if (error) {
+      console.error("Error fetching battery types:", error);
+      return [];
+    }
+
+    return data || [];
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const batteryTypesData = await fetchBatteryTypes();
+        setBatteryTypes(batteryTypesData); // تخزين الكائنات كاملة (id و name)
+      } catch (err) {
+        setError(language === "ar" ? "فشل في جلب البيانات" : "Failed to fetch data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const [lastSupplies, setLastSupplies] = useState<{ [supplierCode: string]: { [batteryType: string]: any } }>({});
+  const fetchLastSupplies = async (supplierCode: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("daily_purchases")
+        .select("battery_type, date, quantity, price_per_kg")
+        .eq("supplier_code", supplierCode)
+        .lt("date", currentDate) // جلب التوريدات قبل اليوم الحالي فقط
+        .order("date", { ascending: false }); // ترتيب التواريخ تنازليًا
+
+      if (error) {
+        console.error("Error fetching last supplies:", error);
+        return {};
+      }
+
+      // تنظيم البيانات حسب نوع البطارية
+      const lastSupplies: { [batteryType: string]: any } = {};
+      for (const purchase of data || []) {
+        if (!lastSupplies[purchase.battery_type]) {
+          lastSupplies[purchase.battery_type] = purchase;
+        }
+      }
+
+      return lastSupplies;
+    } catch (err) {
+      console.error("Unexpected error fetching last supplies:", err);
+      return {};
+    }
+  };
+  useEffect(() => {
+    const fetchData = async () => {
+      const supplierCodes = [...new Set(localPurchases.map(p => p.supplierCode).filter(Boolean))];
+
+      const newLastSupplies: { [supplierCode: string]: { [batteryType: string]: any } } = {};
+      for (const supplierCode of supplierCodes) {
+        const supplies = await fetchLastSupplies(supplierCode);
+        newLastSupplies[supplierCode] = supplies;
+      }
+
+      setLastSupplies(newLastSupplies);
+    };
+
+    fetchData();
+  }, [localPurchases]);
+
+  const [selectedPurchase, setSelectedPurchase] = useState<DailyPurchase | null>(null);
+
+  const handleRowClick = (purchase: DailyPurchase) => {
+    setSelectedPurchase(purchase); // تحديث الصف المحدد عند الضغط
+  };
+
+  const handleOutsideClick = (event: React.MouseEvent) => {
+    const target = event.target as HTMLElement;
+    const isInsideTable = target.closest("table"); // تحقق إذا كان النقر داخل الجدول
+    if (!isInsideTable) {
+      setSelectedPurchase(null); // إعادة تعيين الصف المحدد
+    }
+  };
+
+  useEffect(() => {
+    // إزالة أي تأثير يقوم بتعيين `selectedPurchase` عند تغيير التاريخ أو إعادة تحميل الصفحة
+  }, [currentDate]);
+
+  const updateSupplierBalance = async (supplierCode: string, amount: number) => {
+    try {
+      const { data, error } = await supabase
+        .from("suppliers")
+        .select("balance")
+        .eq("supplier_code", supplierCode)
+        .single();
+
+      if (error) {
+        console.error("Error fetching supplier balance:", error);
+        return;
+      }
+
+      const updatedBalance = (data?.balance || 0) + amount;
+
+      const { error: updateError } = await supabase
+        .from("suppliers")
+        .update({ balance: updatedBalance })
+        .eq("supplier_code", supplierCode);
+
+      if (updateError) {
+        console.error("Error updating supplier balance:", updateError);
+      } else {
+        console.log("Supplier balance updated successfully.");
+        toast({
+          title: language === "ar" ? "تم تحديث الرصيد" : "Balance Updated",
+          description: language === "ar" ? `تم تعديل رصيد المورد بنجاح` : `Supplier balance updated successfully`,
+          duration: 2000,
+        });
+      }
+    } catch (err) {
+      console.error("Unexpected error updating supplier balance:", err);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -285,89 +683,243 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" onClick={handleOutsideClick}>
       {/* Header with Date Navigation and Total */}
       <div className={`flex justify-between items-center bg-white rounded-lg shadow-lg p-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
-        <DateNavigation 
+        <DateNavigation
           currentDate={currentDate}
           onDateChange={setCurrentDate}
           onClearData={clearAllData}
           language={language}
         />
-        
+
         <div className={isRTL ? 'text-right' : 'text-left'}>
-          <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+          <p className="text-sm text-gray-600 " style={{ fontFamily: 'Tajawal, sans-serif' }}>
             {language === "ar" ? "إجمالي مشتريات اليوم" : "Daily Total"}
           </p>
-          <p className="text-2xl font-bold text-green-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-            {totalDailyAmount.toLocaleString()} {language === "ar" ? "ريال" : "SAR"}
-          </p>
+          <div className="flex items-center gap-2 bg-green-50">
+            <span className="text-2xl font-bold text-green-600 " style={{ fontFamily: 'Tajawal, sans-serif' }}>
+              {totalDailyAmount.toLocaleString()}
+            </span>
+            <img src="/assets/icons/SaudiRG.svg" alt="Custom Icon" className="w-5 h-5" />
+          </div>
         </div>
       </div>
 
       {/* Daily Purchases Table - Full Width */}
       <Card className="shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
-          <CardTitle className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
-            <CalendarDays className="w-5 h-5" />
-            {language === "ar" ? "المشتريات من الموردين" : "Supplier Purchases"}
+        <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white flex justify-end items-center">
+          <CardTitle
+            className={`flex items-center gap-2 justify-start ${isRTL ? 'flex-row-reverse' : ''}`}
+            style={{ fontFamily: 'Tajawal, sans-serif', width: '100%', textAlign: 'right' }}
+          >
+            {selectedPurchase && (
+              <div
+                className="flex flex-row gap-4 bg-white rounded px-3 py-1 shadow border items-center"
+                style={{
+                  fontFamily: 'Tajawal, sans-serif',
+                  marginBottom: 8,
+                  minHeight: 36,
+                  maxWidth: '100%',
+                  overflow: 'hidden',
+                }}
+              >
+                <span
+                  className="text-blue-700 text-xs break-words"
+                  style={{ maxWidth: 120, display: "inline-block", wordBreak: "break-word" }}
+                >
+                  {language === "ar" ? "المورد:" : "Supplier:"} {selectedPurchase.supplierName}
+                </span>
+                <div className="flex flex-row gap-3 flex-wrap items-center">
+                  {Object.entries(lastSupplies[selectedPurchase.supplierCode] || {}).length === 0 && (
+                    <span className="text-gray-700 text-xs">
+                      {language === "ar" ? "لا يوجد توريد سابق" : "No previous supply"}
+                    </span>
+                  )}
+                  {Object.entries(lastSupplies[selectedPurchase.supplierCode] || {}).map(([batteryType, purchase]) => {
+                    const daysSinceLastSupply = Math.floor(
+                      (new Date().getTime() - new Date(purchase.date).getTime()) / (1000 * 60 * 60 * 24)
+                    );
+                    const isOverdue = daysSinceLastSupply > 15;
+
+                    return (
+                      <span
+                        key={batteryType}
+                        className={`text-xs whitespace-nowrap ${isOverdue ? 'text-red-600' : 'text-gray-700'}`}
+                      >
+                        {language === "ar"
+                          ? `آخر توريد (${batteryType}): `
+                          : `Last Supply (${batteryType}): `}
+                        <span className="font-bold">{purchase.date || "-"}</span>
+                        {" | "} 
+                        {language === "ar" ? "كمية:" : "Qty:"}{" "}
+                        <span className="font-bold">{purchase.quantity ?? "-"}</span>
+                        {" | "}
+                        {language === "ar" ? "سعر:" : "Price:"}{" "}
+                        <span className="font-bold">{purchase.price_per_kg ?? "-"}</span>
+                        {" | "}
+                        {language === "ar" ? "منذ:" : "Since:"}{" "}
+                        <span className="font-bold">{daysSinceLastSupply} {language === "ar" ? "يوم" : "days"}</span>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            <div className="flex-1 text-right flex items-center gap-2">
+              {language === "ar" ? "المشتريات من الموردين" : "Supplier Purchases"}
+              <CalendarDays className="w-5 h-5" />
+            </div>
           </CardTitle>
         </CardHeader>
-        
+
         <CardContent className="p-0">
           <div className="overflow-x-auto" ref={tableRef}>
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+                <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                    {language === "ar" ? "المورد" : "Supplier"}
+                  <th
+                  className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}
+                  style={{
+                    fontFamily: 'Tajawal, sans-serif',
+                    width: 180, // المورد
+                    minWidth: 120,
+                    maxWidth: 220,
+                  }}
+                  >
+                  {language === "ar" ? "المورد" : "Supplier"}
                   </th>
-                  <th className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                    {language === "ar" ? "نوع البطارية" : "Battery Type"}
+                  <th
+                  className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}
+                  style={{
+                    fontFamily: 'Tajawal, sans-serif',
+                    width: 140, // نوع البطارية
+                    minWidth: 100,
+                    maxWidth: 180,
+                  }}
+                  >
+                  {language === "ar" ? "نوع البطارية" : "Battery Type"}
                   </th>
-                  <th className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                    {language === "ar" ? "الكمية" : "Quantity"}
+                  <th
+                  className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}
+                  style={{
+                    fontFamily: 'Tajawal, sans-serif',
+                    width: 90, // الكمية
+                    minWidth: 70,
+                    maxWidth: 110,
+                  }}
+                  >
+                  {language === "ar" ? "الكمية" : "Quantity"}
                   </th>
-                  <th className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                    {language === "ar" ? "السعر" : "Price"}
+                  <th
+                  className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}
+                  style={{
+                    fontFamily: 'Tajawal, sans-serif',
+                    width: 90, // السعر
+                    minWidth: 70,
+                    maxWidth: 110,
+                  }}
+                  >
+                  {language === "ar" ? "السعر" : "Price"}
                   </th>
-                  <th className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                    {language === "ar" ? "الإجمالي" : "Total"}
+                  <th
+                  className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}
+                  style={{
+                    fontFamily: 'Tajawal, sans-serif',
+                    width: 110, // الإجمالي
+                    minWidth: 90,
+                    maxWidth: 130,
+                  }}
+                  >
+                  {language === "ar" ? "الإجمالي" : "Total"}
                   </th>
-                  <th className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                    {language === "ar" ? "الخصم" : "Discount"}
+                  <th
+                  className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}
+                  style={{
+                    fontFamily: 'Tajawal, sans-serif',
+                    width: 90, // الخصم
+                    minWidth: 70,
+                    maxWidth: 110,
+                  }}
+                  >
+                  {language === "ar" ? "الخصم" : "Discount"}
                   </th>
-                  <th className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                    {language === "ar" ? "الإجمالي النهائي" : "Final Total"}
+                  <th
+                  className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}
+                  style={{
+                    fontFamily: 'Tajawal, sans-serif',
+                    width: 120, // الإجمالي النهائي
+                    minWidth: 100,
+                    maxWidth: 150,
+                  }}
+                  >
+                  {language === "ar" ? "الإجمالي النهائي" : "Final Total"}
                   </th>
-                  <th className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                    {language === "ar" ? "إجراءات" : "Actions"}
+                  <th
+                  className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}
+                  style={{
+                    fontFamily: 'Tajawal, sans-serif',
+                    width: 120, // إجراءات
+                    minWidth: 90,
+                    maxWidth: 150,
+                  }}
+                  >
+                  {language === "ar" ? "إجراءات" : "Actions"}
                   </th>
                 </tr>
-              </thead>
-              
+                </thead>
+
               <tbody>
                 {localPurchases.map((purchase, index) => (
-                  <tr key={purchase.id} className={`border-b hover:bg-gray-50 ${purchase.isSaved ? 'bg-green-50' : ''}`}>
+                  <tr
+                    key={purchase.id}
+                    className={`border-b hover:bg-gray-50 ${purchase.isSaved ? 'bg-green-50' : ''}`}
+                    onClick={() => handleRowClick(purchase)} // تحديث الصف المحدد عند الضغط
+                  >
                     <td className="p-2">
                       <Input
                         id={`${index}-supplierName`}
                         value={purchase.supplierName}
-                        onChange={(e) => handleSupplierInput(e.target.value, index)}
-                        onKeyDown={(e) => handleKeyDown(e, index, 'supplierName')}
-                        onFocus={() => setFocusedCell({row: index, col: 'supplierName'})}
+                        onChange={(e) => {
+                          if (e.target.value === "") {
+                            updateLocalPurchase(index, 'supplierName', "");
+                            updateLocalPurchase(index, 'supplierCode', "");
+                            updateLocalPurchase(index, 'supplierPhone', "");
+                          } else {
+                            updateLocalPurchase(index, 'supplierName', e.target.value);
+                          }
+                        }}
+                        onBlur={(e) => {
+                          if (e.target.value !== "") {
+                            handleSupplierInput(e.target.value, index);
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleSupplierInput((e.target as HTMLInputElement).value, index);
+                          }
+                        }}
                         placeholder={language === "ar" ? "ابحث: اسم/جوال/رمز..." : "Search: name/phone/code..."}
                         className={isRTL ? 'text-right' : 'text-left'}
                         style={{ fontFamily: 'Tajawal, sans-serif' }}
+                        readOnly={purchase.isSaved}
+                        tabIndex={purchase.isSaved ? -1 : 0}
                       />
                     </td>
-                    
+
                     <td className="p-2">
                       <Select
-                        value={purchase.batteryType}
-                        onValueChange={(value) => updateLocalPurchase(index, 'batteryType', value)}
+                        value={purchase.batteryTypeId || ""}
+                        onValueChange={(value) => {
+                          const selectedType = batteryTypes.find((type) => type.id === value);
+                          if (selectedType) {
+                            updateLocalPurchase(index, "batteryType", selectedType.name);
+                            updateLocalPurchase(index, "batteryTypeId", selectedType.id);
+                          }
+                        }}
                       >
-                        <SelectTrigger 
+                        <SelectTrigger
                           id={`${index}-batteryType`}
                           onKeyDown={(e) => handleKeyDown(e, index, 'batteryType')}
                           className={isRTL ? 'text-right' : 'text-left'}
@@ -376,14 +928,14 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
                         </SelectTrigger>
                         <SelectContent>
                           {batteryTypes.map((type) => (
-                            <SelectItem key={type} value={type} style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                              {type}
+                            <SelectItem key={type.id} value={type.id} style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                              {type.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </td>
-                    
+
                     <td className="p-2">
                       <Input
                         id={`${index}-quantity`}
@@ -391,11 +943,11 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
                         value={purchase.quantity || ''}
                         onChange={(e) => updateLocalPurchase(index, 'quantity', Number(e.target.value) || 0)}
                         onKeyDown={(e) => handleKeyDown(e, index, 'quantity')}
-                        onFocus={() => setFocusedCell({row: index, col: 'quantity'})}
+                        onFocus={() => setFocusedCell({ row: index, col: 'quantity' })}
                         className="text-center"
                       />
                     </td>
-                    
+
                     <td className="p-2">
                       <Input
                         id={`${index}-pricePerKg`}
@@ -404,15 +956,15 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
                         value={purchase.pricePerKg || ''}
                         onChange={(e) => updateLocalPurchase(index, 'pricePerKg', Number(e.target.value) || 0)}
                         onKeyDown={(e) => handleKeyDown(e, index, 'pricePerKg')}
-                        onFocus={() => setFocusedCell({row: index, col: 'pricePerKg'})}
+                        onFocus={() => setFocusedCell({ row: index, col: 'pricePerKg' })}
                         className="text-center"
                       />
                     </td>
-                    
+
                     <td className="p-2 text-center font-semibold">
                       {purchase.total.toLocaleString()}
                     </td>
-                    
+
                     <td className="p-2">
                       <Input
                         id={`${index}-discount`}
@@ -420,20 +972,23 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
                         value={purchase.discount || ''}
                         onChange={(e) => updateLocalPurchase(index, 'discount', Number(e.target.value) || 0)}
                         onKeyDown={(e) => handleKeyDown(e, index, 'discount')}
-                        onFocus={() => setFocusedCell({row: index, col: 'discount'})}
+                        onFocus={() => setFocusedCell({ row: index, col: 'discount' })}
                         className="text-center"
                       />
                     </td>
-                    
+
                     <td className="p-2 text-center font-bold text-green-600">
                       {purchase.finalTotal.toLocaleString()}
                     </td>
-                    
+
                     <td className="p-2 text-center">
                       <div className="flex gap-1 justify-center">
                         <Button
                           id={`save-${index}`}
-                          onClick={() => savePurchaseRow(index)}
+                          onClick={async () => {
+                            await savePurchaseRow(index);
+                            await updateSupplierBalance(purchase.supplierCode, purchase.discount);
+                          }}
                           onKeyDown={(e) => handleKeyDown(e, index, 'save')}
                           variant="outline"
                           size="sm"
@@ -452,6 +1007,7 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
+                       
                       </div>
                     </td>
                   </tr>
@@ -459,7 +1015,7 @@ export const DailyPurchases = ({ language = "ar" }: DailyPurchasesProps) => {
               </tbody>
             </table>
           </div>
-          
+
           <div className="p-4 bg-gray-50 border-t">
             <Button
               onClick={addRow}

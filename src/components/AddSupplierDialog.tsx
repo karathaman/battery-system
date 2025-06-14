@@ -97,21 +97,22 @@ export const AddSupplierDialog = ({
               placeholder="05xxxxxxxx"
               required
             />
-          </div>
-
+          </div> 
           <div>
             <Label htmlFor="description" style={{ fontFamily: 'Tajawal, sans-serif' }}>
               الوصف
             </Label>
-            <Input
+            <select
               id="description"
-              value={formData.description}
+              value={formData.description || "عميل عادي"}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="وصف المورد"
+              className="w-full border rounded px-3 py-2 mt-1"
               style={{ fontFamily: 'Tajawal, sans-serif' }}
-            />
+            >
+              <option value="عميل عادي">عميل عادي</option>
+              <option value="عميل مميز">عميل مميز</option>
+            </select>
           </div>
-
           <div>
             <Label htmlFor="notes" style={{ fontFamily: 'Tajawal, sans-serif' }}>
               ملاحظات

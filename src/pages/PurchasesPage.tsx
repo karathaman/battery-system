@@ -1,4 +1,4 @@
-import { useState } from "react";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,40 +12,28 @@ import { SupplierSearchDialog } from "@/components/SupplierSearchDialog";
 import { BatteryTypeSelector } from "@/components/BatteryTypeSelector";
 import { Purchase, PurchaseItem } from "@/types/purchases";
 import { addTransactionToSupplier, removeSupplierTransactionByInvoice } from "@/utils/accountUtils";
+import { useEffect, useState } from "react"; 
+import { supabase } from "@/integrations/supabase/client";
+import { error } from "console";
+      
 
-// Mock data
-const mockPurchases: Purchase[] = [
-  {
-    id: "1",
-    invoiceNumber: "P001",
-    date: "2024-01-20",
-    supplierId: "S001",
-    supplierName: "مورد البطاريات الرئيسي",
-    items: [
-      { id: "1", batteryType: "AAA", quantity: 100, price: 2.5, total: 250 },
-      { id: "2", batteryType: "AA", quantity: 50, price: 3.0, total: 150 }
-    ],
-    subtotal: 400,
-    discount: 20,
-    tax: 57,
-    total: 437,
-    paymentMethod: "آجل",
-    status: "مكتملة"
-  }
-];
+const paymentMethodMap: Record<string, "cash" | "card" | "bank_transfer" | "check"> = {
+  "نقداً": "cash",
+  "بطاقة": "card",
+  "تحويل": "bank_transfer",
+  "آجل": "check"
+};
 
-const paymentMethods = [
-  { value: "cash", label: "نقداً", icon: Banknote },
-  { value: "card", label: "بطاقة", icon: CreditCard },
-  { value: "transfer", label: "تحويل", icon: Smartphone },
-  { value: "credit", label: "آجل", icon: Calendar }
-];
+const statusMap: Record<string, "pending" | "completed" | "cancelled"> = {
+  "قيد الانتظار": "pending",
+  "مكتملة": "completed",
+  "ملغاة": "cancelled"
+};
 
 const PurchasesPage = () => {
-  const [purchases, setPurchases] = useState<Purchase[]>(mockPurchases);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showSupplierDialog, setShowSupplierDialog] = useState(false);
-  const [selectedSupplier, setSelectedSupplier] = useState<{ id: string; name: string; balance: number } | null>(null);
   const [editingPurchase, setEditingPurchase] = useState<Purchase | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [newPurchase, setNewPurchase] = useState({
@@ -62,25 +50,28 @@ const PurchasesPage = () => {
     price: 0
   });
 
+  const [selectedSupplier, setSelectedSupplier] = useState<{
+    id: string;
+    name: string;
+    balance: number;
+    total_purchases: number;
+    total_amount: number;
+  } | null>(null);
+
   const filteredPurchases = purchases.filter(purchase =>
     purchase.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
     purchase.supplierName.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const generateNextInvoiceNumber = () => {
-    if (purchases.length === 0) return "P001";
-    const lastNumber = purchases[purchases.length - 1].invoiceNumber;
-    const number = parseInt(lastNumber.slice(1)) + 1;
-    return `P${number.toString().padStart(3, '0')}`;
-  };
-
-  const handleSupplierSelect = (supplier: { id: string; name: string; balance: number }) => {
+ 
+  const handleSupplierSelect = (supplier: { id: string; name: string; balance: number; total_purchases: number; total_amount: number }) => {
     setSelectedSupplier(supplier);
+
     setNewPurchase(prev => ({
       ...prev,
       supplierId: supplier.id,
       supplierName: supplier.name
     }));
+
     setShowSupplierDialog(false);
   };
 
@@ -125,68 +116,174 @@ const PurchasesPage = () => {
     const subtotal = newPurchase.items.reduce((sum, item) => sum + item.total, 0);
     const discountAmount = (subtotal * newPurchase.discount) / 100;
     const afterDiscount = subtotal - discountAmount;
-    const tax = afterDiscount * 0.15; // 15% VAT
+    const tax = afterDiscount * 0.15; // ضريبة القيمة المضافة 15%
     const total = afterDiscount + tax;
 
     return { subtotal, discountAmount, tax, total };
   };
 
-  const handleSavePurchase = () => {
-    if (!selectedSupplier || newPurchase.items.length === 0) {
+  const fetchBatteryTypeId = async (batteryTypeName: string): Promise<string | null> => {
+    const { data, error } = await supabase
+      .from("battery_types")
+      .select("id")
+      .eq("name", batteryTypeName)
+      .single();
+
+    if (error) {
+      console.error("خطأ أثناء جلب معرف نوع البطارية:", error);
+      return null;
+    }
+
+    return data?.id || null;
+  };
+
+
+  const generateNextInvoiceNumber = async () => {
+    const { data: purchases, error } = await supabase
+      .from("purchases")
+      .select("invoice_number");
+
+    if (error) {
+      console.error("خطأ أثناء جلب أرقام الفواتير:", error);
+      return "P001";
+    }
+
+    const existingNumbers = purchases.map(p => p.invoice_number);
+    let nextNumber = 1;
+
+    while (existingNumbers.includes(`P${nextNumber.toString().padStart(3, '0')}`)) {
+      nextNumber++;
+    }
+
+    return `P${nextNumber.toString().padStart(3, '0')}`;
+  };
+
+  const handleSavePurchase = async () => {
+    try {
+      console.log("بدء عملية حفظ الفاتورة...");
+  
+      if (!selectedSupplier || newPurchase.items.length === 0) {
+        console.error("خطأ: لم يتم اختيار المورد أو إضافة أصناف.");
+        toast({
+          title: "خطأ",
+          description: "يرجى اختيار مورد وإضافة أصناف",
+          variant: "destructive"
+        });
+        return;
+      }
+  
+      console.log("المورد المحدد:", selectedSupplier);
+      console.log("الأصناف:", newPurchase.items);
+  
+      const { subtotal, tax, total } = calculateTotals();
+      console.log("المجموع الفرعي:", subtotal, "الضريبة:", tax, "الإجمالي:", total);
+  
+      const invoiceNumber = await generateNextInvoiceNumber();
+      console.log("رقم الفاتورة الجديد:", invoiceNumber);
+  
+      const purchase = {
+        invoice_number: invoiceNumber,
+        date: newPurchase.date,
+        supplier_id: newPurchase.supplierId,
+        subtotal,
+        discount: newPurchase.discount,
+        tax,
+        total,
+        payment_method: paymentMethodMap[newPurchase.paymentMethod] ?? "cash",
+        status: statusMap["مكتملة"],
+      };
+  
+      console.log("بيانات الفاتورة:", purchase);
+  
+      const { data: insertedPurchase, error: purchaseError } = await supabase
+        .from("purchases")
+        .insert(purchase)
+        .select("id")
+        .single();
+  
+      if (purchaseError) {
+        console.error("خطأ أثناء حفظ الفاتورة:", purchaseError);
+        toast({
+          title: "خطأ",
+          description: purchaseError.message || "حدث خطأ أثناء حفظ الفاتورة",
+          variant: "destructive"
+        });
+        return;
+      }
+  
+      console.log("تم حفظ الفاتورة بنجاح:", insertedPurchase);
+  
+      const purchaseId = insertedPurchase.id;
+  
+      const purchaseItems = await Promise.all(
+        newPurchase.items.map(async (item) => {
+          const batteryTypeId = await fetchBatteryTypeId(item.batteryType);
+          if (!batteryTypeId) {
+            throw new Error(`نوع البطارية "${item.batteryType}" غير موجود`);
+          }
+  
+          console.log("تم جلب معرف نوع البطارية:", batteryTypeId);
+  
+          return {
+            purchase_id: purchaseId,
+            battery_type_id: batteryTypeId,
+            quantity: item.quantity,
+            price_per_kg: item.price,
+            total: item.total
+          };
+        })
+      );
+  
+      console.log("بيانات أصناف الفاتورة:", purchaseItems);
+  
+      const { error: itemsError } = await supabase
+        .from("purchase_items")
+        .insert(purchaseItems);
+  
+      if (itemsError) {
+        console.error("خطأ أثناء حفظ أصناف الفاتورة:", itemsError);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ أثناء حفظ أصناف الفاتورة",
+          variant: "destructive"
+        });
+        return;
+      }
+  
+      console.log("تم حفظ أصناف الفاتورة بنجاح.");
+  
+      setPurchases((prev) => [
+        ...prev,
+        {
+          id: purchaseId,
+          invoiceNumber: invoiceNumber,
+          date: newPurchase.date,
+          supplierId: newPurchase.supplierId,
+          supplierName: selectedSupplier?.name || "",
+          items: newPurchase.items,
+          subtotal,
+          discount: newPurchase.discount,
+          tax,
+          total,
+          paymentMethod: newPurchase.paymentMethod,
+          status: "مكتملة",
+        },
+      ]);
+  
+      console.log("تم تحديث حالة المشتريات في واجهة المستخدم.");
+  
+      toast({
+        title: "تمت الإضافة",
+        description: "تمت إضافة فاتورة المشتريات وتحديث بيانات المورد بنجاح",
+      });
+    } catch (err) {
+      console.error("خطأ غير متوقع:", err);
       toast({
         title: "خطأ",
-        description: "يرجى اختيار مورد وإضافة أصناف",
+        description: err.message || "حدث خطأ غير متوقع أثناء حفظ الفاتورة",
         variant: "destructive"
       });
-      return;
     }
-
-    const { subtotal, tax, total } = calculateTotals();
-
-    const purchase: Purchase = {
-      id: Date.now().toString(),
-      invoiceNumber: generateNextInvoiceNumber(),
-      date: newPurchase.date,
-      supplierId: newPurchase.supplierId,
-      supplierName: newPurchase.supplierName,
-      items: newPurchase.items,
-      subtotal,
-      discount: newPurchase.discount,
-      tax,
-      total,
-      paymentMethod: newPurchase.paymentMethod,
-      status: "مكتملة"
-    };
-
-    setPurchases(prev => [...prev, purchase]);
-
-    // Add to supplier account if payment is deferred
-    if (newPurchase.paymentMethod === "آجل") {
-      addTransactionToSupplier(newPurchase.supplierId, {
-        date: purchase.date,
-        type: "purchase",
-        description: `فاتورة مشتريات رقم ${purchase.invoiceNumber}`,
-        amount: total,
-        invoiceNumber: purchase.invoiceNumber,
-        vatAmount: tax
-      });
-    }
-
-    // Reset form
-    setNewPurchase({
-      date: new Date().toISOString().split('T')[0],
-      supplierId: "",
-      supplierName: "",
-      items: [],
-      discount: 0,
-      paymentMethod: "آجل"
-    });
-    setSelectedSupplier(null);
-
-    toast({
-      title: "تمت الإضافة",
-      description: "تمت إضافة فاتورة المشتريات بنجاح",
-    });
   };
 
   const handleEditPurchase = (purchase: Purchase) => {
@@ -272,36 +369,103 @@ const PurchasesPage = () => {
     printWindow.document.close();
     printWindow.print();
   };
-
-  const handleDeletePurchase = (purchase: Purchase) => {
-    // Remove from purchases list
-    setPurchases(prev => prev.filter(p => p.id !== purchase.id));
-
-    // Remove from supplier account if it was deferred
-    if (purchase.paymentMethod === "آجل") {
-      removeSupplierTransactionByInvoice(purchase.supplierId, purchase.invoiceNumber);
+ 
+  const handleDeletePurchase = async (purchase: Purchase) => {
+    try {
+      // حذف الفاتورة من قاعدة البيانات
+      const { error: deletePurchaseError } = await supabase
+        .from("purchases")
+        .delete()
+        .eq("id", purchase.id);
+  
+      if (deletePurchaseError) {
+        throw new Error("حدث خطأ أثناء حذف الفاتورة من قاعدة البيانات");
+      }
+  
+      // حذف الأصناف المرتبطة بالفاتورة من قاعدة البيانات
+      const { error: deleteItemsError } = await supabase
+        .from("purchase_items")
+        .delete()
+        .eq("purchase_id", purchase.id);
+  
+      if (deleteItemsError) {
+        throw new Error("حدث خطأ أثناء حذف أصناف الفاتورة من قاعدة البيانات");
+      }
+  
+      // تحديث حالة المورد إذا كانت طريقة الدفع "آجل"
+      if (purchase.paymentMethod === "آجل") {
+        const { data: supplierData, error: fetchSupplierError } = await supabase
+          .from("suppliers")
+          .select("balance, total_purchases, total_amount")
+          .eq("id", purchase.supplierId)
+          .single();
+  
+        if (fetchSupplierError) {
+          throw new Error("حدث خطأ أثناء جلب بيانات المورد");
+        }
+  
+        const updatedBalance = (supplierData?.balance || 0) - purchase.total;
+        const updatedTotalPurchases = (supplierData?.total_purchases || 0) - purchase.items.reduce((sum, item) => sum + item.quantity, 0);
+        const updatedTotalAmount = (supplierData?.total_amount || 0) - purchase.total;
+  
+        const { error: updateSupplierError } = await supabase
+          .from("suppliers")
+          .update({
+            balance: updatedBalance,
+            total_purchases: updatedTotalPurchases,
+            total_amount: updatedTotalAmount,
+          })
+          .eq("id", purchase.supplierId);
+  
+        if (updateSupplierError) {
+          throw new Error("حدث خطأ أثناء تحديث بيانات المورد");
+        }
+      }
+  
+      // إزالة الفاتورة من واجهة المستخدم
+      setPurchases((prev) => prev.filter((p) => p.id !== purchase.id));
+  
+      toast({
+        title: "تم الحذف",
+        description: "تم حذف فاتورة المشتريات وتحديث حساب المورد بنجاح",
+      });
+    } catch (err) {
+      console.error(err.message);
+      toast({
+        title: "خطأ",
+        description: err.message || "حدث خطأ غير متوقع أثناء حذف الفاتورة",
+        variant: "destructive",
+      });
     }
-
-    toast({
-      title: "تم الحذف",
-      description: "تم حذف فاتورة المشتريات وتحديث حساب المورد",
-    });
   };
+
+const fetchSuppliers = async () => {
+  const { data, error } = await supabase
+    .from("suppliers")
+    .select("id, name, balance, total_purchases, total_amount");
+
+  if (error) {
+    console.error("Error fetching suppliers:", error);
+    return [];
+  }
+
+  return data;
+};
 
   const totals = calculateTotals();
 
-  const LocalSupplierSearchDialog = ({ open, onClose, onSupplierSelect }: { open: boolean; onClose: () => void; onSupplierSelect: (supplier: { id: string; name: string; balance: number }) => void }) => {
+  const LocalSupplierSearchDialog = ({ open, onClose, onSupplierSelect }: { open: boolean; onClose: () => void; onSupplierSelect: (supplier: { id: string; name: string; balance: number; total_purchases: number; total_amount: number }) => void }) => {
     const [searchTerm, setSearchTerm] = useState("");
-    const mockSuppliers = [
-      { id: "S001", name: "مورد البطاريات الرئيسي", balance: 5000 },
-      { id: "S002", name: "شركة البطاريات الحديثة", balance: -2000 },
-      { id: "S003", name: "مورد البطاريات السريعة", balance: 0 },
-    ];
-
-    const filteredSuppliers = mockSuppliers.filter(supplier =>
+    const [suppliers, setSuppliers] = useState<{ id: string; name: string; balance: number; total_purchases: number; total_amount: number }[]>([]);
+  
+    useEffect(() => {
+      fetchSuppliers().then(setSuppliers); // جلب قائمة الموردين من قاعدة البيانات
+    }, []);
+  
+    const filteredSuppliers = suppliers.filter(supplier =>
       supplier.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
-
+  
     return (
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="max-w-md" dir="rtl">
@@ -310,7 +474,7 @@ const PurchasesPage = () => {
               اختيار المورد
             </DialogTitle>
           </DialogHeader>
-
+  
           <div className="space-y-4">
             <div className="relative">
               <Search className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
@@ -322,13 +486,13 @@ const PurchasesPage = () => {
                 style={{ fontFamily: 'Tajawal, sans-serif' }}
               />
             </div>
-
+  
             <div className="max-h-60 overflow-y-auto space-y-2">
               {filteredSuppliers.map(supplier => (
                 <div
                   key={supplier.id}
                   onClick={() => {
-                    onSupplierSelect(supplier);
+                    onSupplierSelect(supplier); // تمرير UUID الخاص بالمورد
                     setSearchTerm("");
                     onClose();
                   }}
@@ -356,21 +520,112 @@ const PurchasesPage = () => {
     );
   };
 
+
+      const fetchPurchases = async () => {
+        const { data: purchases, error: purchasesError } = await supabase
+          .from("purchases")
+          .select("id, invoice_number, date, supplier_id, subtotal, discount, tax, total, payment_method, status");
+      
+        if (purchasesError) {
+          console.error("Error fetching purchases:", purchasesError);
+          toast({
+            title: "خطأ",
+            description: "حدث خطأ أثناء جلب الفواتير",
+            variant: "destructive"
+          });
+          return [];
+        }
+      
+        const purchasesWithDetails = await Promise.all(
+          purchases.map(async (purchase) => {
+            // جلب اسم المورد
+            const { data: supplier, error: supplierError } = await supabase
+              .from("suppliers")
+              .select("name")
+              .eq("id", purchase.supplier_id)
+              .single();
+      
+            if (supplierError) {
+              console.error(`Error fetching supplier name for supplier_id ${purchase.supplier_id}:`, supplierError);
+            }
+      
+            // جلب الأصناف المرتبطة بالفاتورة
+            const { data: items, error: itemsError } = await supabase
+              .from("purchase_items")
+              .select("id, battery_type_id, quantity, price_per_kg, total")
+              .eq("purchase_id", purchase.id);
+      
+            if (itemsError) {
+              console.error(`Error fetching items for purchase_id ${purchase.id}:`, itemsError);
+            }
+      
+            // تحويل بيانات الأصناف لجلب اسم نوع البطارية
+            const itemsWithBatteryType = await Promise.all(
+              items.map(async (item) => {
+                const { data: batteryType, error: batteryTypeError } = await supabase
+                  .from("battery_types")
+                  .select("name")
+                  .eq("id", item.battery_type_id)
+                  .single();
+      
+                if (batteryTypeError) {
+                  console.error(`Error fetching battery type for battery_type_id ${item.battery_type_id}:`, batteryTypeError);
+                }
+      
+                return {
+                  id: item.id,
+                  batteryType: batteryType?.name || "غير معروف",
+                  quantity: item.quantity,
+                  price: item.price_per_kg,
+                  total: item.total,
+                };
+              })
+            );
+      
+            return {
+              id: purchase.id,
+              invoiceNumber: purchase.invoice_number,
+              date: purchase.date,
+              supplierId: purchase.supplier_id,
+              supplierName: supplier?.name || "غير معروف",
+              items: itemsWithBatteryType,
+              subtotal: purchase.subtotal,
+              discount: purchase.discount,
+              tax: purchase.tax,
+              total: purchase.total,
+              paymentMethod: purchase.payment_method,
+              status: purchase.status,
+            };
+          })
+        );
+      
+        return purchasesWithDetails;
+      };
+
+     useEffect(() => {
+      const loadPurchases = async () => {
+        const data = await fetchPurchases();
+        setPurchases(data);
+      };
+    
+      loadPurchases();
+    }, []);
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <Card className="shadow-lg">
         <CardHeader className="bg-[#eff6ff] text-gray-600">
-            <div className="flex justify-center">
+          <div className="flex justify-center">
             <CardTitle className="flex items-center gap-2 flex-row-reverse text-lg sm:text-xl" style={{ fontFamily: 'Tajawal, sans-serif' }}>
               إدارة المشتريات
               <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
             </CardTitle>
-            </div>
+          </div>
         </CardHeader>
 
         <CardContent className="p-4 sm:p-6">
-         
+
 
           {/* Add New Purchase Form */}
           <div className="bg-gray-50 p-4 rounded-lg mb-6">
@@ -412,8 +667,8 @@ const PurchasesPage = () => {
                   {selectedSupplier && (
                     <span
                       className={`text-sm font-bold whitespace-nowrap ${selectedSupplier.balance >= 0
-                          ? "text-green-600 bg-green-100 py-2 px-6 rounded"
-                          : "text-red-600 bg-red-100 py-2 px-6 rounded"
+                        ? "text-green-600 bg-green-100 py-2 px-6 rounded"
+                        : "text-red-600 bg-red-100 py-2 px-6 rounded"
                         }`}
                     >
                       الرصيد: {selectedSupplier.balance.toLocaleString()} ريال
@@ -512,59 +767,64 @@ const PurchasesPage = () => {
             <div>
               <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>طريقة الدفع</Label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
-                {paymentMethods.map(method => {
-                  const Icon = method.icon;
-                  return (
-                    <Button
-                      key={method.value}
-                      variant={newPurchase.paymentMethod === method.value ? "default" : "outline"}
-                      onClick={() => setNewPurchase({ ...newPurchase, paymentMethod: method.value })}
-                      className="flex items-center gap-2"
-                      style={{ fontFamily: 'Tajawal, sans-serif' }}
-                    >
-                      <Icon className="w-4 h-4" />
-                      {method.label}
-                    </Button>
-                  );
-                })}
-              </div>
+                  {[
+                    { value: "نقداً", label: "نقداً", icon: DollarSign },
+                    { value: "بطاقة", label: "بطاقة", icon: CreditCard },
+                    { value: "تحويل", label: "تحويل", icon: Banknote },
+                    { value: "آجل", label: "آجل", icon: Smartphone }
+                  ].map(method => {
+                    const Icon = method.icon;
+                    return (
+                      <Button
+                        key={method.value}
+                        variant={newPurchase.paymentMethod === method.value ? "default" : "outline"}
+                        onClick={() => setNewPurchase({ ...newPurchase, paymentMethod: method.value })}
+                        className="flex items-center gap-2"
+                        style={{ fontFamily: 'Tajawal, sans-serif' }}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {method.label}
+                      </Button>
+                    );
+                  })}
+                </div>
             </div>
 
           </div>
-<Card>
-  <CardHeader>
-    <CardTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
-      ملخص الفاتورة
-    </CardTitle>
-  </CardHeader>
-  <CardContent className="space-y-4">
-    <div className="flex justify-between">
-      <span style={{ fontFamily: 'Tajawal, sans-serif' }}>المجموع الفرعي:</span>
-      <span className="font-bold">{totals.subtotal.toLocaleString()} ريال</span>
-    </div>
-    <div className="flex justify-between">
-      <span style={{ fontFamily: 'Tajawal, sans-serif' }}>الخصم:</span>
-      <span className="font-bold text-red-600">-{totals.discountAmount.toLocaleString()} ريال</span>
-    </div>
-    <div className="flex justify-between">
-      <span style={{ fontFamily: 'Tajawal, sans-serif' }}>ضريبة القيمة المضافة (15%):</span>
-      <span className="font-bold">{totals.tax.toLocaleString()} ريال</span>
-    </div>
-    <div className="border-t pt-4">
-      <div className="flex justify-between text-lg">
-        <span className="font-bold" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجمالي:</span>
-        <span className="font-bold text-green-600">{totals.total.toLocaleString()} ريال</span>
-      </div>
-    </div>
-    {newPurchase.paymentMethod === 'credit' && (
-      <div className="bg-yellow-50 p-3 rounded border">
-        <p className="text-sm text-yellow-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-          ملاحظة: سيتم إضافة هذا المبلغ لرصيد المورد في حالة الشراء الآجل
-        </p>
-      </div>
-    )}
-  </CardContent>
-</Card>
+          <Card>
+            <CardHeader>
+              <CardTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                ملخص الفاتورة
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between">
+                <span style={{ fontFamily: 'Tajawal, sans-serif' }}>المجموع الفرعي:</span>
+                <span className="font-bold">{totals.subtotal.toLocaleString()} ريال</span>
+              </div>
+              <div className="flex justify-between">
+                <span style={{ fontFamily: 'Tajawal, sans-serif' }}>الخصم:</span>
+                <span className="font-bold text-red-600">-{totals.discountAmount.toLocaleString()} ريال</span>
+              </div>
+              <div className="flex justify-between">
+                <span style={{ fontFamily: 'Tajawal, sans-serif' }}>ضريبة القيمة المضافة (15%):</span>
+                <span className="font-bold">{totals.tax.toLocaleString()} ريال</span>
+              </div>
+              <div className="border-t pt-4">
+                <div className="flex justify-between text-lg">
+                  <span className="font-bold" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجمالي:</span>
+                  <span className="font-bold text-green-600">{totals.total.toLocaleString()} ريال</span>
+                </div>
+              </div>
+              {newPurchase.paymentMethod === 'credit' && (
+                <div className="bg-yellow-50 p-3 rounded border">
+                  <p className="text-sm text-yellow-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                    ملاحظة: سيتم إضافة هذا المبلغ لرصيد المورد في حالة الشراء الآجل
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           <div className="flex gap-2 ">
             <Button
@@ -594,7 +854,7 @@ const PurchasesPage = () => {
 
           <Card>
             <CardContent className="p-4 text-center">
-            <img src="/assets/icons/SaudiRG.svg" alt="Custom Icon" className="w-8 h-8 mx-auto mb-2" />
+              <img src="/assets/icons/SaudiRG.svg" alt="Custom Icon" className="w-8 h-8 mx-auto mb-2" />
               <p className="text-2xl font-bold">
                 {purchases.reduce((sum, p) => sum + p.total, 0).toFixed(2)}
               </p>
@@ -617,17 +877,17 @@ const PurchasesPage = () => {
           </Card>
         </div>
         <div className="mb-6 px-5  ">
-            <div className="relative">
-              <Search className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="ابحث عن فاتورة مشتريات..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pr-10 text-sm"
-                style={{ fontFamily: 'Tajawal, sans-serif' }}
-              />
-            </div>
+          <div className="relative">
+            <Search className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="ابحث عن فاتورة مشتريات..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pr-10 text-sm"
+              style={{ fontFamily: 'Tajawal, sans-serif' }}
+            />
           </div>
+        </div>
         <CardHeader>
           <CardTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>قائمة المشتريات</CardTitle>
         </CardHeader>
@@ -701,25 +961,25 @@ const PurchasesPage = () => {
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="max-w-2xl" dir="rtl">
           <DialogHeader>
-        <DialogTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
-          تعديل فاتورة المشتريات - {editingPurchase?.invoiceNumber}
-        </DialogTitle>
+            <DialogTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
+              تعديل فاتورة المشتريات - {editingPurchase?.invoiceNumber}
+            </DialogTitle>
           </DialogHeader>
           {editingPurchase && (
-        <EditPurchaseForm
-          purchase={editingPurchase}
-          onSave={(updatedPurchase) => {
-            setPurchases((prev) =>
-          prev.map((p) => (p.id === updatedPurchase.id ? updatedPurchase : p))
-            );
-            setShowEditDialog(false);
-            toast({
-          title: "تم التعديل",
-          description: "تم تعديل فاتورة المشتريات بنجاح",
-            });
-          }}
-          onCancel={() => setShowEditDialog(false)}
-        />
+            <EditPurchaseForm
+              purchase={editingPurchase}
+              onSave={(updatedPurchase) => {
+                setPurchases((prev) =>
+                  prev.map((p) => (p.id === updatedPurchase.id ? updatedPurchase : p))
+                );
+                setShowEditDialog(false);
+                toast({
+                  title: "تم التعديل",
+                  description: "تم تعديل فاتورة المشتريات بنجاح",
+                });
+              }}
+              onCancel={() => setShowEditDialog(false)}
+            />
           )}
         </DialogContent>
       </Dialog>
@@ -749,7 +1009,7 @@ const EditPurchaseForm = ({ purchase, onSave, onCancel }: EditPurchaseFormProps)
       total:
         field === "quantity" || field === "price"
           ? (field === "quantity" ? value : updatedItems[index].quantity) *
-            (field === "price" ? value : updatedItems[index].price)
+          (field === "price" ? value : updatedItems[index].price)
           : updatedItems[index].total,
     };
     setEditedPurchase({ ...editedPurchase, items: updatedItems });
@@ -760,27 +1020,159 @@ const EditPurchaseForm = ({ purchase, onSave, onCancel }: EditPurchaseFormProps)
     setEditedPurchase({ ...editedPurchase, items: updatedItems });
   };
 
-  const handleSave = () => {
-    // Recalculate totals
-    const subtotal = editedPurchase.items.reduce((sum, item) => sum + item.total, 0);
-    const discountAmount = (subtotal * editedPurchase.discount) / 100;
-    const afterDiscount = subtotal - discountAmount;
-    const tax = afterDiscount * 0.15;
-    const total = afterDiscount + tax;
-    onSave({
-      ...editedPurchase,
-      subtotal,
-      tax,
-      total,
-    });
+  const handleSave = async () => {
+    try {
+      console.log("بدء عملية حفظ التعديلات...");
+  
+      // حساب الإجمالي الجديد
+      const subtotal = editedPurchase.items.reduce((sum, item) => sum + item.total, 0);
+      const discountAmount = (subtotal * editedPurchase.discount) / 100;
+      const afterDiscount = subtotal - discountAmount;
+      const tax = afterDiscount * 0.15;
+      const total = afterDiscount + tax;
+  
+      console.log("الإجماليات المحسوبة:", { subtotal, discountAmount, tax, total });
+  
+      // حساب الفرق بين الإجمالي القديم والجديد
+      const totalDifference = total - purchase.total;
+      console.log("الفرق بين الإجمالي القديم والجديد:", totalDifference);
+  
+      // تحديث جدول الموردين إذا كانت طريقة الدفع "آجل"
+      if (editedPurchase.paymentMethod === "آجل") {
+        console.log("تحديث بيانات المورد...");
+        const { data: supplierData, error: fetchError } = await supabase
+          .from("suppliers")
+          .select("balance, total_purchases, total_amount, last_purchase")
+          .eq("id", editedPurchase.supplierId)
+          .single();
+  
+        if (fetchError) {
+          console.error("خطأ أثناء جلب بيانات المورد:", fetchError);
+          throw new Error("حدث خطأ أثناء جلب بيانات المورد");
+        }
+  
+        console.log("بيانات المورد الحالية:", supplierData);
+  
+        const updatedBalance = (supplierData?.balance || 0) + totalDifference;
+        const updatedTotalPurchases = (supplierData?.total_purchases || 0) + editedPurchase.items.reduce((sum, item) => sum + item.quantity, 0) - purchase.items.reduce((sum, item) => sum + item.quantity, 0);
+        const updatedTotalAmount = (supplierData?.total_amount || 0) + totalDifference;
+        const updatedLastPurchase = editedPurchase.date;
+  
+        console.log("القيم المحدثة للمورد:", {
+          updatedBalance,
+          updatedTotalPurchases,
+          updatedTotalAmount,
+          updatedLastPurchase,
+        });
+  
+        const { error: updateSupplierError } = await supabase
+          .from("suppliers")
+          .update({
+            balance: updatedBalance,
+            total_purchases: updatedTotalPurchases,
+            total_amount: updatedTotalAmount,
+            last_purchase: updatedLastPurchase,
+          })
+          .eq("id", editedPurchase.supplierId);
+  
+        if (updateSupplierError) {
+          console.error("خطأ أثناء تحديث بيانات المورد:", updateSupplierError);
+          throw new Error("حدث خطأ أثناء تحديث بيانات المورد");
+        }
+  
+        console.log("تم تحديث بيانات المورد بنجاح.");
+      }
+  
+      // تحديث الكميات في جدول أنواع البطاريات
+      console.log("تحديث الكميات في جدول أنواع البطاريات...");
+      await Promise.all(
+        purchase.items.map(async (oldItem) => {
+          const newItem = editedPurchase.items.find((item) => item.id === oldItem.id);
+          if (!newItem) return;
+  
+          const quantityDifference = newItem.quantity - oldItem.quantity;
+          console.log(`الفرق في الكمية لنوع البطارية "${newItem.batteryType}":`, quantityDifference);
+  
+          const { data: batteryData, error: fetchError } = await supabase
+            .from("battery_types")
+            .select("currentQty")
+            .eq("name", newItem.batteryType)
+            .single();
+  
+          if (fetchError) {
+            console.error(`خطأ أثناء جلب الكمية لنوع البطارية "${newItem.batteryType}":`, fetchError);
+            throw new Error(`حدث خطأ أثناء جلب الكمية لنوع البطارية "${newItem.batteryType}"`);
+          }
+  
+          console.log(`الكمية الحالية لنوع البطارية "${newItem.batteryType}":`, batteryData?.currentQty);
+  
+          const updatedQty = (batteryData?.currentQty || 0) + quantityDifference;
+  
+          const { error: updateError } = await supabase
+            .from("battery_types")
+            .update({ currentQty: updatedQty })
+            .eq("name", newItem.batteryType);
+  
+          if (updateError) {
+            console.error(`خطأ أثناء تحديث الكمية لنوع البطارية "${newItem.batteryType}":`, updateError);
+            throw new Error(`حدث خطأ أثناء تحديث الكمية لنوع البطارية "${newItem.batteryType}"`);
+          }
+  
+          console.log(`تم تحديث الكمية لنوع البطارية "${newItem.batteryType}" بنجاح.`);
+        })
+      );
+  
+      // تحديث الفاتورة في قاعدة البيانات
+      console.log("تحديث الفاتورة في قاعدة البيانات...");
+      const { error: updatePurchaseError } = await supabase
+        .from("purchases")
+        .update({
+          subtotal,
+          discount: editedPurchase.discount,
+          tax,
+          total,
+          payment_method: paymentMethodMap[editedPurchase.paymentMethod] ?? "cash",
+          status: "completed",
+        })
+        .eq("id", editedPurchase.id);
+  
+      if (updatePurchaseError) {
+        console.error("خطأ أثناء تحديث الفاتورة:", updatePurchaseError);
+        throw new Error("حدث خطأ أثناء تحديث الفاتورة");
+      }
+  
+      console.log("تم تحديث الفاتورة بنجاح.");
+  
+      // تحديث الحالة في واجهة المستخدم
+      onSave({
+        ...editedPurchase,
+        subtotal,
+        tax,
+        total,
+        status: "مكتملة",
+      });
+  
+      toast({
+        title: "تم التعديل",
+        description: "تم تعديل الفاتورة وتحديث بيانات المورد بنجاح",
+      });
+    } catch (err) {
+      console.error("خطأ غير متوقع:", err.message);
+      toast({
+        title: "خطأ",
+        description: err.message || "حدث خطأ غير متوقع أثناء تعديل الفاتورة",
+        variant: "destructive",
+      });
+    }
   };
-
+  
+ 
   return (
     <div className="space-y-4">
       <div className="flex flex-col md:flex-row gap-4 mb-4 items-end">
         <div className="flex-4">
           <Label htmlFor="date" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-            التاريخ
+      التاريخ
           </Label>
           <Input
             type="date"

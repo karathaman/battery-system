@@ -239,7 +239,22 @@ const Index = () => {
     {/* Content for each tab */}
     <TabsContent value="daily" className="space-y-4 sm:space-y-6">
       <StickyNotes compact={true} language={language} />
-      <DailyPurchases language={language} />
+       <DailyPurchases  
+        language={language}
+        id="unique-id" // استبدل بـ ID مناسب إذا كان لديك
+        date="2023-06-11" // استبدل بالتاريخ المناسب
+        supplierName="Supplier Name" // استبدل باسم المورد
+        supplierCode="SUP123" // استبدل بالكود المناسب
+        supplierPhone="123456789" // استبدل برقم الهاتف
+        batteryType="Battery Type" // استبدل بنوع البطارية
+        batteryTypeId="Battery Type" // استبدل بنوع البطارية
+        quantity={10} // استبدل بالكمية المناسبة
+        pricePerKg={50} // استبدل بالسعر المناسب
+        total={500} // استبدل بالإجمالي المناسب
+        discount={50} // استبدل بالخصم المناسب
+        finalTotal={450} // استبدل بالإجمالي النهائي المناسب
+        isSaved={false} // استبدل بالحالة المناسبة
+      />
     </TabsContent>
     <TabsContent value="purchases" className="space-y-4 sm:space-y-6">
       <PurchasesPage />

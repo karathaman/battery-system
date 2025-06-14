@@ -3,6 +3,21 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Supplier, SupplierFormData, PaginatedResponse, FilterOptions } from '@/types';
 
+
+// دالة لجلب الموردين من قاعدة البيانات
+export const fetchSuppliers = async () => {
+  const { data, error } = await supabase
+    .from("suppliers") // اسم الجدول في قاعدة البيانات
+    .select("*"); // الأعمدة التي تريد جلبها
+
+  if (error) {
+    console.error("Error fetching suppliers:", error);
+    throw new Error("Failed to fetch suppliers");
+  }
+
+  return data;
+};
+
 const supplierService = {
   getSuppliers: async (page = 1, limit = 10, filters?: FilterOptions): Promise<PaginatedResponse<Supplier>> => {
     const offset = (page - 1) * limit;

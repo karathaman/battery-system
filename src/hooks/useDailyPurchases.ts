@@ -4,6 +4,7 @@ import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface DailyPurchase {
+  batteryTypeId: any;
   id: string;
   date: string;
   supplierName: string;
@@ -45,6 +46,7 @@ const dailyPurchaseService = {
     }
 
     return (data || []).map(purchase => ({
+      batteryTypeId: purchase.battery_type ?? purchase.battery_type ?? '', // fallback if column is named differently
       id: purchase.id,
       date: purchase.date,
       supplierName: purchase.supplier_name,
@@ -85,6 +87,7 @@ const dailyPurchaseService = {
     }
 
     return {
+      batteryTypeId: newPurchase.battery_type,
       id: newPurchase.id,
       date: newPurchase.date,
       supplierName: newPurchase.supplier_name,
@@ -123,8 +126,8 @@ const dailyPurchaseService = {
       console.error('Error updating daily purchase:', error);
       throw new Error(error.message);
     }
-
     return {
+      batteryTypeId: updatedPurchase.battery_type,
       id: updatedPurchase.id,
       date: updatedPurchase.date,
       supplierName: updatedPurchase.supplier_name,
@@ -137,7 +140,7 @@ const dailyPurchaseService = {
       discount: updatedPurchase.discount || 0,
       finalTotal: updatedPurchase.final_total,
       isSaved: updatedPurchase.is_saved || false
-    };
+    }; 
   },
 
   deleteDailyPurchase: async (id: string): Promise<void> => {

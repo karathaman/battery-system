@@ -1,78 +1,28 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Battery, Search, Plus, Edit3, Trash2, Save, X, Minus, TrendingDown, Package, DollarSign } from "lucide-react";
+import { Battery, Search, Plus, Edit3, Trash2, Save, X, Minus, TrendingDown, Package } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface BatteryType {
   id: string;
   name: string;
   description?: string;
-  defaultPrice: number;
+  unit_price: number;
   currentQty: number;
-  averageBuyingPrice: number;
-  lastPrice: number;
   isActive: boolean;
   createdAt: string;
 }
-
-// Mock data with enhanced details
-const mockBatteryTypes: BatteryType[] = [
-  {
-    id: "1",
-    name: "بطاريات عادية",
-    description: "بطاريات السيارات العادية",
-    defaultPrice: 25,
-    currentQty: 150,
-    averageBuyingPrice: 20,
-    lastPrice: 22,
-    isActive: true,
-    createdAt: "2024-01-01"
-  },
-  {
-    id: "2",
-    name: "بطاريات جافة",
-    description: "بطاريات جافة للسيارات الحديثة",
-    defaultPrice: 30,
-    currentQty: 85,
-    averageBuyingPrice: 25,
-    lastPrice: 28,
-    isActive: true,
-    createdAt: "2024-01-01"
-  },
-  {
-    id: "3",
-    name: "بطاريات زجاج",
-    description: "بطاريات الزجاج عالية الجودة",
-    defaultPrice: 35,
-    currentQty: 45,
-    averageBuyingPrice: 30,
-    lastPrice: 32,
-    isActive: true,
-    createdAt: "2024-01-01"
-  },
-  {
-    id: "4",
-    name: "بطاريات ليثيوم",
-    description: "بطاريات ليثيوم متقدمة",
-    defaultPrice: 50,
-    currentQty: 0,
-    averageBuyingPrice: 45,
-    lastPrice: 48,
-    isActive: false,
-    createdAt: "2024-01-01"
-  }
-];
-
 export const BatteryTypeManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [batteryTypes, setBatteryTypes] = useState<BatteryType[]>(mockBatteryTypes);
+  const [batteryTypes, setBatteryTypes] = useState<BatteryType[]>([]);
   const [editingType, setEditingType] = useState<string | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showDecreaseDialog, setShowDecreaseDialog] = useState<string | null>(null);
@@ -80,11 +30,31 @@ export const BatteryTypeManagement = () => {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    defaultPrice: 0,
+    unit_price: 0,
     currentQty: 0,
-    averageBuyingPrice: 0,
-    lastPrice: 0
   });
+
+    useEffect(() => {
+    const fetchBatteryTypes = async () => {
+      const { data, error } = await supabase
+        .from("battery_types")
+        .select("id, name, description, unit_price, currentQty");
+  
+      if (error) {
+        console.error("Error fetching battery types:", error);
+      } else {
+        console.log("Fetched battery types:", data);
+        // Add isActive: true as default since it's not in the table
+        setBatteryTypes((data || []).map((item: any) => ({
+          ...item,
+          isActive: true,
+          createdAt: item.createdAt || new Date().toISOString().split('T')[0],
+        })));
+      }
+    };
+  
+    fetchBatteryTypes();
+  }, []);
 
   const filteredTypes = batteryTypes.filter(type =>
     type.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -92,7 +62,7 @@ export const BatteryTypeManagement = () => {
   );
 
   const handleAddType = () => {
-    if (!formData.name.trim() || formData.defaultPrice <= 0) {
+    if (!formData.name.trim() || formData.unit_price <= 0) {
       toast({
         title: "خطأ في البيانات",
         description: "يرجى إدخال اسم النوع والسعر الافتراضي",
@@ -106,18 +76,16 @@ export const BatteryTypeManagement = () => {
       id: Date.now().toString(),
       name: formData.name.trim(),
       description: formData.description.trim() || undefined,
-      defaultPrice: formData.defaultPrice,
+      unit_price: formData.unit_price,
       currentQty: formData.currentQty || 0,
-      averageBuyingPrice: formData.averageBuyingPrice || 0,
-      lastPrice: formData.lastPrice || 0,
       isActive: true,
-      createdAt: new Date().toISOString().split('T')[0]
+      createdAt: new Date().toISOString().split('T')[0],
     };
 
     setBatteryTypes(prev => [...prev, newType]);
-    setFormData({ name: "", description: "", defaultPrice: 0, currentQty: 0, averageBuyingPrice: 0, lastPrice: 0 });
+    setFormData({ name: "", description: "", unit_price: 0, currentQty: 0 });
     setShowAddDialog(false);
-    
+
     toast({
       title: "تم إضافة النوع",
       description: `تم إضافة ${newType.name} بنجاح`,
@@ -130,15 +98,13 @@ export const BatteryTypeManagement = () => {
     setFormData({
       name: type.name,
       description: type.description || "",
-      defaultPrice: type.defaultPrice,
+      unit_price: type.unit_price,
       currentQty: type.currentQty,
-      averageBuyingPrice: type.averageBuyingPrice,
-      lastPrice: type.lastPrice
     });
   };
 
   const handleUpdateType = () => {
-    if (!formData.name.trim() || formData.defaultPrice <= 0) {
+    if (!formData.name.trim() || formData.unit_price <= 0) {
       toast({
         title: "خطأ في البيانات",
         description: "يرجى إدخال اسم النوع والسعر الافتراضي",
@@ -148,21 +114,23 @@ export const BatteryTypeManagement = () => {
       return;
     }
 
-    setBatteryTypes(prev => prev.map(type => 
-      type.id === editingType ? {
-        ...type,
-        name: formData.name.trim(),
-        description: formData.description.trim() || undefined,
-        defaultPrice: formData.defaultPrice,
-        currentQty: formData.currentQty,
-        averageBuyingPrice: formData.averageBuyingPrice,
-        lastPrice: formData.lastPrice
-      } : type
-    ));
+    setBatteryTypes(prev =>
+      prev.map(type =>
+        type.id === editingType
+          ? {
+              ...type,
+              name: formData.name.trim(),
+              description: formData.description.trim() || undefined,
+              unit_price: formData.unit_price,
+              currentQty: formData.currentQty,
+            }
+          : type
+      )
+    );
 
     setEditingType(null);
-    setFormData({ name: "", description: "", defaultPrice: 0, currentQty: 0, averageBuyingPrice: 0, lastPrice: 0 });
-    
+    setFormData({ name: "", description: "", unit_price: 0, currentQty: 0 });
+
     toast({
       title: "تم تحديث النوع",
       description: "تم تحديث بيانات النوع بنجاح",
@@ -170,7 +138,8 @@ export const BatteryTypeManagement = () => {
     });
   };
 
-  const handleDecreaseQuantity = () => {
+
+ const handleDecreaseQuantity = () => {
     const amount = parseInt(decreaseAmount);
     if (!amount || amount <= 0) {
       toast({
@@ -193,16 +162,20 @@ export const BatteryTypeManagement = () => {
       return;
     }
 
-    setBatteryTypes(prev => prev.map(type => 
-      type.id === showDecreaseDialog ? {
-        ...type,
-        currentQty: type.currentQty - amount
-      } : type
-    ));
+    setBatteryTypes(prev =>
+      prev.map(type =>
+        type.id === showDecreaseDialog
+          ? {
+              ...type,
+              currentQty: type.currentQty - amount,
+            }
+          : type
+      )
+    );
 
     setShowDecreaseDialog(null);
     setDecreaseAmount("");
-    
+
     toast({
       title: "تم تقليل الكمية",
       description: `تم تقليل ${amount} كيلو من ${typeToUpdate?.name}`,
@@ -220,10 +193,12 @@ export const BatteryTypeManagement = () => {
   };
 
   const toggleTypeStatus = (typeId: string) => {
-    setBatteryTypes(prev => prev.map(type => 
-      type.id === typeId ? { ...type, isActive: !type.isActive } : type
-    ));
-    
+    setBatteryTypes(prev =>
+      prev.map(type =>
+        type.id === typeId ? { ...type, isActive: !type.isActive } : type
+      )
+    );
+  
     const type = batteryTypes.find(t => t.id === typeId);
     toast({
       title: type?.isActive ? "تم إيقاف النوع" : "تم تفعيل النوع",
@@ -231,6 +206,8 @@ export const BatteryTypeManagement = () => {
       duration: 2000,
     });
   };
+
+ 
 
   const AddEditDialog = ({ isEdit = false }: { isEdit?: boolean }) => (
     <Dialog open={isEdit ? !!editingType : showAddDialog} onOpenChange={isEdit ? () => setEditingType(null) : setShowAddDialog}>
@@ -273,14 +250,14 @@ export const BatteryTypeManagement = () => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="defaultPrice" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+              <Label htmlFor="unit_price" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                 السعر الافتراضي
               </Label>
               <Input
-                id="defaultPrice"
+                id="unit_price"
                 type="number"
-                value={formData.defaultPrice}
-                onChange={(e) => setFormData(prev => ({ ...prev, defaultPrice: Number(e.target.value) }))}
+                value={formData.unit_price}
+                onChange={(e) => setFormData(prev => ({ ...prev, unit_price: Number(e.target.value) }))}
                 placeholder="0"
                 min="0"
                 step="0.5"
@@ -301,38 +278,7 @@ export const BatteryTypeManagement = () => {
               />
             </div>
           </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label htmlFor="avgBuyingPrice" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                متوسط سعر الشراء
-              </Label>
-              <Input
-                id="avgBuyingPrice"
-                type="number"
-                value={formData.averageBuyingPrice}
-                onChange={(e) => setFormData(prev => ({ ...prev, averageBuyingPrice: Number(e.target.value) }))}
-                placeholder="0"
-                min="0"
-                step="0.5"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="lastPrice" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                آخر سعر شراء
-              </Label>
-              <Input
-                id="lastPrice"
-                type="number"
-                value={formData.lastPrice}
-                onChange={(e) => setFormData(prev => ({ ...prev, lastPrice: Number(e.target.value) }))}
-                placeholder="0"
-                min="0"
-                step="0.5"
-              />
-            </div>
-          </div>
+ 
 
           <div className="flex gap-2 flex-row-reverse pt-4">
             <Button
@@ -349,7 +295,7 @@ export const BatteryTypeManagement = () => {
                 } else {
                   setShowAddDialog(false);
                 }
-                setFormData({ name: "", description: "", defaultPrice: 0, currentQty: 0, averageBuyingPrice: 0, lastPrice: 0 });
+                setFormData({ name: "", description: "", unit_price: 0, currentQty: 0});
               }}
               variant="outline"
               style={{ fontFamily: 'Tajawal, sans-serif' }}
@@ -422,7 +368,7 @@ export const BatteryTypeManagement = () => {
               <CardContent className="p-4 text-center">
                 <Battery className="w-8 h-8 mx-auto mb-2 text-orange-600" />
                 <p className="text-2xl font-bold">
-                  {batteryTypes.length > 0 ? Math.round(batteryTypes.reduce((sum, t) => sum + t.defaultPrice, 0) / batteryTypes.length) : 0}
+                  {batteryTypes.length > 0 ? Math.round(batteryTypes.reduce((sum, t) => sum + t.unit_price, 0) / batteryTypes.length) : 0}
                 </p>
                 <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                   متوسط السعر
@@ -442,7 +388,10 @@ export const BatteryTypeManagement = () => {
                 <div className="flex items-center justify-between flex-row-reverse">
                   <div className="flex-1">
                     <h3 className="text-base font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                      {type.name}
+                        <span className="inline-flex items-center gap-1">
+                        {type.name}
+                        <Battery className="w-4 h-4 text-purple-600" />
+                        </span>
                     </h3>
                     <div className="flex items-center gap-2 mt-1 flex-row-reverse">
                       <Badge variant={type.isActive ? "default" : "secondary"} className="text-xs">
@@ -463,55 +412,28 @@ export const BatteryTypeManagement = () => {
                   </p>
                 )}
 
-                {/* Current Quantity */}
-                <div className="bg-blue-50 rounded p-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold text-blue-600">
-                      {type.currentQty} كيلو
-                    </span>
-                    <div className="flex items-center gap-1 flex-row-reverse">
-                      <Package className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                        الكمية الحالية
-                      </span>
-                    </div>
-                  </div>
+                {/* Current Quantity */} 
+                <div className="bg-blue-50 rounded p-3 flex items-center justify-between flex-row-reverse">
+                  <span className="flex items-center gap-1 text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  الكمية الحالية
+                  <Package className="w-5 h-5 text-blue-500" />
+                  </span>
+                  <span className="flex items-center gap-1">
+                  <span className="text-xs text-gray-500">كيلو</span>
+                  <span className="text-base font-semibold text-blue-700">{type.currentQty}</span>
+                  </span>
                 </div>
 
                 {/* Pricing Info */}
-                <div className="grid grid-cols-1 gap-2">
-                  <div className="bg-green-50 rounded p-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-bold text-green-600">
-                        {type.defaultPrice} ريال
-                      </span>
-                      <span className="text-xs text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                        السعر الافتراضي
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-orange-50 rounded p-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-bold text-orange-600">
-                        {type.averageBuyingPrice} ريال
-                      </span>
-                      <span className="text-xs text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                        متوسط سعر الشراء
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-purple-50 rounded p-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-bold text-purple-600">
-                        {type.lastPrice} ريال
-                      </span>
-                      <span className="text-xs text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                        آخر سعر شراء
-                      </span>
-                    </div>
-                  </div>
+                <div className="bg-green-50 rounded p-3 flex items-center justify-between flex-row-reverse mt-2">
+                  <span className="text-xs text-gray-600 flex items-center gap-1" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  السعر الافتراضي
+                  <img src="/assets/icons/SaudiRG.svg" alt="Custom Icon" className="w-4 h-4" />
+                  </span>
+                  <span className="flex items-center gap-1">
+                  <img src="/assets/icons/SaudiRG.svg" alt="Custom Icon" className="w-4 h-4" />
+                  <span className="text-base font-bold text-green-600">{type.unit_price}</span>
+                  </span>
                 </div>
 
                 <div className="flex gap-2">

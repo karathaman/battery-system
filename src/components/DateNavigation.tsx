@@ -35,22 +35,22 @@ export const DateNavigation = ({
   };
   return <div className={`flex items-center gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
       <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+      <Button onClick={() => navigateDate('next')} variant="outline" size="sm" className="flex items-center gap-1">
+          {language === "ar" ? "التالي" : "Next"}
+          {isRTL ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+        </Button>
+        
+        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}> 
+          <input type="date" value={currentDate} onChange={e => onDateChange(e.target.value)} style={{
+          fontFamily: 'Tajawal, sans-serif'
+        }} className="text-md   border rounded-lg px-2 py-1 bg-blue-50" />
+        </div>
+        
         <Button onClick={() => navigateDate('prev')} variant="outline" size="sm" className="flex items-center gap-1">
           {isRTL ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           {language === "ar" ? "السابق" : "Previous"}
         </Button>
         
-        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-          <Calendar className="w-5 h-5 text-blue-600" />
-          <input type="date" value={currentDate} onChange={e => onDateChange(e.target.value)} style={{
-          fontFamily: 'Tajawal, sans-serif'
-        }} className="text-md   border rounded-lg px-3 py-2" />
-        </div>
-        
-        <Button onClick={() => navigateDate('next')} variant="outline" size="sm" className="flex items-center gap-1">
-          {language === "ar" ? "التالي" : "Next"}
-          {isRTL ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-        </Button>
       </div>
 
       <Button onClick={handleClearData} variant="destructive" size="sm" className="flex items-center gap-2">

@@ -1,9 +1,9 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Plus } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface BatteryTypeSelectorProps {
   value: string;
@@ -11,30 +11,27 @@ interface BatteryTypeSelectorProps {
   placeholder?: string;
 }
 
-// قائمة أنواع البطاريات الشائعة
-const commonBatteryTypes = [
-  "AA",
-  "AAA", 
-  "C",
-  "D",
-  "9V",
-  "CR2032",
-  "CR2016",
-  "LR44",
-  "A23",
-  "CR123A",
-  "18650",
-  "21700",
-  "26650",
-  "بطارية سيارة",
-  "بطارية دراجة نارية",
-  "بطارية UPS",
-  "بطارية شمسية"
-];
-
 export const BatteryTypeSelector = ({ value, onChange, placeholder = "اختر نوع البطارية" }: BatteryTypeSelectorProps) => {
   const [isCustom, setIsCustom] = useState(false);
   const [customType, setCustomType] = useState("");
+  const [batteryTypes, setBatteryTypes] = useState<string[]>([]); // حالة لتخزين أنواع البطاريات
+
+  // جلب بيانات أنواع البطاريات من قاعدة البيانات
+  useEffect(() => {
+    const fetchBatteryTypes = async () => {
+      const { data, error } = await supabase
+        .from("battery_types") // اسم الجدول في قاعدة البيانات
+        .select("name"); // جلب أسماء الأنواع فقط
+
+      if (error) {
+        console.error("Error fetching battery types:", error);
+      } else {
+        setBatteryTypes(data.map((item) => item.name)); // تخزين أسماء الأنواع في الحالة
+      }
+    };
+
+    fetchBatteryTypes();
+  }, []);
 
   const handleSelectChange = (selectedValue: string) => {
     if (selectedValue === "custom") {
@@ -60,8 +57,8 @@ export const BatteryTypeSelector = ({ value, onChange, placeholder = "اختر �
           placeholder="أدخل نوع البطارية"
           value={customType}
           onChange={(e) => setCustomType(e.target.value)}
-          style={{ fontFamily: 'Tajawal, sans-serif' }}
-          onKeyPress={(e) => e.key === 'Enter' && handleCustomSubmit()}
+          style={{ fontFamily: "Tajawal, sans-serif" }}
+          onKeyPress={(e) => e.key === "Enter" && handleCustomSubmit()}
         />
         <Button onClick={handleCustomSubmit} size="sm">
           <Plus className="w-4 h-4" />
@@ -79,12 +76,12 @@ export const BatteryTypeSelector = ({ value, onChange, placeholder = "اختر �
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent dir="rtl">
-        {commonBatteryTypes.map((type) => (
-          <SelectItem key={type} value={type} style={{ fontFamily: 'Tajawal, sans-serif' }}>
+        {batteryTypes.map((type) => (
+          <SelectItem key={type} value={type} style={{ fontFamily: "Tajawal, sans-serif" }}>
             {type}
           </SelectItem>
         ))}
-        <SelectItem value="custom" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+        <SelectItem value="custom" style={{ fontFamily: "Tajawal, sans-serif" }}>
           <div className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
             إضافة نوع جديد

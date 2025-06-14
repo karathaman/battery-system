@@ -49,7 +49,7 @@ export const supplierSchema = z.object({
 export const batteryTypeSchema = z.object({
   name: nameSchema,
   description: z.string().optional(),
-  defaultPrice: priceSchema,
+  unite_price: priceSchema,
   currentQty: quantitySchema,
   averageBuyingPrice: priceSchema,
   lastPrice: priceSchema,

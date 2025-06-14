@@ -36,13 +36,26 @@ interface EditSupplierDialogProps {
   onSupplierUpdated: (supplier: Supplier) => void;
 }
 
+import { useEffect } from "react";
+
 export const EditSupplierDialog = ({ open, onClose, supplier, onSupplierUpdated }: EditSupplierDialogProps) => {
   const [formData, setFormData] = useState({
     name: supplier?.name || "",
     phone: supplier?.phone || "",
     description: supplier?.description || "",
-    notes: supplier?.notes || ""
+    notes: supplier?.notes || "",
   });
+
+  useEffect(() => {
+    if (supplier) {
+      setFormData({
+        name: supplier.name || "",
+        phone: supplier.phone || "",
+        description: supplier.description || "",
+        notes: supplier.notes || "",
+      });
+    }
+  }, [supplier]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,18 +128,30 @@ export const EditSupplierDialog = ({ open, onClose, supplier, onSupplierUpdated 
             />
           </div>
 
-          <div>
-            <Label htmlFor="description" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-              الوصف
-            </Label>
-            <Input
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="وصف المورد"
-              style={{ fontFamily: 'Tajawal, sans-serif' }}
-            />
-          </div>
+          <div className="mb-6">
+  <Label
+    htmlFor="description"
+    className="block  font-medium  mb-2"
+    style={{ fontFamily: 'Tajawal, sans-serif' }}
+  >
+    نوع العميل
+  </Label>
+  
+  <select
+    id="description"
+    value={formData.description}
+    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+    style={{ fontFamily: 'Tajawal, sans-serif' }}
+    className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 text-sm  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+  >
+    <option className="text-sm  " value="">
+      اختر نوع العميل
+    </option>
+    <option value="عميل مميز">عميل مميز</option>
+    <option value="عميل عادي">عميل عادي</option>
+  </select>
+</div>
+
 
           <div>
             <Label htmlFor="notes" style={{ fontFamily: 'Tajawal, sans-serif' }}>

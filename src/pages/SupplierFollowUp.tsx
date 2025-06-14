@@ -11,6 +11,7 @@ import { AddSupplierDialog } from "@/components/AddSupplierDialog";
 import { SupplierDetailsDialog } from "@/components/SupplierDetailsDialog";
 import { EditSupplierDialog } from "@/components/EditSupplierDialog";
 import { useSuppliers } from "@/hooks/useSuppliers";
+import { supabase } from "@/integrations/supabase/client"; // تأكد من أن المسار صحيح حسب مشروعك
 
 const SupplierFollowUp = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -36,11 +37,7 @@ const SupplierFollowUp = () => {
     isDeleting
   } = useSuppliers(1, 50, { searchTerm });
 
-  const filteredSuppliers = suppliers.filter(supplier =>
-    supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    supplier.phone.includes(searchTerm) ||
-    supplier.supplierCode.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+ 
 
   const generateNextSupplierCode = () => {
     if (suppliers.length === 0) return "S001";
@@ -52,17 +49,66 @@ const SupplierFollowUp = () => {
 
     return `S${String(maxCode + 1).padStart(3, '0')}`;
   };
-
   const exportToExcel = () => {
+    // إعداد رؤوس الأعمدة
+    const headers = [
+      "كود المورد",
+      "الاسم",
+      "الجوال",
+      "الوصف",
+      "الرصيد",
+      "آخر توريد",
+      "أيام منذ آخر توريد",
+      "آخر رسالة",
+      "أيام منذ آخر رسالة",
+      "ملاحظات"
+    ];
+  
+    // إعداد الصفوف
+    const rows = filteredSuppliers.map(supplier => [
+      supplier.supplierCode,
+      supplier.name,
+      supplier.phone,
+      supplier.description || "",
+      supplier.balance,
+      supplier.lastPurchase || "",
+      supplier.lastPurchase ? getDaysSinceLastPurchase(supplier.lastPurchase) : "",
+      supplier.lastMessageSent || "",
+      supplier.lastMessageSent ? getDaysSinceLastMessage(supplier.lastMessageSent) : "",
+      supplier.notes || ""
+    ]);
+  
+    // إضافة BOM لضمان عرض النصوص العربية بشكل صحيح
+    const csvContent =
+      "\uFEFF" +
+      [headers, ...rows]
+        .map(row => row.join(",")) // تأكد من أن كل خلية مفصولة بفاصلة
+        .join("\n");
+  
+    // إنشاء رابط لتنزيل الملف
+    const encodedUri = encodeURI("data:text/csv;charset=utf-8," + csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "suppliers.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  
+    // عرض رسالة نجاح
     toast({
       title: "تم التصدير",
       description: "تم تصدير بيانات الموردين إلى Excel بنجاح",
       duration: 2000,
     });
   };
+  
+  
 
   const resetFilters = () => {
     setSearchTerm("");
+    setFilterDescription("");
+    setFilterLastMessageDays(null);
+    setFilterLastPurchaseDays(null);
     toast({
       title: "تم إعادة التعيين",
       description: "تم إعادة تعيين جميع الفلاتر",
@@ -127,8 +173,8 @@ const SupplierFollowUp = () => {
   };
 
   const handleEditSupplier = (supplier: any) => {
-    setEditingSupplierData(supplier);
-    setShowEditDialog(true);
+    setEditingSupplierData(supplier); // تعيين بيانات المورد إلى الحالة
+    setShowEditDialog(true); // فتح الديالوج
   };
 
   const handleSupplierUpdated = (updatedSupplier: any) => {
@@ -167,7 +213,72 @@ const SupplierFollowUp = () => {
     }
   };
 
-  if (isLoading) {
+  const [filterDescription, setFilterDescription] = useState<string>(""); // فلتر الوصف
+  const [filterLastMessageDays, setFilterLastMessageDays] = useState<number | "never" | null>(null); // فلتر آخر رسالة
+  const [filterLastPurchaseDays, setFilterLastPurchaseDays] = useState<number | null>(null); // فلتر آخر توريد
+
+const filteredSuppliers = suppliers.filter(supplier => {
+  const matchesSearchTerm =
+    supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    supplier.phone.includes(searchTerm) ||
+    supplier.supplierCode.toLowerCase().includes(searchTerm.toLowerCase());
+
+  const matchesDescription =
+    filterDescription === "" || supplier.description?.includes(filterDescription);
+
+  const matchesLastMessage =
+    filterLastMessageDays === null ||
+    (filterLastMessageDays === "never"
+      ? !supplier.lastMessageSent
+      : supplier.lastMessageSent &&
+        getDaysSinceLastMessage(supplier.lastMessageSent) <= filterLastMessageDays);
+
+  const matchesLastPurchase =
+    filterLastPurchaseDays === null ||
+    (supplier.lastPurchase &&
+      getDaysSinceLastPurchase(supplier.lastPurchase) >= filterLastPurchaseDays); // تعديل الشرط ليشمل الموردين الذين مر على آخر توريد لهم عدد الأيام المحدد
+
+  return matchesSearchTerm && matchesDescription && matchesLastMessage && matchesLastPurchase;
+});
+
+
+
+const resetBalance = async (supplierId) => {
+  try {
+    // تأكد من أن لديك طريقة لتحديث الرصيد في قاعدة البيانات
+    const { error } = await supabase
+      .from("suppliers")
+      .update({ balance: 0 })
+      .eq("id", supplierId);
+
+    if (error) {
+      console.error("Error resetting balance:", error);
+      toast({
+        title: "خطأ",
+        description: "فشل في تصفير الرصيد",
+        variant: "destructive",
+        duration: 2000,
+      });
+    } else {
+      toast({
+        title: "تم تصفير الرصيد",
+        description: "تم تصفير رصيد المورد بنجاح",
+        duration: 2000,
+      });
+    }
+  } catch (error) {
+    console.error("Error resetting balance:", error);
+    toast({
+      title: "خطأ",
+      description: "حدث خطأ أثناء محاولة تصفير الرصيد",
+      variant: "destructive",
+      duration: 2000,
+    });
+  }
+};
+
+
+if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
@@ -222,35 +333,35 @@ const SupplierFollowUp = () => {
 
           {/* Statistics Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            <Card>
+            <Card className="bg-gradient-to-br from-orange-100 to-orange-50 border-0 shadow-md">
               <CardContent className="p-3 sm:p-4 text-center">
-                <Truck className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-orange-600" />
-                <p className="text-lg sm:text-2xl font-bold">{suppliers.length}</p>
-                <p className="text-xs sm:text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                <Truck className="w-7 h-7 sm:w-9 sm:h-9 mx-auto mb-2 text-orange-600" />
+                <p className="text-xl sm:text-3xl font-bold text-orange-700">{suppliers.length}</p>
+                <p className="text-xs sm:text-sm text-orange-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                   إجمالي الموردين
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-gradient-to-br from-green-100 to-green-50 border-0 shadow-md">
               <CardContent className="p-3 sm:p-4 text-center">
-                <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-green-600" />
-                <p className="text-lg sm:text-2xl font-bold">
+                <TrendingUp className="w-7 h-7 sm:w-9 sm:h-9 mx-auto mb-2 text-green-600" />
+                <p className="text-xl sm:text-3xl font-bold text-green-700">
                   {suppliers.reduce((sum, s) => sum + s.totalAmount, 0).toLocaleString()}
                 </p>
-                <p className="text-xs sm:text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                <p className="text-xs sm:text-sm text-green-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                   إجمالي التوريدات
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-gradient-to-br from-blue-100 to-blue-50 border-0 shadow-md">
               <CardContent className="p-3 sm:p-4 text-center">
-                <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-blue-600" />
-                <p className="text-lg sm:text-2xl font-bold">
+                <img src="/assets/icons/SaudiRG.svg" alt="Custom Icon" className="w-9 h-9 mx-auto mb-2" />
+                <p className="text-xl sm:text-3xl font-bold text-blue-700">
                   {suppliers.reduce((sum, s) => sum + s.balance, 0).toLocaleString()}
                 </p>
-                <p className="text-xs sm:text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                <p className="text-xs sm:text-sm text-blue-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                   إجمالي الأرصدة
                 </p>
               </CardContent>
@@ -259,25 +370,91 @@ const SupplierFollowUp = () => {
 
           <div className="flex flex-wrap gap-2 w-full justify-between items-center">
             <div className="flex gap-4 flex-wrap w-full">
-              <Button
-                onClick={resetFilters}
-                variant="outline"
-                className="flex items-center gap-2 flex-1 min-w-[180px]"
-                style={{ fontFamily: 'Tajawal, sans-serif' }}
-              >
-                <RefreshCw className="w-4 h-4" />
-                إعادة تعيين الفلاتر
-              </Button>
+              <div className="flex flex-col gap-2 flex-1 min-w-[180px] max-w-[220px]">
+                <label className="text-xs text-gray-600 mb-1" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  نوع العميل
+                </label>
+                <select
+                  value={filterDescription}
+                  onChange={(e) => setFilterDescription(e.target.value)}
+                  className="border rounded px-2 py-2 text-sm w-full h-10"
+                  style={{ fontFamily: 'Tajawal, sans-serif' }}
+                >
+                  <option value="">كل العملاء</option>
+                  <option value="عميل عادي">عميل عادي</option>
+                  <option value="عميل مميز">عميل مميز</option>
+                </select>
+              </div>
 
-              <Button
-                onClick={exportToExcel}
-                variant="outline"
-                className="flex items-center gap-2 flex-1 min-w-[180px]"
-                style={{ fontFamily: 'Tajawal, sans-serif' }}
-              >
-                <FileDown className="w-4 h-4" />
-                تصدير Excel
-              </Button>
+              <div className="flex flex-col gap-2 flex-1 min-w-[180px] max-w-[220px]">
+                <label className="text-xs text-gray-600 mb-1" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  آخر رسالة
+                </label>
+                <select
+                  value={filterLastMessageDays === null ? "" : filterLastMessageDays === "never" ? "never" : filterLastMessageDays}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === "") setFilterLastMessageDays(null);
+                    else if (value === "never") setFilterLastMessageDays("never");
+                    else setFilterLastMessageDays(parseInt(value));
+                  }}
+                  className="border rounded px-2 py-2 text-sm w-full h-10"
+                  style={{ fontFamily: 'Tajawal, sans-serif' }}
+                >
+                  <option value="">إظهار الكل</option>
+                  <option value="7">آخر 7 أيام</option>
+                  <option value="30">آخر 30 يوما</option>
+                  <option value="60">آخر 60 يومًا</option>
+                  <option value="never">لم ترسل</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-2 flex-1 min-w-[180px] max-w-[220px]">
+                <label className="text-xs text-gray-600 mb-1" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  أكثر من
+                </label>
+                <select
+                  value={filterLastPurchaseDays || ""}
+                  onChange={(e) => setFilterLastPurchaseDays(e.target.value ? parseInt(e.target.value) : null)}
+                  className="border rounded px-2 py-2 text-sm w-full h-10"
+                  style={{ fontFamily: 'Tajawal, sans-serif' }}
+                >
+                  <option value="">كل التوريدات</option>
+                  <option value="7">أكثر من 7 أيام</option>
+                  <option value="30">أكثر من 30 يومًا</option>
+                  <option value="60">أكثر من 60 يومًا</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-2 flex-1 min-w-[180px] max-w-[220px]">
+                <label className="text-xs text-gray-600 mb-1" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  إعادة تعيين الفلاتر
+                </label>
+                <Button
+                  onClick={resetFilters}
+                  variant="outline"
+                  className="flex items-center gap-2 w-full h-10"
+                  style={{ fontFamily: 'Tajawal, sans-serif' }}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  إعادة تعيين  
+                </Button>
+              </div>
+
+              <div className="flex flex-col gap-2 flex-1 min-w-[180px] max-w-[220px]">
+                <label className="text-xs text-gray-600 mb-1" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  تصدير إلى Excel
+                </label>
+                <Button
+                  onClick={exportToExcel}
+                  variant="outline"
+                  className="flex items-center gap-2 w-full h-10"
+                  style={{ fontFamily: 'Tajawal, sans-serif' }}
+                >
+                  <FileDown className="w-4 h-4" />
+                  تصدير  
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -286,28 +463,29 @@ const SupplierFollowUp = () => {
       {/* Suppliers Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {filteredSuppliers.map(supplier => (
-          <Card key={supplier.id} className={`shadow-md hover:shadow-lg transition-shadow ${supplier.isBlocked ? 'border-red-200 bg-red-50' : ''}`}>
+          <Card
+            key={supplier.id}
+            className={`shadow-md hover:shadow-lg transition-shadow ${supplier.isBlocked ? 'border-red-200 bg-red-50' : supplier.description?.includes("عميل مميز") ? 'border-green-200 bg-green-50 ' : ''
+              }`}
+          >
             <CardContent className="p-3 sm:p-4">
               <div className="space-y-3">
                 <div className="flex items-center gap-2 mb-2 flex-row-reverse">
                   <div className="flex-1">
-                    <h3 className="text-sm sm:text-base font-semibold truncate" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                      {supplier.name}
+                    <h3
+                      className="text-sm sm:text-base font-semibold truncate"
+                      style={{ fontFamily: 'Tajawal, sans-serif' }}
+                    >
+                      {supplier.name} - <Badge variant="secondary" className="text-xs">{supplier.supplierCode}</Badge>
                     </h3>
+
                     <div className="flex items-center gap-2 mt-1 flex-row-reverse flex-wrap">
-                      <Badge variant="secondary" className="text-xs">
-                        {supplier.supplierCode}
-                      </Badge>
                       {supplier.isBlocked && (
                         <Badge variant="destructive" className="text-xs">
                           محظور
                         </Badge>
                       )}
-                      {supplier.messageSent && (
-                        <Badge variant="outline" className="text-xs">
-                          تم إرسال رسالة
-                        </Badge>
-                      )}
+                      
                       {getDaysSinceLastPurchase(supplier.lastPurchase) > 30 && (
                         <Badge variant="destructive" className="text-xs">
                           متأخر
@@ -316,41 +494,77 @@ const SupplierFollowUp = () => {
                     </div>
                   </div>
                 </div>
-
-                <div className="space-y-1">
-                  <p className="text-xs sm:text-sm text-gray-600">{supplier.phone}</p>
-                  {supplier.description && (
-                    <p className="text-xs text-gray-500 truncate" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                      {supplier.description}
-                    </p>
+                <div className="space-y-2">
+                  {/* Supplier Notes */}
+                  {supplier.notes && (
+                    <div className="flex items-start gap-2 bg-yellow-50 rounded p-2">
+                      <MessageCircle className="w-4 h-4 text-yellow-500 mt-0.5" />
+                      <span className="text-xs font-semibold text-gray-700" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                        {supplier.notes}
+                      </span>
+                    </div>
                   )}
-                  <p className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                    آخر توريد: {supplier.lastPurchase || "لا يوجد"}
-                    {supplier.lastPurchase && (
-                      <span className={`ml-1 ${getDaysSinceLastPurchase(supplier.lastPurchase) > 30 ? 'text-red-600' : 'text-green-600'}`}>
-                        ({getDaysSinceLastPurchase(supplier.lastPurchase)} يوم)
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                    آخر رسالة: {supplier.lastMessageSent || "لم ترسل"}
-                    {supplier.lastMessageSent && (
-                      <span className="ml-1 text-blue-600">
-                        ({getDaysSinceLastMessage(supplier.lastMessageSent)} يوم)
-                      </span>
-                    )}
-                  </p>
-                  <p className={`text-xs font-semibold ${supplier.balance >= 0 ? 'text-green-600' : 'text-red-600'}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
+
+                  {/* Supplier Phone & Description */}
+                  <div className="flex items-center gap-2">
+                    <User className="w-3 h-3 text-blue-400" />
+                    <span className="text-xs  font-semibold text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      {supplier.phone}
+                    </span>
+                  </div>
+                  {/* Last Purchase */}
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-3 h-3 text-orange-400" />
+                    <span className="text-xs font-semibold text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      آخر توريد: {supplier.lastPurchase || "لا يوجد"}
+                      {supplier.lastPurchase && (
+                        <span className={`ml-1 ${getDaysSinceLastPurchase(supplier.lastPurchase) > 30 ? 'text-red-600' : 'text-green-600'}`}>
+                           &nbsp; &nbsp; ← &nbsp; {getDaysSinceLastPurchase(supplier.lastPurchase)} يوم 
+                        </span>
+                      )}
+                    </span>
+                  </div>
+
+                  {/* Last Message */}
+                                    <div className="flex items-center gap-2">
+                    <MessageCircle className="w-3 h-3 text-green-400" />
+                    <span className="text-xs font-semibold text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      آخر رسالة: {supplier.lastMessageSent ? new Date(supplier.lastMessageSent).toLocaleDateString("en-CA") : "لم ترسل"}
+                      {supplier.lastMessageSent && (
+                       <span className="ml-1 text-blue-600 ">
+                       &nbsp; ← &nbsp; {getDaysSinceLastMessage(supplier.lastMessageSent)} يوم  
+                     </span>
+                      )}
+                    </span>
+                  </div>
+
+                  {/* Balance */}
+                  <div className="flex items-center gap-2">
+                  <img src="/assets/icons/SaudiRG.svg" alt="Custom Icon" className="w-3 h-3" />
+                  <span
+                    className={`text-xs font-semibold ${supplier.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                    style={{ fontFamily: 'Tajawal, sans-serif' }}
+                  >
                     الرصيد: {supplier.balance.toLocaleString()} ريال
-                  </p>
+                  </span>
+                  <Button
+                    onClick={() => resetBalance(supplier.id)}
+                    variant="outline"
+                    size="sm"
+                    className="ml-2 px-2 py-1 text-xs border-red-300 text-red-600 hover:text-white hover:bg-red-600 transition-all"
+                    style={{ fontFamily: 'Tajawal, sans-serif', height: '20px', lineHeight: '20px' }}
+                  >
+                    تصفير الرصيد
+                  </Button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-center">
-                  <div className="bg-gray-50 rounded p-2">
-                    <p className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>التوريدات</p>
+                  <div className="bg-gray-50 rounded p-2 border-gray-300 border">
+                    <p className="text-xs text-gray-500  " style={{ fontFamily: 'Tajawal, sans-serif' }}>الكميات</p>
                     <p className="font-semibold text-xs sm:text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{supplier.totalPurchases}</p>
                   </div>
-                  <div className="bg-gray-50 rounded p-2">
+                  <div className="bg-gray-50 rounded p-2 border-gray-300 border">
                     <p className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجمالي</p>
                     <p className="font-semibold text-xs sm:text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{supplier.totalAmount.toLocaleString()}</p>
                   </div>
@@ -374,8 +588,7 @@ const SupplierFollowUp = () => {
                       variant="outline"
                       size="sm"
                       className="flex items-center gap-1 flex-row-reverse text-xs bg-green-50 hover:bg-green-100"
-                      style={{ fontFamily: 'Tajawal, sans-serif' }}
-                      disabled={supplier.messageSent && getDaysSinceLastMessage(supplier.lastMessageSent) < 7}
+                      style={{ fontFamily: 'Tajawal, sans-serif' }} 
                     >
                       <MessageCircle className="w-3 h-3" />
                       واتساب
@@ -422,7 +635,7 @@ const SupplierFollowUp = () => {
                         onClick={() => handleBlockSupplier(supplier.id)}
                         variant="outline"
                         size="sm"
-                        className="w-full flex items-center gap-1 flex-row-reverse text-xs text-red-600"
+                        className="w-full flex items-center gap-1 flex-row-reverse text-xs text-white bg-red-600"
                         style={{ fontFamily: 'Tajawal, sans-serif' }}
                       >
                         <Ban className="w-3 h-3" />
@@ -469,11 +682,6 @@ const SupplierFollowUp = () => {
                       </div>
                     ) : (
                       <div>
-                        {supplier.notes && (
-                          <p className="text-xs text-gray-600 mb-1 p-2 bg-yellow-50 rounded" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                            {supplier.notes}
-                          </p>
-                        )}
                         <Button
                           onClick={() => {
                             setEditingSupplier(supplier.id);
@@ -510,10 +718,10 @@ const SupplierFollowUp = () => {
         supplier={selectedSupplier}
       />
 
-      <EditSupplierDialog
+            <EditSupplierDialog
         open={showEditDialog}
         onClose={() => setShowEditDialog(false)}
-        supplier={editingSupplierData}
+        supplier={editingSupplierData} // تمرير بيانات المورد إلى الديالوج
         onSupplierUpdated={handleSupplierUpdated}
       />
     </div>
