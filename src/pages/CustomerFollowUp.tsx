@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Users, Search, Filter, UserPlus, TrendingUp, Calendar, Edit3, Trash2, Ban, UnlockIcon } from "lucide-react";
+import { Users, Search, Filter, UserPlus, TrendingUp, Calendar, Edit3, Trash2, Ban, UnlockIcon, Phone, User } from "lucide-react";
 import { useCustomers } from "@/hooks/useCustomers";
 import { Customer, FilterOptions } from "@/types";
 import { AddCustomerDialog } from "@/components/AddCustomerDialog";
@@ -206,15 +206,22 @@ const CustomerFollowUp = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {customers.map(customer => (
-          <Card key={customer.id} className={`shadow-md hover:shadow-lg transition-shadow ${customer.isBlocked ? 'border-red-300 bg-red-50' : ''}`}>
+          <Card key={customer.id} className={`shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50 ${customer.isBlocked ? 'border-red-300 bg-red-50' : 'border-blue-200'}`}>
             <CardContent className="p-4">
-              <div className="space-y-3">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+              <div className="space-y-4">
+                {/* Header with name and avatar */}
+                <div className="flex items-center gap-3 flex-row-reverse">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
+                    <User className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="text-right flex-1">
+                    <h3 className="text-lg font-bold text-gray-900 mb-1" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                       {customer.name}
                     </h3>
-                    <p className="text-sm text-gray-600 text-right">{customer.phone}</p>
+                    <div className="flex items-center gap-2 flex-row-reverse text-sm text-gray-600">
+                      <Phone className="w-4 h-4" />
+                      <span>{customer.phone}</span>
+                    </div>
                     <div className="flex justify-end gap-2 mt-2">
                       <Badge variant="secondary" className="text-xs">
                         {customer.customerCode}
@@ -228,74 +235,81 @@ const CustomerFollowUp = () => {
                   </div>
                 </div>
 
+                {/* Description */}
                 {customer.description && (
-                  <p className="text-sm text-gray-600 text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                    {customer.description}
-                  </p>
+                  <div className="bg-blue-50 rounded-lg p-3">
+                    <p className="text-sm text-gray-700 text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      {customer.description}
+                    </p>
+                  </div>
                 )}
 
-                <div className="bg-blue-50 rounded p-3">
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="text-center">
-                      <p className="font-bold text-blue-600">{customer.totalPurchases}</p>
-                      <p className="text-gray-600">المشتريات</p>
+                {/* Statistics */}
+                <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-3">
+                  <div className="grid grid-cols-2 gap-3 text-center">
+                    <div>
+                      <div className="text-lg font-bold text-green-600">{customer.totalPurchases}</div>
+                      <div className="text-xs text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>المشتريات</div>
                     </div>
-                    <div className="text-center">
-                      <p className="font-bold text-green-600">{customer.totalAmount.toLocaleString()} ريال</p>
-                      <p className="text-gray-600">الإجمالي</p>
+                    <div>
+                      <div className="text-lg font-bold text-blue-600">{customer.totalAmount.toLocaleString()}</div>
+                      <div className="text-xs text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجمالي</div>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => handleEditCustomer(customer)}
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 flex items-center gap-1 text-xs"
-                    style={{ fontFamily: 'Tajawal, sans-serif' }}
-                    disabled={isUpdating}
-                  >
-                    <Edit3 className="w-3 h-3" />
-                    تعديل
-                  </Button>
-                  
-                  {customer.isBlocked ? (
+                {/* Action buttons */}
+                <div className="space-y-2">
+                  <div className="flex gap-2">
                     <Button
-                      onClick={() => handleUnblockCustomer(customer.id)}
+                      onClick={() => handleEditCustomer(customer)}
                       variant="outline"
                       size="sm"
-                      className="flex-1 text-xs text-green-600 hover:bg-green-50"
+                      className="flex-1 flex items-center gap-1 text-xs hover:bg-blue-50 hover:border-blue-300"
                       style={{ fontFamily: 'Tajawal, sans-serif' }}
+                      disabled={isUpdating}
                     >
-                      <UnlockIcon className="w-3 h-3" />
-                      إلغاء الحظر
+                      <Edit3 className="w-3 h-3" />
+                      تعديل
                     </Button>
-                  ) : (
-                    <Button
-                      onClick={() => handleBlockCustomer(customer.id)}
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 text-xs text-orange-600 hover:bg-orange-50"
-                      style={{ fontFamily: 'Tajawal, sans-serif' }}
-                    >
-                      <Ban className="w-3 h-3" />
-                      حظر
-                    </Button>
-                  )}
-                </div>
+                    
+                    {customer.isBlocked ? (
+                      <Button
+                        onClick={() => handleUnblockCustomer(customer.id)}
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-xs text-green-600 hover:bg-green-50 hover:border-green-300"
+                        style={{ fontFamily: 'Tajawal, sans-serif' }}
+                      >
+                        <UnlockIcon className="w-3 h-3" />
+                        إلغاء الحظر
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => handleBlockCustomer(customer.id)}
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-xs text-orange-600 hover:bg-orange-50 hover:border-orange-300"
+                        style={{ fontFamily: 'Tajawal, sans-serif' }}
+                      >
+                        <Ban className="w-3 h-3" />
+                        حظر
+                      </Button>
+                    )}
+                  </div>
 
-                <Button
-                  onClick={() => handleDeleteCustomer(customer.id)}
-                  variant="destructive"
-                  size="sm"
-                  className="w-full flex items-center gap-2 text-xs"
-                  style={{ fontFamily: 'Tajawal, sans-serif' }}
-                  disabled={isDeleting}
-                >
-                  <Trash2 className="w-3 h-3" />
-                  حذف العميل
-                </Button>
+                  <Button
+                    onClick={() => handleDeleteCustomer(customer.id)}
+                    variant="destructive"
+                    size="sm"
+                    className="w-full flex items-center gap-2 text-xs hover:bg-red-600"
+                    style={{ fontFamily: 'Tajawal, sans-serif' }}
+                    disabled={isDeleting}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    حذف العميل
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
