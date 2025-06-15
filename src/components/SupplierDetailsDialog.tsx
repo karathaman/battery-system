@@ -5,7 +5,6 @@ import { User, Phone, Calendar, Package, DollarSign, TrendingUp, ShoppingCart, M
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 
-
 interface Purchase {
   id: string;
   date: string;
@@ -75,21 +74,94 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
 
       if (dailyError) {
         console.error("Error fetching daily purchases:", dailyError);
-        return [];
       }
 
       console.log("Daily Purchases:", dailyPurchases);
 
-      // Sort by date
-      const history = dailyPurchases.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      // Fetch data from purchases and purchase_items
+      const { data: purchaseData, error: purchaseError } = await supabase
+        .from("purchases")
+        .select(`
+          id,
+          date,
+          subtotal,
+          discount,
+          total,
+          purchase_items (
+            battery_type_id,
+            quantity,
+            price_per_kg,
+            total
+          ),
+          suppliers!inner (
+            supplier_code
+          )
+        `)
+        .eq("suppliers.supplier_code", supplierCode);
 
-      return history;
+      if (purchaseError) {
+        console.error("Error fetching purchases:", purchaseError);
+      }
+
+      console.log("Purchase Data:", purchaseData);
+
+      // Get battery type names for purchase items
+      const batteryTypeIds = purchaseData?.flatMap(purchase => 
+        purchase.purchase_items?.map(item => item.battery_type_id) || []
+      ) || [];
+
+      const { data: batteryTypes } = await supabase
+        .from("battery_types")
+        .select("id, name")
+        .in("id", batteryTypeIds);
+
+      const batteryTypeMap = Object.fromEntries(
+        batteryTypes?.map(bt => [bt.id, bt.name]) || []
+      );
+
+      // Format daily purchases
+      const formattedDailyPurchases = (dailyPurchases || []).map(purchase => ({
+        id: purchase.id,
+        date: purchase.date,
+        battery_type: purchase.battery_type,
+        quantity: purchase.quantity,
+        price_per_kg: purchase.price_per_kg,
+        total: purchase.total,
+        discount: purchase.discount || 0,
+        final_total: purchase.final_total,
+        source: 'daily'
+      }));
+
+      // Format regular purchases
+      const formattedPurchases = [];
+      (purchaseData || []).forEach(purchase => {
+        if (purchase.purchase_items && purchase.purchase_items.length > 0) {
+          purchase.purchase_items.forEach(item => {
+            formattedPurchases.push({
+              id: `${purchase.id}-${item.battery_type_id}`,
+              date: purchase.date,
+              battery_type: batteryTypeMap[item.battery_type_id] || 'غير محدد',
+              quantity: item.quantity,
+              price_per_kg: item.price_per_kg,
+              total: item.total,
+              discount: purchase.discount || 0,
+              final_total: item.total - (purchase.discount || 0),
+              source: 'purchase'
+            });
+          });
+        }
+      });
+
+      // Combine and sort by date (newest first)
+      const allHistory = [...formattedDailyPurchases, ...formattedPurchases];
+      const sortedHistory = allHistory.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      return sortedHistory;
     } catch (error) {
       console.error("Unexpected error fetching supplier history:", error);
       return [];
     }
   };
-
 
   const getDaysSinceLastPurchase = (lastPurchase?: string) => {
     if (!lastPurchase) return 0;
@@ -318,8 +390,6 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
               </CardTitle>
             </CardHeader>
             <CardContent>
-
-
               {/* Filtered Data */}
               {supplierHistory.length > 0 ? (
                 <div className="overflow-x-auto">
@@ -333,6 +403,7 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
                         <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجمالي</th>
                         <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الخصم</th>
                         <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>المبلغ النهائي</th>
+                        <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>المصدر</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -356,6 +427,11 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
                             <td className="p-3 text-sm">{entry.total.toLocaleString()}</td>
                             <td className="p-3 text-sm">{entry.discount?.toLocaleString() || 0}</td>
                             <td className="p-3 text-sm font-bold text-green-600">{entry.final_total.toLocaleString()}</td>
+                            <td className="p-3 text-sm">
+                              <Badge variant={entry.source === 'daily' ? 'default' : 'secondary'}>
+                                {entry.source === 'daily' ? 'يومية' : 'فاتورة'}
+                              </Badge>
+                            </td>
                           </tr>
                         ))}
                     </tbody>
