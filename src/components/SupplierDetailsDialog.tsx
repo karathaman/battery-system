@@ -574,7 +574,7 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
 
               {supplier.isBlocked && supplier.blockReason && (
                 <div className="mt-2 p-3 bg-red-50 rounded-lg border border-red-200">
-                  <span className="font-semibold text-red-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>سبب الحظر: </span>
+                  <span className="font-semibold text-red-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>سبب الحظر: </span> 
                   <span className="text-red-700" style={{ fontFamily: 'Tajawal, sans-serif' }}>{supplier.blockReason}</span>
                 </div>
               )}
@@ -640,7 +640,86 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
                       </TabsTrigger>
                     </TabsList>
                   </div>
-                  {/* --- END FILTERS --- */}
+                  {/* محتوى التابات الجديد */}
+                  <TabsContent value="deliveries">
+                    {/* جدول التوريدات */}
+                    <div className="overflow-x-auto mt-4">
+                      <table className="min-w-full bg-white text-sm">
+                        <thead className="bg-blue-100 text-blue-700">
+                          <tr>
+                            <th className="px-2 py-2 border">التاريخ</th>
+                            <th className="px-2 py-2 border">الصنف</th>
+                            <th className="px-2 py-2 border">الكمية</th>
+                            <th className="px-2 py-2 border">سعر الكيلو</th>
+                            <th className="px-2 py-2 border">الإجمالي</th>
+                            <th className="px-2 py-2 border">الخصم</th>
+                            <th className="px-2 py-2 border">الإجمالي النهائي</th>
+                            <th className="px-2 py-2 border">المصدر</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredHistory.length === 0 ? (
+                            <tr>
+                              <td colSpan={8} className="text-center text-gray-400 py-3">
+                                لا توجد توريدات مطابقة للفلاتر
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredHistory.map((entry, idx) => (
+                              <tr key={entry.id + idx}>
+                                <td className="border px-2 py-1">{entry.date}</td>
+                                <td className="border px-2 py-1">{entry.battery_type}</td>
+                                <td className="border px-2 py-1">{entry.quantity}</td>
+                                <td className="border px-2 py-1">{entry.price_per_kg}</td>
+                                <td className="border px-2 py-1">{entry.total}</td>
+                                <td className="border px-2 py-1">{entry.discount}</td>
+                                <td className="border px-2 py-1">{entry.final_total}</td>
+                                <td className="border px-2 py-1">{entry.source === 'daily' ? 'يومية' : 'فاتورة'}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="statement">
+                    {/* جدول كشف الحساب */}
+                    <div className="overflow-x-auto mt-4">
+                      <table className="min-w-full bg-white text-sm">
+                        <thead className="bg-green-100 text-green-800">
+                          <tr>
+                            <th className="px-2 py-2 border">التاريخ</th>
+                            <th className="px-2 py-2 border">الوصف</th>
+                            <th className="px-2 py-2 border">مدين</th>
+                            <th className="px-2 py-2 border">دائن</th>
+                            <th className="px-2 py-2 border">الرصيد</th>
+                            <th className="px-2 py-2 border">رقم المرجع</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {accountStatement.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="text-center text-gray-400 py-3">
+                                لا توجد حركات مطابقة للفلاتر
+                              </td>
+                            </tr>
+                          ) : (
+                            filterDataByDate(accountStatement).map((entry, idx) => (
+                              <tr key={entry.id + idx}>
+                                <td className="border px-2 py-1">{entry.date}</td>
+                                <td className="border px-2 py-1">{entry.description}</td>
+                                <td className="border px-2 py-1">{entry.debit > 0 ? entry.debit : ""}</td>
+                                <td className="border px-2 py-1">{entry.credit > 0 ? entry.credit : ""}</td>
+                                <td className="border px-2 py-1">{entry.balance}</td>
+                                <td className="border px-2 py-1">{entry.reference || "-"}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </TabsContent>
+                  {/* --- END محتوى التابات --- */}
                 </Tabs>
               </div>
             </CardHeader>
