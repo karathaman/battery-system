@@ -183,12 +183,12 @@ const salesService = {
     }
 
     // --- تحديث تاريخ آخر بيع للعميل هنا ---
-    const { error: lastPurchaseError } = await supabase
+    const { error: lastSaleError } = await supabase
       .from('customers')
-      .update({ last_purchase: data.date })
+      .update({ last_sale: data.date }) // CHANGED: last_purchase → last_sale
       .eq('id', data.customer_id);
-    if (lastPurchaseError) {
-      console.error('فشل في تحديث تاريخ آخر بيع للعميل:', lastPurchaseError);
+    if (lastSaleError) {
+      console.error('فشل في تحديث تاريخ آخر بيع للعميل:', lastSaleError);
     }
 
     // Create sale items
@@ -383,12 +383,12 @@ const salesService = {
 
     // تحديث تاريخ آخر بيع في بطاقة العميل إذا توفر تاريخ وعميل
     if (newCustomerId && data.date) {
-      const { error: lastPurchaseError } = await supabase
+      const { error: lastSaleError } = await supabase
         .from('customers')
-        .update({ last_purchase: data.date })
+        .update({ last_sale: data.date })
         .eq('id', newCustomerId);
-      if (lastPurchaseError) {
-        console.error('فشل في تحديث تاريخ آخر بيع للعميل:', lastPurchaseError);
+      if (lastSaleError) {
+        console.error('فشل في تحديث تاريخ آخر بيع للعميل:', lastSaleError);
       }
     }
 
