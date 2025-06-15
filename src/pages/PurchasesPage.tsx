@@ -49,7 +49,6 @@ const PurchasesPage = () => {
   const [showSupplierDialog, setShowSupplierDialog] = useState(false);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [dialogInvoice, setDialogInvoice] = useState<any>(null);
-  const [showPurchaseForm, setShowPurchaseForm] = useState(false);
 
   const { purchases, createPurchase, updatePurchase, deletePurchase, isCreating, isUpdating, isDeleting } = usePurchases();
   const { batteryTypes, isLoading: batteryTypesLoading } = useBatteryTypes();
@@ -112,7 +111,6 @@ const PurchasesPage = () => {
     setPaymentMethod("check");
     setVatEnabled(false);
     setEditingPurchase(null);
-    setShowPurchaseForm(false);
   };
 
   const generatePurchase = async () => {
@@ -165,7 +163,6 @@ const PurchasesPage = () => {
 
   const editPurchase = (purchase: ServicePurchase) => {
     setEditingPurchase(purchase);
-    setShowPurchaseForm(true);
     // Find supplier from the purchase data
     const supplier: Supplier = {
       id: purchase.supplier_id,
@@ -420,201 +417,186 @@ const PurchasesPage = () => {
         </CardHeader>
       </Card>
 
-      {/* زر انشاء فاتورة يظهر اذا لم يكن هناك تحرير او عرض نموذج */}
-      {!showPurchaseForm && !editingPurchase && (
-        <Button
-          className="w-full mb-2 font-bold"
-          onClick={() => {
-            setShowPurchaseForm(true);
-            resetForm(); // إعادة تعيين النموذج
-          }}
-        >
-          إنشاء فاتورة جديدة
-        </Button>
-      )}
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Purchase Form */}
-        {(showPurchaseForm || editingPurchase) && (
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                  {editingPurchase ? `تعديل فاتورة ${editingPurchase.invoice_number}` : 'إنشاء فاتورة جديدة'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Supplier Selection */}
-                <div>
-                  <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>المورد</Label>
-                  <Button 
-                    variant="outline" 
-                    className="w-full flex items-center gap-2 flex-row-reverse"
-                    onClick={() => setShowSupplierDialog(true)}
-                  >
-                    <Search className="w-4 h-4" />
-                    {selectedSupplier ? selectedSupplier.name : "اختر المورد"}
-                  </Button>
-                  {selectedSupplier && (
-                    <div className="mt-2 p-3 bg-blue-50 rounded border">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="font-semibold" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                            {selectedSupplier.name}
-                          </p>
-                          <p className="text-sm text-gray-600">{selectedSupplier.phone}</p>
-                          <Badge variant="secondary" className="mt-1">
-                            {selectedSupplier.supplier_code}
-                          </Badge>
-                        </div>
-                        <div className="text-left">
-                          <p className={`font-bold ${selectedSupplier.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {selectedSupplier.balance.toLocaleString()} ريال
-                          </p>
-                          <p className="text-xs text-gray-500">الرصيد الحالي</p>
-                        </div>
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                {editingPurchase ? `تعديل فاتورة ${editingPurchase.invoice_number}` : 'إنشاء فاتورة جديدة'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Supplier Selection */}
+              <div>
+                <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>المورد</Label>
+                <Button 
+                  variant="outline" 
+                  className="w-full flex items-center gap-2 flex-row-reverse"
+                  onClick={() => setShowSupplierDialog(true)}
+                >
+                  <Search className="w-4 h-4" />
+                  {selectedSupplier ? selectedSupplier.name : "اختر المورد"}
+                </Button>
+                {selectedSupplier && (
+                  <div className="mt-2 p-3 bg-blue-50 rounded border">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-semibold" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                          {selectedSupplier.name}
+                        </p>
+                        <p className="text-sm text-gray-600">{selectedSupplier.phone}</p>
+                        <Badge variant="secondary" className="mt-1">
+                          {selectedSupplier.supplier_code}
+                        </Badge>
+                      </div>
+                      <div className="text-left">
+                        <p className={`font-bold ${selectedSupplier.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {selectedSupplier.balance.toLocaleString()} ريال
+                        </p>
+                        <p className="text-xs text-gray-500">الرصيد الحالي</p>
                       </div>
                     </div>
-                  )}
-                </div>
-
-                {/* Purchase Items */}
-                <div>
-                  <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>أصناف الفاتورة</Label>
-                  <div className="space-y-3 mt-2">
-                    {purchaseItems.map((item, index) => (
-                      <div key={item.id} className="grid grid-cols-12 gap-2 items-end">
-                        <div className="col-span-4">
-                          <Select
-                            value={item.batteryTypeId}
-                            onValueChange={(value) => updatePurchaseItem(index, 'batteryTypeId', value)}
-                            disabled={batteryTypesLoading}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="اختر نوع البطارية" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {batteryTypes.map(type => (
-                                <SelectItem key={type.id} value={type.id} style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                                  {type.name} - {type.unit_price} ريال
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="col-span-2">
-                          <Input
-                            type="number"
-                            placeholder="الكمية"
-                            value={item.quantity || ''}
-                            onChange={(e) => updatePurchaseItem(index, 'quantity', Number(e.target.value) || 0)}
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <Input
-                            type="number"
-                            placeholder="السعر"
-                            value={item.price || ''}
-                            onChange={(e) => updatePurchaseItem(index, 'price', Number(e.target.value) || 0)}
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <Input
-                            value={item.total.toLocaleString()}
-                            disabled
-                            className="bg-gray-100"
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removePurchaseItem(index)}
-                            disabled={purchaseItems.length === 1}
-                          >
-                            حذف
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
                   </div>
-                  <Button
-                    onClick={addPurchaseItem}
-                    variant="outline"
-                    className="mt-3 w-full flex items-center gap-2"
-                    style={{ fontFamily: 'Tajawal, sans-serif' }}
-                  >
-                    <Plus className="w-4 h-4" />
-                    إضافة صنف
-                  </Button>
-                </div>
+                )}
+              </div>
 
-                {/* Payment Method */}
-                <div>
-                  <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>طريقة الدفع</Label>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    {paymentMethods.map(method => {
-                      const Icon = method.icon;
-                      return (
-                        <Button
-                          key={method.value}
-                          variant={paymentMethod === method.value ? "default" : "outline"}
-                          onClick={() => setPaymentMethod(method.value)}
-                          className="flex items-center gap-2"
-                          style={{ fontFamily: 'Tajawal, sans-serif' }}
+              {/* Purchase Items */}
+              <div>
+                <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>أصناف الفاتورة</Label>
+                <div className="space-y-3 mt-2">
+                  {purchaseItems.map((item, index) => (
+                    <div key={item.id} className="grid grid-cols-12 gap-2 items-end">
+                      <div className="col-span-4">
+                        <Select
+                          value={item.batteryTypeId}
+                          onValueChange={(value) => updatePurchaseItem(index, 'batteryTypeId', value)}
+                          disabled={batteryTypesLoading}
                         >
-                          <Icon className="w-4 h-4" />
-                          {method.label}
+                          <SelectTrigger>
+                            <SelectValue placeholder="اختر نوع البطارية" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {batteryTypes.map(type => (
+                              <SelectItem key={type.id} value={type.id} style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                                {type.name} - {type.unit_price} ريال
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="col-span-2">
+                        <Input
+                          type="number"
+                          placeholder="الكمية"
+                          value={item.quantity || ''}
+                          onChange={(e) => updatePurchaseItem(index, 'quantity', Number(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Input
+                          type="number"
+                          placeholder="السعر"
+                          value={item.price || ''}
+                          onChange={(e) => updatePurchaseItem(index, 'price', Number(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Input
+                          value={item.total.toLocaleString()}
+                          disabled
+                          className="bg-gray-100"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removePurchaseItem(index)}
+                          disabled={purchaseItems.length === 1}
+                        >
+                          حذف
                         </Button>
-                      );
-                    })}
-                  </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
+                <Button
+                  onClick={addPurchaseItem}
+                  variant="outline"
+                  className="mt-3 w-full flex items-center gap-2"
+                  style={{ fontFamily: 'Tajawal, sans-serif' }}
+                >
+                  <Plus className="w-4 h-4" />
+                  إضافة صنف
+                </Button>
+              </div>
 
-                {/* VAT Toggle */}
-                <div className="flex items-center justify-between">
-                  <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>تطبيق ضريبة القيمة المضافة (15%)</Label>
-                  <Switch
-                    checked={vatEnabled}
-                    onCheckedChange={setVatEnabled}
-                  />
+              {/* Payment Method */}
+              <div>
+                <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>طريقة الدفع</Label>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {paymentMethods.map(method => {
+                    const Icon = method.icon;
+                    return (
+                      <Button
+                        key={method.value}
+                        variant={paymentMethod === method.value ? "default" : "outline"}
+                        onClick={() => setPaymentMethod(method.value)}
+                        className="flex items-center gap-2"
+                        style={{ fontFamily: 'Tajawal, sans-serif' }}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {method.label}
+                      </Button>
+                    );
+                  })}
                 </div>
+              </div>
 
-                {/* Discount */}
-                <div>
-                  <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>الخصم</Label>
-                  <Input
-                    type="number"
-                    value={discount || ''}
-                    onChange={(e) => setDiscount(Number(e.target.value) || 0)}
-                    placeholder="0"
-                  />
-                </div>
+              {/* VAT Toggle */}
+              <div className="flex items-center justify-between">
+                <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>تطبيق ضريبة القيمة المضافة (15%)</Label>
+                <Switch
+                  checked={vatEnabled}
+                  onCheckedChange={setVatEnabled}
+                />
+              </div>
 
-                {/* Action Buttons */}
-                <div className="flex gap-2">
+              {/* Discount */}
+              <div>
+                <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>الخصم</Label>
+                <Input
+                  type="number"
+                  value={discount || ''}
+                  onChange={(e) => setDiscount(Number(e.target.value) || 0)}
+                  placeholder="0"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2">
+                <Button
+                  onClick={generatePurchase}
+                  className="flex-1"
+                  disabled={isCreating || isUpdating}
+                  style={{ fontFamily: 'Tajawal, sans-serif' }}
+                >
+                  {editingPurchase ? 'تحديث الفاتورة' : 'إنشاء الفاتورة'}
+                </Button>
+                {editingPurchase && (
                   <Button
-                    onClick={generatePurchase}
-                    className="flex-1"
-                    disabled={isCreating || isUpdating}
+                    onClick={resetForm}
+                    variant="outline"
                     style={{ fontFamily: 'Tajawal, sans-serif' }}
                   >
-                    {editingPurchase ? 'تحديث الفاتورة' : 'إنشاء الفاتورة'}
+                    إلغاء
                   </Button>
-                  {(editingPurchase || showPurchaseForm) && (
-                    <Button
-                      onClick={resetForm}
-                      variant="outline"
-                      style={{ fontFamily: 'Tajawal, sans-serif' }}
-                    >
-                      إلغاء
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Purchase Summary */}
         <div className="space-y-6">
