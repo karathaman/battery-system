@@ -51,8 +51,7 @@ const DailyPurchasesPage = () => {
       // Fetch sum of quantities per supplier from daily_purchases
       const { data: totalData, error: tErr } = await supabase
         .from("daily_purchases")
-        .select("supplier_name, supplier_code, sum:quantity")
-        .group("supplier_code,supplier_name");
+        .select("supplier_name, supplier_code, sum:quantity");
 
       let merged: any[] = [];
       if (suppliersData && totalData) {
