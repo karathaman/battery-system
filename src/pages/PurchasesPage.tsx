@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,6 +13,8 @@ import { usePurchases } from "@/hooks/usePurchases";
 import { useBatteryTypes } from "@/hooks/useBatteryTypes";
 import { Purchase as ServicePurchase, PurchaseFormData } from "@/services/purchaseService";
 import { supabase } from "@/integrations/supabase/client";
+import { AlertCircle } from "lucide-react";
+import { InvoiceDialog } from "@/components/InvoiceDialog";
 
 interface ExtendedPurchaseItem extends PurchaseItem {
   batteryTypeId: string;
@@ -46,6 +47,8 @@ const PurchasesPage = () => {
   const [vatEnabled, setVatEnabled] = useState(false);
   const [editingPurchase, setEditingPurchase] = useState<ServicePurchase | null>(null);
   const [showSupplierDialog, setShowSupplierDialog] = useState(false);
+  const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
+  const [dialogInvoice, setDialogInvoice] = useState<any>(null);
 
   const { purchases, createPurchase, updatePurchase, deletePurchase, isCreating, isUpdating, isDeleting } = usePurchases();
   const { batteryTypes, isLoading: batteryTypesLoading } = useBatteryTypes();
@@ -259,8 +262,7 @@ const PurchasesPage = () => {
       </head>
       <body>
         <div class="invoice-header">
-          <h1>فاتورة مشتريات</h1>
-          <h2>رقم الفاتورة: ${purchase.invoice_number}</h2>
+          <h1>فاتورة مشتريات رقم ${purchase.invoice_number}</h1>
         </div>
         
         <div class="invoice-details">
@@ -410,7 +412,7 @@ const PurchasesPage = () => {
             style={{ fontFamily: 'Tajawal, sans-serif' }}
           >
             {editingPurchase ? 'تعديل فاتورة المشتريات' : 'نظام المشتريات'}
-            <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
+            <ShoppingCart className="w-4 h-4" />
           </CardTitle>
         </CardHeader>
       </Card>
@@ -658,35 +660,42 @@ const PurchasesPage = () => {
                             {paymentMethods.find(m => m.value === purchase.payment_method)?.label}
                           </Badge>
                         </div>
-                        <div className="text-left">
-                          <p className="font-bold text-green-600">{purchase.total.toLocaleString()} ريال</p>
-                          <div className="flex gap-1 mt-1">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => handlePrintPurchase(purchase)}
-                              title="طباعة"
-                            >
-                              <Printer className="w-3 h-3" />
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => editPurchase(purchase)}
-                              title="تعديل"
-                            >
-                              <Edit className="w-3 h-3" />
-                            </Button>
-                            <Button 
-                              variant="destructive" 
-                              size="sm" 
-                              onClick={() => handleDeletePurchase(purchase)}
-                              title="حذف"
-                              disabled={isDeleting}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </div>
+                        <div className="text-left flex gap-1 items-center">
+                          {/* Show invoice dialog on click */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => { setDialogInvoice(purchase); setShowInvoiceDialog(true); }}
+                            title="عرض الفاتورة"
+                            className="text-yellow-500 border-yellow-400"
+                          >
+                            <AlertCircle className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handlePrintPurchase(purchase)}
+                            title="طباعة"
+                          >
+                            <Printer className="w-3 h-3" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => editPurchase(purchase)}
+                            title="تعديل"
+                          >
+                            <Edit className="w-3 h-3" />
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            size="sm" 
+                            onClick={() => handleDeletePurchase(purchase)}
+                            title="حذف"
+                            disabled={isDeleting}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -703,6 +712,13 @@ const PurchasesPage = () => {
         open={showSupplierDialog}
         onClose={() => setShowSupplierDialog(false)}
         onSupplierSelect={handleSupplierSelect}
+      />
+      {/* == Dialog عرض الفاتورة == */}
+      <InvoiceDialog
+        open={showInvoiceDialog}
+        onClose={() => setShowInvoiceDialog(false)}
+        invoice={dialogInvoice}
+        type="purchase"
       />
     </div>
   );

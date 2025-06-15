@@ -15,6 +15,8 @@ import { Customer } from "@/types";
 import { useSales } from "@/hooks/useSales";
 import { useBatteryTypes } from "@/hooks/useBatteryTypes";
 import { SaleFormData, ExtendedSale } from "@/services/salesService";
+import { AlertCircle } from "lucide-react";
+import { InvoiceDialog } from "@/components/InvoiceDialog";
 
 interface ExtendedSaleItem extends SaleItem {
   batteryTypeId: string;
@@ -36,6 +38,8 @@ const SalesPage = () => {
   const [vatEnabled, setVatEnabled] = useState(false);
   const [editingSale, setEditingSale] = useState<ExtendedSale | null>(null);
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
+  const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
+  const [dialogInvoice, setDialogInvoice] = useState<ExtendedSale | null>(null);
 
   const { sales, createSale, updateSale, deleteSale, isCreating, isUpdating, isDeleting } = useSales();
   const { batteryTypes, isLoading: batteryTypesLoading } = useBatteryTypes();
@@ -464,35 +468,42 @@ const SalesPage = () => {
                               {paymentMethodLabel}
                             </Badge>
                           </div>
-                          <div className="text-left">
-                            <p className="font-bold text-green-600">{sale.total.toLocaleString()} ريال</p>
-                            <div className="flex gap-1 mt-1">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => handlePrintInvoice(sale)}
-                                title="طباعة"
-                              >
-                                <Printer className="w-3 h-3" />
-                              </Button>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => editSale(sale)}
-                                title="تعديل"
-                              >
-                                <Edit className="w-3 h-3" />
-                              </Button>
-                              <Button 
-                                variant="destructive" 
-                                size="sm" 
-                                onClick={() => handleDeleteSale(sale)}
-                                title="حذف"
-                                disabled={isDeleting}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
-                            </div>
+                          <div className="text-left flex gap-1 items-center">
+                            {/* Show invoice dialog on click */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => { setDialogInvoice(sale); setShowInvoiceDialog(true); }}
+                              title="عرض الفاتورة"
+                              className="text-yellow-500 border-yellow-400"
+                            >
+                              <AlertCircle className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handlePrintInvoice(sale)}
+                              title="طباعة"
+                            >
+                              <Printer className="w-3 h-3" />
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => editSale(sale)}
+                              title="تعديل"
+                            >
+                              <Edit className="w-3 h-3" />
+                            </Button>
+                            <Button 
+                              variant="destructive" 
+                              size="sm" 
+                              onClick={() => handleDeleteSale(sale)}
+                              title="حذف"
+                              disabled={isDeleting}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -511,6 +522,14 @@ const SalesPage = () => {
         onClose={() => setShowCustomerDialog(false)}
         onSelectCustomer={handleCustomerSelect}
         language="ar"
+      />
+
+      {/* == عرض dialog الفاتورة == */}
+      <InvoiceDialog
+        open={showInvoiceDialog}
+        onClose={() => setShowInvoiceDialog(false)}
+        invoice={dialogInvoice}
+        type="sale"
       />
     </div>
   );
