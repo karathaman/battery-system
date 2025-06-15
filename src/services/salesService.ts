@@ -280,31 +280,33 @@ const salesService = {
       throw new Error('فشل في جلب بيانات الفاتورة الأصلية');
     }
 
-    // --- حساب نوع الفاتورة قبل وبعد ---
-    const originalWasCredit = originalSale.payment_method === 'check'; // الفواتير الآجلة مخزنة كـ check
-    let newIsCredit = false;
-    if (data.payment_method) {
-      newIsCredit = data.payment_method === 'credit';
-    } else {
-      // إذا لم يتم إرسال طريقة الدفع الجديدة، استخدم طريقة الدفع الأصلية
-      newIsCredit = originalSale.payment_method === 'check';
-    }
+    // معرفة نوع الدفع القديم والجديد بطريقة دقيقة
+    const originalWasCredit = originalSale.payment_method === 'check';
+    const updatedPaymentMethod = data.payment_method ?? originalSale.payment_method;
+    const newIsCredit = updatedPaymentMethod === 'credit';
 
-    // --- تحديث رصيد العميل إذا لزم الأمر ---
-    if (originalWasCredit && !newIsCredit) {
-      // كان آجل وأصبح نقدي ⇒ إزالة رصيد الفاتورة الأصلية من العميل
-      await updateCustomerBalance(originalSale.customer_id, originalSale.total, false);
-    } else if (!originalWasCredit && newIsCredit && data.customer_id && data.total !== undefined) {
-      // كان نقدي وأصبح آجل ⇒ إضافة رصيد الفاتورة الجديدة
-      await updateCustomerBalance(data.customer_id, data.total, true);
-    } else if (originalWasCredit && newIsCredit) {
-      // بقي "آجل" لكن القيم تغيّرت ⇒ أزل القديمة وأضف الجديدة
-      await updateCustomerBalance(originalSale.customer_id, originalSale.total, false);
-      await updateCustomerBalance(data.customer_id || originalSale.customer_id, data.total ?? originalSale.total, true);
-    }
-    // في حال نقدي --> نقدي: لا تفعل شيء
+    // سنحتاج لقيمة المجموع (total) القديمة والجديدة
+    const originalTotal = originalSale.total;
+    // لو لم يأتِ total جديد في البيانات، اعتبره نفس القديم
+    const newTotal = data.total !== undefined ? data.total : originalTotal;
+    // نفس الحال مع customer_id
+    const customerId = data.customer_id ?? originalSale.customer_id;
 
-    // إعادة الكمية للبطاريات (إرجاع الأصناف الأصلية للمخزن)
+    // تحديث رصيد العميل حسب السيناريو المناسب
+    if (originalWasCredit && newIsCredit) {
+      // إذا بقيت آجل وتم تغيير المبلغ فقط: أزل القديمة أضف الجديدة
+      await updateCustomerBalance(originalSale.customer_id, originalTotal, false);
+      await updateCustomerBalance(customerId, newTotal, true);
+    } else if (originalWasCredit && !newIsCredit) {
+      // أصبحت الفاتورة نقدي بعد أن كانت آجل ⇒ أزل فقط قيمة القديمة
+      await updateCustomerBalance(originalSale.customer_id, originalTotal, false);
+    } else if (!originalWasCredit && newIsCredit) {
+      // أصبحت الفاتورة آجل بعد أن كانت نقدي ⇒ أضف قيمة الجديدة فقط
+      await updateCustomerBalance(customerId, newTotal, true);
+    }
+    // إذا كانت نقدي ⇒ نقدي: لا تفعل شيء
+
+    // إرجاع وحدات البطاريات القديمة إلى المخزون
     if (originalSale.sale_items) {
       const originalItems = originalSale.sale_items.map(item => ({
         battery_type_id: item.battery_type_id,
@@ -345,7 +347,7 @@ const salesService = {
       throw new Error(deleteError.message);
     }
 
-    // إضافة الأصناف الجديدة
+    // إضافة الأصناف الجديدة وتحديث الكميات
     if (data.items) {
       const saleItems = data.items.map(item => ({
         sale_id: id,
@@ -363,17 +365,16 @@ const salesService = {
         console.error('Error creating sale items:', itemsError);
         throw new Error(itemsError.message);
       }
-
-      // تحديث الكميات الجديدة (طرح من المخزن)
+      // تحديث الكميات الجديدة (طرح من المخزون)
       await updateBatteryTypeQuantities(data.items, true);
     }
 
-    // دائمًا حدّث تاريخ آخر بيع في بطاقة العميل إذا توفر تاريخ وعميل
-    if (data.customer_id && data.date) {
+    // تحديث تاريخ آخر بيع في بطاقة العميل إذا توفر تاريخ وعميل
+    if (customerId && data.date) {
       const { error: lastPurchaseError } = await supabase
         .from('customers')
         .update({ last_purchase: data.date })
-        .eq('id', data.customer_id);
+        .eq('id', customerId);
       if (lastPurchaseError) {
         console.error('فشل في تحديث تاريخ آخر بيع للعميل:', lastPurchaseError);
       }
