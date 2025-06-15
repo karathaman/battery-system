@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -184,15 +185,14 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
     try {
       console.log("Fetching account statement for supplier:", supplierId);
 
-      // Fetch credit purchases (invoices)
-      const { data: creditPurchases, error: purchaseError } = await supabase
+      // Fetch all purchases for the supplier (we'll show all purchases that affect account balance)
+      const { data: purchases, error: purchaseError } = await supabase
         .from("purchases")
-        .select("id, date, total, invoice_number, payment_method")
-        .eq("supplier_id", supplierId)
-        .eq("payment_method", "credit");
+        .select("id, date, total, invoice_number")
+        .eq("supplier_id", supplierId);
 
       if (purchaseError) {
-        console.error("Error fetching credit purchases:", purchaseError);
+        console.error("Error fetching purchases:", purchaseError);
       }
 
       // Fetch vouchers (receipts and payments)
@@ -206,14 +206,14 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
         console.error("Error fetching vouchers:", voucherError);
       }
 
-      console.log("Credit Purchases:", creditPurchases);
+      console.log("Purchases:", purchases);
       console.log("Vouchers:", vouchers);
 
       // Format account statement entries
       const entries: AccountStatementEntry[] = [];
 
-      // Add credit purchases as debit entries
-      (creditPurchases || []).forEach(purchase => {
+      // Add purchases as debit entries (increase supplier balance/debt)
+      (purchases || []).forEach(purchase => {
         entries.push({
           id: purchase.id,
           date: purchase.date,
