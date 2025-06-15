@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Phone, Calendar, Package, DollarSign, TrendingUp, ShoppingCart, MessageCircle, FileText } from "lucide-react";
+import { User, Phone, Calendar, Package, DollarSign, TrendingUp, ShoppingCart, MessageCircle, FileText, FileExcel, FilePdf } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState, useMemo } from "react";
 import { exportAccountStatementToExcel, exportAccountStatementToPDF } from "@/utils/accountExportUtils";
@@ -690,6 +690,55 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
 
                 {/* --- جدول كشف الحساب الجديد --- */}
                 <TabsContent value="statement">
+                  {/* --- أزرار التصدير الجدد لمشاركة كشف الحساب للمورد --- */}
+                  {accountStatement.length > 0 && (
+                    <div className="mb-3 flex gap-2 justify-end">
+                      <button
+                        className="flex items-center gap-2 bg-green-600 text-white py-1 px-3 rounded shadow hover:bg-green-700 text-sm transition-all"
+                        onClick={() => {
+                          const cols: { title: string; key: string; format?: (v: any) => any }[] = [
+                            { title: "التاريخ", key: "date" },
+                            { title: "الوصف", key: "description" },
+                            { title: "مدين", key: "debit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
+                            { title: "دائن", key: "credit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
+                            { title: "الرصيد", key: "balance", format: (v: any) => v.toLocaleString() },
+                            { title: "رقم المرجع", key: "reference" }
+                          ];
+                          const filtered = filterDataByDate(accountStatement);
+                          exportAccountStatementToExcel({
+                            data: filtered,
+                            columns: cols,
+                            filename: `كشف حساب مورد ${supplier.name}.xlsx`
+                          });
+                        }}
+                      >
+                        <FileExcel className="w-4 h-4" /> مشاركة كـ Excel
+                      </button>
+                      <button
+                        className="flex items-center gap-2 bg-blue-600 text-white py-1 px-3 rounded shadow hover:bg-blue-700 text-sm transition-all"
+                        onClick={() => {
+                          const cols: { title: string; key: string; format?: (v: any) => any }[] = [
+                            { title: "التاريخ", key: "date" },
+                            { title: "الوصف", key: "description" },
+                            { title: "مدين", key: "debit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
+                            { title: "دائن", key: "credit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
+                            { title: "الرصيد", key: "balance", format: (v: any) => v.toLocaleString() },
+                            { title: "رقم المرجع", key: "reference" }
+                          ];
+                          const filtered = filterDataByDate(accountStatement);
+                          exportAccountStatementToPDF({
+                            data: filtered,
+                            columns: cols,
+                            filename: `كشف حساب مورد ${supplier.name}.pdf`,
+                            title: `كشف حساب المورد: ${supplier.name} (${supplier.supplierCode})`
+                          });
+                        }}
+                      >
+                        <FilePdf className="w-4 h-4" /> مشاركة كـ PDF
+                      </button>
+                    </div>
+                  )}
+                  {/* جدول كشف الحساب */}
                   <div className="overflow-x-auto mt-4">
                     <table className="min-w-full bg-white text-sm">
                       <thead>
