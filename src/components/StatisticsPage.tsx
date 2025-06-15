@@ -1,5 +1,5 @@
+
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -27,10 +27,10 @@ import { DataFilterDialog } from "./DataFilterDialog";
 
 interface StatisticsPageProps {
   language: string;
+  onTabChange?: (tab: string) => void;
 }
 
-export const StatisticsPage = ({ language }: StatisticsPageProps) => {
-  const navigate = useNavigate();
+export const StatisticsPage = ({ language, onTabChange }: StatisticsPageProps) => {
   const [date, setDate] = React.useState<DateRange>({
     from: addDays(new Date(), -7),
     to: new Date(),
@@ -116,6 +116,12 @@ export const StatisticsPage = ({ language }: StatisticsPageProps) => {
     return translations[key as keyof typeof translations][language as keyof typeof translations.dashboard];
   };
 
+  const handleNavigation = (tab: string) => {
+    if (onTabChange) {
+      onTabChange(tab);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6" dir={isRTL ? "rtl" : "ltr"}>
       {/* Header Section */}
@@ -130,19 +136,19 @@ export const StatisticsPage = ({ language }: StatisticsPageProps) => {
 
       {/* Action Buttons */}
       <div className="mb-6 flex flex-wrap gap-4 justify-center">
-        <Button onClick={() => navigate('/customers')} className="flex items-center gap-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+        <Button onClick={() => handleNavigation('customers')} className="flex items-center gap-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
           <Users className="w-4 h-4" />
           {getTranslatedText("manageCustomers")}
         </Button>
-        <Button onClick={() => navigate('/suppliers')} className="flex items-center gap-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+        <Button onClick={() => handleNavigation('suppliers')} className="flex items-center gap-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
           <Truck className="w-4 h-4" />
           {getTranslatedText("manageSuppliers")}
         </Button>
-        <Button onClick={() => navigate('/sales')} className="flex items-center gap-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+        <Button onClick={() => handleNavigation('sales')} className="flex items-center gap-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
           <ShoppingCart className="w-4 h-4" />
           {getTranslatedText("manageSales")}
         </Button>
-        <Button onClick={() => navigate('/purchases')} className="flex items-center gap-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+        <Button onClick={() => handleNavigation('purchases')} className="flex items-center gap-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
           <Package className="w-4 h-4" />
           {getTranslatedText("managePurchases")}
         </Button>

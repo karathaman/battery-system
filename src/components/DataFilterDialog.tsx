@@ -1,11 +1,10 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar, Trash2, AlertTriangle, DollarSign, Package, FileText, StickyNote, CheckSquare, Battery } from "lucide-react";
+import { Calendar, Trash2, AlertTriangle, DollarSign, Package, FileText, StickyNote, CheckSquare, Battery, ShoppingCart } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useSuppliers } from "@/hooks/useSuppliers";
@@ -39,6 +38,34 @@ export const DataFilterDialog = ({ open, onClose }: DataFilterDialogProps) => {
   const { batteryTypes } = useBatteryTypes();
 
   const filterOptions: FilterOption[] = [
+    // المبيعات اليومية
+    {
+      id: "daily-sales-all",
+      label: "جميع المبيعات اليومية",
+      description: "حذف جميع بيانات المبيعات اليومية",
+      icon: <ShoppingCart className="w-5 h-5 text-green-600" />
+    },
+    {
+      id: "daily-sales-date-range",
+      label: "المبيعات اليومية خلال فترة",
+      description: "حذف المبيعات اليومية في فترة زمنية محددة",
+      icon: <Calendar className="w-5 h-5 text-green-600" />,
+      requiresDateRange: true
+    },
+    // فواتير المبيعات
+    {
+      id: "sales-invoices-all",
+      label: "جميع فواتير المبيعات",
+      description: "حذف جميع فواتير المبيعات",
+      icon: <FileText className="w-5 h-5 text-emerald-600" />
+    },
+    {
+      id: "sales-invoices-date-range",
+      label: "فواتير المبيعات خلال فترة",
+      description: "حذف فواتير المبيعات في فترة زمنية محددة",
+      icon: <Calendar className="w-5 h-5 text-emerald-600" />,
+      requiresDateRange: true
+    },
     // المشتريات اليومية
     {
       id: "daily-purchases-all",
@@ -58,13 +85,13 @@ export const DataFilterDialog = ({ open, onClose }: DataFilterDialogProps) => {
       id: "purchase-invoices-all",
       label: "جميع فواتير المشتريات",
       description: "حذف جميع فواتير المشتريات",
-      icon: <FileText className="w-5 h-5 text-green-600" />
+      icon: <FileText className="w-5 h-5 text-indigo-600" />
     },
     {
       id: "purchase-invoices-date-range",
       label: "فواتير المشتريات خلال فترة",
       description: "حذف فواتير المشتريات في فترة زمنية محددة",
-      icon: <Calendar className="w-5 h-5 text-green-600" />,
+      icon: <Calendar className="w-5 h-5 text-indigo-600" />,
       requiresDateRange: true
     },
     // أرصدة الموردين
@@ -237,13 +264,48 @@ export const DataFilterDialog = ({ open, onClose }: DataFilterDialogProps) => {
           </DialogHeader>
 
           <div className="space-y-6">
-            <Tabs defaultValue="purchases" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+            <Tabs defaultValue="sales" className="w-full">
+              <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger value="sales" style={{ fontFamily: 'Tajawal, sans-serif' }}>المبيعات</TabsTrigger>
                 <TabsTrigger value="purchases" style={{ fontFamily: 'Tajawal, sans-serif' }}>المشتريات</TabsTrigger>
                 <TabsTrigger value="balances" style={{ fontFamily: 'Tajawal, sans-serif' }}>الأرصدة</TabsTrigger>
                 <TabsTrigger value="vouchers" style={{ fontFamily: 'Tajawal, sans-serif' }}>السندات</TabsTrigger>
                 <TabsTrigger value="others" style={{ fontFamily: 'Tajawal, sans-serif' }}>أخرى</TabsTrigger>
               </TabsList>
+
+              <TabsContent value="sales" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      بيانات المبيعات
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {filterOptions
+                      .filter(option => option.id.includes('sales') || option.id.includes('daily-sales'))
+                      .map(option => (
+                        <div key={option.id} className="flex items-center space-x-2 space-x-reverse p-3 border rounded-lg hover:bg-gray-50">
+                          <Checkbox
+                            id={option.id}
+                            checked={selectedFilters.includes(option.id)}
+                            onCheckedChange={() => handleFilterToggle(option.id)}
+                          />
+                          <div className="flex items-center gap-3 flex-1">
+                            {option.icon}
+                            <div>
+                              <label htmlFor={option.id} className="font-medium cursor-pointer" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                                {option.label}
+                              </label>
+                              <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                                {option.description}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
               <TabsContent value="purchases" className="space-y-4">
                 <Card>
@@ -254,7 +316,7 @@ export const DataFilterDialog = ({ open, onClose }: DataFilterDialogProps) => {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {filterOptions
-                      .filter(option => option.id.includes('purchase') || option.id.includes('daily'))
+                      .filter(option => option.id.includes('purchase') || option.id.includes('daily-purchases'))
                       .map(option => (
                         <div key={option.id} className="flex items-center space-x-2 space-x-reverse p-3 border rounded-lg hover:bg-gray-50">
                           <Checkbox

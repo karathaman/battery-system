@@ -39,6 +39,10 @@ const Index = () => {
     setLanguage(newLanguage);
   };
 
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+  };
+
   const getTabText = (key: string) => {
     const texts = {
       daily: { ar: "المشتريات اليومية", en: "Daily Purchases" },
@@ -278,7 +282,7 @@ const Index = () => {
       <NotesAndBatteriesPage />
     </TabsContent>
     <TabsContent value="statistics" className="space-y-4 sm:space-y-6">
-      <StatisticsPage language={language} />
+      <StatisticsPage language={language} onTabChange={handleTabChange} />
     </TabsContent>
   </div>
 </Tabs>
