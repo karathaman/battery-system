@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -133,15 +132,15 @@ export const CustomerSearchDialog = ({
                         </p>
                         <div className="flex gap-4 mt-1 text-xs text-gray-500">
                           <span>
-                            {language === "ar" ? "المشتريات:" : "Purchases:"} {customer.totalPurchases}
+                            {language === "ar" ? "المبيعات:" : "Sales:"} {customer.totalSoldQuantity}
                           </span>
                           <span>
                             {language === "ar" ? "الإجمالي:" : "Total:"} {customer.totalAmount.toLocaleString()}
                           </span>
                         </div>
-                        {customer.lastPurchase && (
+                        {customer.lastSale && (
                           <p className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                            {language === "ar" ? "آخر شراء:" : "Last purchase:"} {customer.lastPurchase}
+                            {language === "ar" ? "آخر بيع:" : "Last sale:"} {customer.lastSale}
                           </p>
                         )}
                       </div>

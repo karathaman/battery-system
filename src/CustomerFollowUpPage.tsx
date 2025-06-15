@@ -20,12 +20,12 @@ const mockCustomers: Customer[] = [
     name: "أحمد محمد",
     phone: "0501234567",
     description: "عميل مميز وموثوق",
-    lastPurchase: "2024-01-15",
-    totalPurchases: 15,
+    lastSale: "2024-01-15",
+    totalSoldQuantity: 15,
     totalAmount: 4500,
     averagePrice: 300,
     notes: "عميل مميز، يشتري بانتظام كل شهر",
-    balance: 1000, // Added balance property
+    balance: 1000,
     purchases: [
       { id: "s1", date: "2024-01-15", batteryType: "بطاريات عادية", quantity: 12, pricePerKg: 25, total: 300, discount: 0, finalTotal: 300 },
       { id: "s2", date: "2024-01-10", batteryType: "بطاريات جافة", quantity: 8, pricePerKg: 30, total: 240, discount: 20, finalTotal: 220 }
@@ -40,12 +40,12 @@ const mockCustomers: Customer[] = [
     name: "فاطمة علي",
     phone: "0507654321",
     description: "تتعامل مع البطاريات اليابانية فقط",
-    lastPurchase: "2024-01-10",
-    totalPurchases: 8,
+    lastSale: "2024-01-10",
+    totalSoldQuantity: 8,
     totalAmount: 2400,
     averagePrice: 300,
     notes: "تفضل البطاريات اليابانية",
-    balance: -500, // Added balance property
+    balance: -500,
     purchases: [
       { id: "s3", date: "2024-01-10", batteryType: "بطاريات زجاج", quantity: 15, pricePerKg: 35, total: 525, discount: 50, finalTotal: 475 },
       { id: "s4", date: "2024-01-05", batteryType: "بطاريات عادية", quantity: 10, pricePerKg: 28, total: 280, discount: 0, finalTotal: 280 }
@@ -59,13 +59,13 @@ const mockCustomers: Customer[] = [
     customerCode: "C003",
     name: "خالد أحمد", 
     phone: "0501111111",
-    lastPurchase: "2024-01-05",
-    totalPurchases: 22,
+    lastSale: "2024-01-05",
+    totalSoldQuantity: 22,
     totalAmount: 6600,
     averagePrice: 300,
     isBlocked: true,
     blockReason: "مشاكل في الدفع",
-    balance: 0, // Added balance property
+    balance: 0,
     purchases: [],
     last2Quantities: [0, 0],
     last2Prices: [0, 0],
@@ -96,7 +96,7 @@ const CustomerFollowUp = () => {
     const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          customer.phone.includes(searchTerm);
     
-    const daysSinceLastSale = getDaysSinceLastSale(customer.lastPurchase || "");
+    const daysSinceLastSale = getDaysSinceLastSale(customer.lastSale || "");
     
     let matchesLastSale = true;
     if (lastSaleFilter === "recent") matchesLastSale = daysSinceLastSale <= 7;
@@ -109,11 +109,11 @@ const CustomerFollowUp = () => {
   const handleCustomerAdded = (newCustomer: Customer) => {
     const customerWithDefaults = {
       ...newCustomer,
-      lastPurchase: new Date().toISOString().split('T')[0],
-      totalPurchases: 0,
+      lastSale: new Date().toISOString().split('T')[0],
+      totalSoldQuantity: 0,
       totalAmount: 0,
       averagePrice: 0,
-      balance: 0, // Add default balance
+      balance: 0,
       purchases: []
     };
     setCustomers(prev => [...prev, customerWithDefaults]);
@@ -248,7 +248,7 @@ const CustomerFollowUp = () => {
         {/* Customers Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-6">
           {filteredCustomers.map(customer => {
-            const daysSinceLastSale = getDaysSinceLastSale(customer.lastPurchase || "");
+            const daysSinceLastSale = getDaysSinceLastSale(customer.lastSale || "");
             
             return (
               <Card 
@@ -290,7 +290,7 @@ const CustomerFollowUp = () => {
                         </span>
                       </div>
                       <p className="text-xs sm:text-sm text-gray-700 text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                        {customer.lastPurchase}
+                        {customer.lastSale}
                       </p>
                       <p className="text-xs text-gray-500 text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                         منذ {daysSinceLastSale} يوم
@@ -327,7 +327,7 @@ const CustomerFollowUp = () => {
                     <div className="grid grid-cols-3 gap-2 text-center">
                       <div className="bg-gray-50 rounded p-2">
                         <p className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>الكمية</p>
-                        <p className="font-bold text-xs sm:text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{customer.totalPurchases}</p>
+                        <p className="font-bold text-xs sm:text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{customer.totalSoldQuantity}</p>
                       </div>
                       <div className="bg-gray-50 rounded p-2">
                         <p className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجمالي</p>

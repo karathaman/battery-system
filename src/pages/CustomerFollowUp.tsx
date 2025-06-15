@@ -98,17 +98,10 @@ const CustomerFollowUp = () => {
   };
 
   const getDaysSinceLastPurchase = (date: string): number => {
-    const lastPurchaseDate = new Date(date);
+    const lastSaleDate = new Date(date);
     const currentDate = new Date();
-    const differenceInTime = currentDate.getTime() - lastPurchaseDate.getTime();
-    return Math.floor(differenceInTime / (1000 * 3600 * 24)); // تحويل الفرق إلى أيام
-  };
-  
-  const getDaysSinceLastMessage = (date: string): number => {
-    const lastMessageDate = new Date(date);
-    const currentDate = new Date();
-    const differenceInTime = currentDate.getTime() - lastMessageDate.getTime();
-    return Math.floor(differenceInTime / (1000 * 3600 * 24)); // تحويل الفرق إلى أيام
+    const differenceInTime = currentDate.getTime() - lastSaleDate.getTime();
+    return Math.floor(differenceInTime / (1000 * 3600 * 24));
   };
 
   if (isLoading) {
@@ -258,7 +251,7 @@ const CustomerFollowUp = () => {
                         </Badge>
                       )}
           
-                      {getDaysSinceLastPurchase(customer.lastPurchase) > 30 && (
+                      {getDaysSinceLastPurchase(customer.lastSale) > 30 && (
                         <Badge variant="destructive" className="text-xs">
                           متأخر
                         </Badge>
@@ -289,10 +282,10 @@ const CustomerFollowUp = () => {
                   <div className="flex items-center gap-2">
                     <Calendar className="w-3 h-3 text-orange-400" />
                     <span className="text-xs font-semibold text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                      آخر بيع: {customer.lastPurchase || "لا يوجد"}
-                      {customer.lastPurchase && (
-                        <span className={`ml-1 ${getDaysSinceLastPurchase(customer.lastPurchase) > 30 ? 'text-red-600' : 'text-green-600'}`}>
-                          &nbsp; &nbsp; ← &nbsp; {getDaysSinceLastPurchase(customer.lastPurchase)} يوم
+                      آخر بيع: {customer.lastSale || "لا يوجد"}
+                      {customer.lastSale && (
+                        <span className={`ml-1 ${getDaysSinceLastPurchase(customer.lastSale) > 30 ? 'text-red-600' : 'text-green-600'}`}>
+                          &nbsp; &nbsp; ← &nbsp; {getDaysSinceLastPurchase(customer.lastSale)} يوم
                         </span>
                       )}
                     </span>
@@ -322,7 +315,7 @@ const CustomerFollowUp = () => {
                 <div className="grid grid-cols-2 gap-2 text-center">
                   <div className="bg-gray-50 rounded p-2 border-gray-300 border">
                     <p className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>مجموع الكميات المباعة</p>
-                    <p className="font-semibold text-xs sm:text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{customer.totalPurchases}</p>
+                    <p className="font-semibold text-xs sm:text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{customer.totalSoldQuantity}</p>
                   </div>
                   <div className="bg-gray-50 rounded p-2 border-gray-300 border">
                     <p className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجمالي</p>
