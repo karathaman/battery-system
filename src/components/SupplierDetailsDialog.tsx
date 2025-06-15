@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,17 +63,79 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
   const [accountStatement, setAccountStatement] = useState<AccountStatementEntry[]>([]);
   const [activeTab, setActiveTab] = useState("deliveries");
 
+  // --- NEW STATE FOR STATS ---
+  const [stats, setStats] = useState({
+    totalQuantity: 0,
+    totalAmount: 0,
+    averagePrice: 0
+  });
+
   useEffect(() => {
     if (open && supplier) {
-      const fetchHistory = async () => {
+      const fetchHistoryAndStats = async () => {
+        // 1. Fetch both daily purchases and purchases
         const history = await fetchSupplierHistory(supplier.supplierCode);
         setSupplierHistory(history);
-        
+
+        // 2. Compute combined stats from both sources
+        let totalQuantity = 0;
+        let totalAmount = 0;
+        let totalWeightedSum = 0;
+        let totalRecords = 0;
+
+        // يومية
+        const { data: dailyPurchases, error: dailyError } = await supabase
+          .from("daily_purchases")
+          .select("quantity, price_per_kg, total")
+          .eq("supplier_code", supplier.supplierCode);
+
+        if (dailyPurchases && dailyPurchases.length) {
+          dailyPurchases.forEach((p) => {
+            totalQuantity += Number(p.quantity) || 0;
+            totalAmount += Number(p.total) || 0;
+            totalWeightedSum += (Number(p.price_per_kg) || 0) * (Number(p.quantity) || 0);
+            totalRecords += 1;
+          });
+        }
+
+        // مشتريات شاملة + أصنافها
+        const { data: purchaseData, error: purchaseError } = await supabase
+          .from("purchases")
+          .select(`
+            id,
+            supplier_id,
+            purchase_items (quantity, price_per_kg, total)
+          `)
+          .eq("supplier_id", supplier.id);
+
+        if (purchaseData && Array.isArray(purchaseData)) {
+          purchaseData.forEach((purchase) => {
+            if (Array.isArray(purchase.purchase_items)) {
+              purchase.purchase_items.forEach((item) => {
+                totalQuantity += Number(item.quantity) || 0;
+                totalAmount += Number(item.total) || 0;
+                totalWeightedSum += (Number(item.price_per_kg) || 0) * (Number(item.quantity) || 0);
+                totalRecords += 1;
+              });
+            }
+          });
+        }
+
+        // متوسط السعر (على مستوى كل كيلو)
+        const averagePrice = totalQuantity > 0 ? (totalWeightedSum / totalQuantity).toFixed(2) : 0;
+
+        setStats({
+          totalQuantity,
+          totalAmount,
+          averagePrice: Number(averagePrice)
+        });
+
+        // كشف الحساب
         const statement = await fetchAccountStatement(supplier.id);
         setAccountStatement(statement);
       };
 
-      fetchHistory();
+      fetchHistoryAndStats();
     }
   }, [open, supplier]);
 
@@ -409,18 +470,18 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-blue-50 rounded-lg p-4 text-center">
                   <Package className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-                  <p className="text-2xl font-bold text-blue-600">{supplier.totalPurchases}</p>
+                  <p className="text-2xl font-bold text-blue-600">{stats.totalQuantity.toLocaleString()}</p>
                   <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>إجمالي الكمية</p>
                 </div>
                 <div className="bg-green-50 rounded-lg p-4 text-center">
                   <img src="/assets/icons/SaudiRG.svg" alt="Custom Icon" className="w-8 h-8 mx-auto mb-2" />
 
-                  <p className="text-2xl font-bold text-green-600">{supplier.totalAmount.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-green-600">{stats.totalAmount.toLocaleString()}</p>
                   <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>إجمالي المبلغ </p>
                 </div>
                 <div className="bg-purple-50 rounded-lg p-4 text-center">
                   <TrendingUp className="w-8 h-8 mx-auto mb-2 text-purple-600" />
-                  <p className="text-2xl font-bold text-purple-600">{supplier.averagePrice}</p>
+                  <p className="text-2xl font-bold text-purple-600">{stats.averagePrice}</p>
                   <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>متوسط السعر </p>
                 </div>
                 <div className={`${supplier.balance >= 0 ? 'bg-green-50' : 'bg-red-50'} rounded-lg p-4 text-center`}>
