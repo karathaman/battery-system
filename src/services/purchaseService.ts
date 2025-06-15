@@ -223,12 +223,35 @@ const purchaseService = {
   createPurchase: async (purchaseData: PurchaseFormData): Promise<Purchase> => {
     try {
       console.log('Creating purchase with data:', purchaseData);
-      
+
+      // إذا كان رقم الفاتورة مفقود أو فارغ، نعطيه رقم جديد تلقائي
+      let invoiceNumber = purchaseData.invoice_number && purchaseData.invoice_number.trim();
+      if (!invoiceNumber) {
+        // نأتي بآخر رقم فاتورة في نفس اليوم ونعطي الرقم التالي تلقائيًا
+        const todayStr = new Date(purchaseData.date).toISOString().split('T')[0];
+        const { data: purchasesToday, error: purchasesTodayError } = await supabase
+          .from('purchases')
+          .select('invoice_number')
+          .like('invoice_number', `P-${todayStr.replace(/-/g, '')}-%`)
+          .order('invoice_number', { ascending: false });
+
+        let nextNumber = 1;
+        if (!purchasesTodayError && purchasesToday && purchasesToday.length > 0) {
+          // استخراج آخر رقم تسلسلي في اليوم
+          const lastInvoiceNumber = purchasesToday[0].invoice_number;
+          const match = lastInvoiceNumber && lastInvoiceNumber.match(/P-(\d+)-(\d+)/);
+          if (match) {
+            nextNumber = parseInt(match[2] || "0") + 1;
+          }
+        }
+        invoiceNumber = `P-${todayStr.replace(/-/g, '')}-${String(nextNumber).padStart(4, '0')}`;
+      }
+
       // Create purchase
       const { data: newPurchase, error: purchaseError } = await supabase
         .from('purchases')
         .insert({
-          invoice_number: purchaseData.invoice_number,
+          invoice_number: invoiceNumber,
           date: purchaseData.date,
           supplier_id: purchaseData.supplier_id,
           subtotal: purchaseData.subtotal,
