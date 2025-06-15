@@ -31,7 +31,8 @@ const SalesPage = () => {
     { id: "1", batteryType: "", batteryTypeId: "", quantity: 0, price: 0, total: 0 }
   ]);
   const [discount, setDiscount] = useState(0);
-  const [paymentMethod, setPaymentMethod] = useState("cash");
+  // start with "credit" as the default
+  const [paymentMethod, setPaymentMethod] = useState("credit");
   const [vatEnabled, setVatEnabled] = useState(false);
   const [editingSale, setEditingSale] = useState<ExtendedSale | null>(null);
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
@@ -98,7 +99,7 @@ const SalesPage = () => {
     setSelectedCustomer(null);
     setSaleItems([{ id: "1", batteryType: "", batteryTypeId: "", quantity: 0, price: 0, total: 0 }]);
     setDiscount(0);
-    setPaymentMethod("cash");
+    setPaymentMethod("credit");
     setVatEnabled(false);
     setEditingSale(null);
   };
@@ -179,7 +180,8 @@ const SalesPage = () => {
     });
     setSaleItems(extendedItems);
     setDiscount(sale.discount);
-    setPaymentMethod(sale.paymentMethod);
+    // Only "cash" or "credit" is allowed
+    setPaymentMethod(sale.paymentMethod === "credit" ? "credit" : "cash");
     setVatEnabled(sale.tax > 0);
   };
 
@@ -446,9 +448,15 @@ const SalesPage = () => {
                           <p className="text-xs text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                             {sale.customerName}
                           </p>
+                            {/* Always show "نقداً" or "آجل" based on only allowed methods */}
                             {sale.paymentMethod && (
-                            <Badge variant={sale.paymentMethod === 'credit' ? 'destructive' : 'default'} className="text-xs mt-1">
-                              {paymentMethods.find(m => m.value === sale.paymentMethod)?.label || sale.paymentMethod}
+                            <Badge
+                              variant={sale.paymentMethod === 'credit' ? 'destructive' : 'default'}
+                              className="text-xs mt-1"
+                            >
+                              {sale.paymentMethod === 'credit'
+                                ? "آجل"
+                                : "نقداً"}
                             </Badge>
                             )}
                         </div>
