@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -439,6 +438,7 @@ const VouchersPage = () => {
         onSupplierSelect={handleSupplierSelect}
         searchTerm=""
         language="ar"
+        onAddSupplier={() => {}}
       />
 
       <EditVoucherDialog
