@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -332,7 +331,7 @@ if (isLoading) {
           </div>
 
           {/* Statistics Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-6">
             <Card className="bg-gradient-to-br from-orange-100 to-orange-50 border-0 shadow-md">
               <CardContent className="p-3 sm:p-4 text-center">
                 <Truck className="w-7 h-7 sm:w-9 sm:h-9 mx-auto mb-2 text-orange-600" />
@@ -351,6 +350,18 @@ if (isLoading) {
                 </p>
                 <p className="text-xs sm:text-sm text-green-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                   إجمالي التوريدات
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-yellow-100 to-yellow-50 border-0 shadow-md">
+              <CardContent className="p-3 sm:p-4 text-center">
+                <Package className="w-7 h-7 sm:w-9 sm:h-9 mx-auto mb-2 text-yellow-700" />
+                <p className="text-xl sm:text-3xl font-bold text-yellow-700">
+                  {suppliers.reduce((sum, s) => sum + s.totalPurchases, 0).toLocaleString()}
+                </p>
+                <p className="text-xs sm:text-sm text-yellow-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  إجمالي الكميات الموردة
                 </p>
               </CardContent>
             </Card>
