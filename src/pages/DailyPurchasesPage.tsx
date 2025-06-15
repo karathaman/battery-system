@@ -81,17 +81,23 @@ const DailyPurchasesPage = () => {
     return { total, discountAmount, finalTotal };
   };
 
+  // !!! هنا التعديل الرئيسي: اجعل الدالة async وأضف await
   const handleSave = async () => {
-    if (!newPurchase.supplierName.trim() || !newPurchase.batteryType || newPurchase.quantity <= 0 || newPurchase.pricePerKg <= 0) {
+    if (
+      !newPurchase.supplierName.trim() ||
+      !newPurchase.batteryType ||
+      newPurchase.quantity <= 0 ||
+      newPurchase.pricePerKg <= 0
+    ) {
       toast({
         title: "خطأ",
         description: "يرجى ملء جميع الحقول المطلوبة",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
-    // تحقق من وجود المورد في قاعدة البيانات قبل الحفظ
+    // تحقق من وجود المورد في قاعدة البيانات قبل الحفظ (await)
     const { data: supplier, error } = await supabase
       .from("suppliers")
       .select("id")
@@ -102,9 +108,9 @@ const DailyPurchasesPage = () => {
       toast({
         title: "خطأ",
         description: "اسم المورد غير موجود في قاعدة البيانات! يرجى التأكد من اختيار مورد صحيح.",
-        variant: "destructive"
+        variant: "destructive",
       });
-      return; // أوقف عملية الحفظ نهائيا إذا لم يوجد المورد
+      return;
     }
 
     const { total, finalTotal } = calculateTotals();
@@ -119,7 +125,7 @@ const DailyPurchasesPage = () => {
       pricePerKg: newPurchase.pricePerKg,
       total,
       discount: newPurchase.discount,
-      finalTotal
+      finalTotal,
     });
 
     // Reset form
@@ -130,7 +136,7 @@ const DailyPurchasesPage = () => {
       batteryType: "",
       quantity: 0,
       pricePerKg: 0,
-      discount: 0
+      discount: 0,
     });
   };
 
