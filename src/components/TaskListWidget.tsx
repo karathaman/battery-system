@@ -1,0 +1,138 @@
+
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Trash2, CheckSquare } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { useNotes } from "@/hooks/useNotes";
+
+export const TaskListWidget = () => {
+  const today = new Date().toISOString().split('T')[0];
+  const { notes, createNote, updateNote, deleteNote, toggleChecklistItem } = useNotes(today);
+  
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+
+  // Filter for checklist notes only
+  const taskLists = notes.filter(note => note.type === 'checklist');
+
+  const addNewTaskList = async () => {
+    if (!newTaskTitle.trim()) {
+      toast({
+        title: "خطأ",
+        description: "يرجى إدخال عنوان القائمة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const noteData = {
+      title: newTaskTitle,
+      content: "",
+      color: "blue",
+      type: "checklist" as const,
+      date: today,
+      checklist_items: []
+    };
+
+    createNote(noteData);
+    setNewTaskTitle("");
+  };
+
+  const deleteTaskList = (id: string) => {
+    deleteNote(id);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Add New Task List */}
+      <Card className="shadow-lg">
+        <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+          <CardTitle className="flex items-center gap-2 flex-row-reverse" style={{ fontFamily: "Tajawal, sans-serif" }}>
+            <Plus className="w-5 h-5" />
+            إضافة قائمة مهام جديدة
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-4">
+          <div className="space-y-2">
+            <Input
+              placeholder="أدخل عنوان قائمة المهام"
+              value={newTaskTitle}
+              onChange={(e) => setNewTaskTitle(e.target.value)}
+              style={{ fontFamily: "Tajawal, sans-serif" }}
+            />
+            <Button onClick={addNewTaskList} style={{ fontFamily: "Tajawal, sans-serif" }}>
+              <Plus className="w-4 h-4 ml-2" />
+              إضافة
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Task Lists */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {taskLists.map((taskList) => (
+          <Card key={taskList.id} className="shadow-lg bg-blue-50 border-blue-200">
+            <CardHeader className="bg-gradient-to-r from-blue-400 to-blue-500 text-white">
+              <CardTitle className="flex items-center justify-between" style={{ fontFamily: "Tajawal, sans-serif" }}>
+                <span>{taskList.title}</span>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => deleteTaskList(taskList.id)}
+                  title="حذف القائمة"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 space-y-4">
+              {/* Task List */}
+              <div className="space-y-2">
+                {taskList.checklist_items && taskList.checklist_items.map((task) => (
+                  <div
+                    key={task.id}
+                    className={`rounded-lg p-3 shadow-sm ${task.completed ? "opacity-60" : ""}`}
+                    style={{ backgroundColor: "rgba(255, 255, 255, 0.47)" }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          checked={task.completed}
+                          onCheckedChange={() => toggleChecklistItem({ itemId: task.id, completed: !task.completed })}
+                        />
+                        <span
+                          className={`${
+                            task.completed ? "line-through text-gray-500" : "text-gray-900"
+                          }`}
+                          style={{ fontFamily: "Tajawal, sans-serif" }}
+                        >
+                          {task.text}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {(!taskList.checklist_items || taskList.checklist_items.length === 0) && (
+                  <p className="text-gray-500 text-center py-4" style={{ fontFamily: "Tajawal, sans-serif" }}>
+                    لا توجد مهام في هذه القائمة
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {taskLists.length === 0 && (
+        <div className="text-center py-8">
+          <CheckSquare className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+          <p className="text-gray-500" style={{ fontFamily: "Tajawal, sans-serif" }}>
+            لا توجد قوائم مهام. ابدأ بإنشاء قائمة جديدة!
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};

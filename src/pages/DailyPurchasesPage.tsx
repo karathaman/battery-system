@@ -10,7 +10,7 @@ import { DateNavigation } from "@/components/DateNavigation";
 import { DailyPurchases } from "@/components/DailyPurchases";
 import { DailyNotesAndTasks } from "@/components/DailyNotesAndTasks";
 import { StickyNotes } from "@/components/StickyNotes";
-import { TaskList } from "@/components/TaskList";
+import { TaskListWidget } from "@/components/TaskListWidget";
 import { useDailyPurchases } from "@/hooks/useDailyPurchases";
 import { BatteryTypeSelector } from "@/components/BatteryTypeSelector";
 import { toast } from "@/hooks/use-toast";
@@ -305,9 +305,9 @@ const DailyPurchasesPage = () => {
       {/* Task List - Compact View */}
       <div>
         <h3 className="text-lg font-semibold mb-4" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-          قائمة المهام
+          قوائم المهام
         </h3>
-        <TaskList />
+        <TaskListWidget />
       </div>
 
       {/* Daily Notes and Tasks */}
