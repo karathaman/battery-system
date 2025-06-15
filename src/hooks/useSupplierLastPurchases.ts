@@ -2,17 +2,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+// Type for a Purchase item
+type PurchaseItem = {
+  battery_type_id: string;
+  quantity: number;
+  price_per_kg: number;
+  total: number;
+  battery_types?: { name: string } | null;
+};
+
 type PurchaseRow = {
   id: string;
   date: string;
   supplier_id: string;
-  purchase_items: {
-    battery_type_id: string;
-    battery_types?: { name: string } | null;
-    quantity: number;
-    price_per_kg: number;
-    total: number;
-  }[];
+  purchase_items: PurchaseItem[];
 };
 
 export type LastPurchaseForSupplier = {
@@ -28,31 +31,37 @@ export function useSupplierLastPurchases(supplierId: string | undefined) {
     enabled: !!supplierId,
     queryFn: async () => {
       if (!supplierId) return [];
-      // Fetch purchases for this supplier (regular purchases)
-      const { data: purchaseData, error: purchaseError } = await supabase
+
+      // Fetch purchases for this supplier, most recent first, including purchase_items and battery_types info
+      const { data, error } = await supabase
         .from("purchases")
         .select(
-          `id, date, purchase_items:battery_type_id (battery_type_id, price_per_kg, quantity, total, battery_types(name))`
+          `
+            id,
+            date,
+            supplier_id,
+            purchase_items(
+              battery_type_id,
+              quantity,
+              price_per_kg,
+              total,
+              battery_types(name)
+            )
+          `
         )
         .eq("supplier_id", supplierId)
         .order("date", { ascending: false });
 
-      // Fetch daily_purchases for this supplier (where we use supplier_id, if it exists - if not fallback to supplier code/phone)
-      // For safety, let's stick to purchases only for now as daily_purchases might not always use supplier_id (could be added if needed).
+      if (error) throw new Error(error.message);
 
-      if (purchaseError) throw new Error(purchaseError.message);
-
-      const batteryRows: {
-        batteryTypeName: string;
-        price: number;
-        total: number;
-        date: string;
-      }[] = [];
-
+      // Extract last 2 distinct battery types across all purchases (most recent first)
+      const batteryRows: LastPurchaseForSupplier[] = [];
       const seenTypes = new Set<string>();
 
-      for (const purchase of purchaseData || []) {
-        for (const item of (purchase.purchase_items ?? [])) {
+      for (const purchase of data ?? []) {
+        if (!purchase.purchase_items || !Array.isArray(purchase.purchase_items)) continue;
+        for (const item of purchase.purchase_items) {
+          if (typeof item !== "object" || !item) continue;
           const batteryTypeName =
             item.battery_types?.name || "غير معروف";
           if (!seenTypes.has(batteryTypeName)) {
