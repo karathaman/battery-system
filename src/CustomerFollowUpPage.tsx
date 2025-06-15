@@ -494,7 +494,11 @@ const CustomerFollowUp = () => {
       <CustomerDetailsDialog
         open={showCustomerDetails}
         onClose={() => setShowCustomerDetails(false)}
-        customer={selectedCustomer}
+        customer={
+          selectedCustomer
+            ? { ...selectedCustomer, total_sold_quantity: selectedCustomer.totalSoldQuantity }
+            : null
+        }
       />
       
       {/* Add Customer Dialog */}

@@ -11,7 +11,7 @@ import {
   FileText,
   Calendar,
   Filter,
-  BarChart
+  BarChart as BarChartIcon
 } from 'lucide-react';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useSales } from '@/hooks/useSales';
@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { addDays } from 'date-fns';
 import { DataFilterDialog } from "./DataFilterDialog";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 interface StatisticsPageProps {
   language: string;
@@ -258,14 +258,14 @@ export const StatisticsPage = ({ language, onTabChange }: StatisticsPageProps) =
         <Card>
           <CardHeader>
             <CardTitle className={`flex items-center gap-2 justify-center ${isRTL ? 'flex-row-reverse' : ''}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
-              <BarChart className="w-5 h-5" />
+              <BarChartIcon className="w-5 h-5" />
               {language === "ar" ? "المبيعات والمشتريات (آخر 6 أشهر)" : "Sales vs Purchases (6 Months)"}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div style={{ width: "100%", height: 220 }}>
               <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={monthlyData}>
+                <RechartsBarChart data={monthlyData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis />
@@ -273,7 +273,7 @@ export const StatisticsPage = ({ language, onTabChange }: StatisticsPageProps) =
                   <Legend />
                   <Bar dataKey="salesCount" name={language === "ar" ? "المبيعات" : "Sales"} fill="#6f42c1" />
                   <Bar dataKey="purchasesCount" name={language === "ar" ? "المشتريات" : "Purchases"} fill="#fab005" />
-                </BarChart>
+                </RechartsBarChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
