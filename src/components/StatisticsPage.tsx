@@ -475,11 +475,17 @@ export const StatisticsPage = ({ language, onTabChange }: StatisticsPageProps) =
               <TableRow>
                 <TableHead>#</TableHead>
                 <TableHead>{language === "ar" ? "الاسم" : "Name"}</TableHead>
-                <TableHead>{sortBy==="quantity" ? (language==="ar"? (topType==="customers"?"الكميات المباعة":"الكميات الموردة") : (topType==="customers"?"Sold QTY":"Supplied QTY"))
-                  : sortBy==="amount" ? (language==="ar"?"المبلغ":"Amount")
-                  : sortBy==="balance" ? (language==="ar"?"الرصيد":"Balance")
-                  : (language==="ar"?(topType==="customers"?"آخر بيع":"آخر شراء"):"Last Operation")
-                }</TableHead>
+                <TableHead>
+                  {sortBy==="quantity" ? (language==="ar"? (topType==="customers"?"الكميات المباعة":"الكميات الموردة") : (topType==="customers"?"Sold QTY":"Supplied QTY"))
+                    : sortBy==="amount" ? (language==="ar"?"المبلغ":"Amount")
+                    : sortBy==="balance" ? (language==="ar"?"الرصيد":"Balance")
+                    : (language==="ar"?(topType==="customers"?"آخر بيع":"آخر شراء"):"Last Operation")}
+                </TableHead>
+                <TableHead>
+                  {language === "ar"
+                    ? (topType === "customers" ? "آخر عمليتين بيع" : "آخر عمليتين شراء")
+                    : (topType === "customers" ? "Last 2 Sales" : "Last 2 Purchases")}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -493,6 +499,22 @@ export const StatisticsPage = ({ language, onTabChange }: StatisticsPageProps) =
                     : sortBy==="balance"? item.balance
                     : (topType==="customers"? (item.lastSale? format(new Date(item.lastSale), "yyyy-MM-dd"):"-") : (item.lastPurchase? format(new Date(item.lastPurchase), "yyyy-MM-dd"):"-"))
                     }
+                  </TableCell>
+                  <TableCell>
+                    {/* عرض آخر عمليتين بيع/شراء بالتنسيق المطلوب */}
+                    {(item.last2BatteryTypes && item.last2BatteryTypes.length > 0) ? (
+                      <div className="flex flex-col gap-1" style={{direction: isRTL ? 'rtl' : 'ltr', fontFamily: 'Tajawal, sans-serif', whiteSpace: 'nowrap'}}>
+                        {item.last2BatteryTypes.map((battery, idx) => (
+                          <div key={idx} className="flex gap-2" style={{justifyContent: isRTL ? "flex-end" : "flex-start"}}>
+                            <span>{battery}</span>
+                            <span className="text-blue-600 font-semibold">{(item.last2Prices && item.last2Prices[idx]) || ""}</span>
+                            <span className="text-green-700 font-semibold">{(item.last2Quantities && item.last2Quantities[idx]) || ""}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-gray-500">{language === "ar" ? "لا يوجد" : "N/A"}</span>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
