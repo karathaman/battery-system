@@ -57,7 +57,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
   if (!customer) return null;
 
   const [customerHistory, setCustomerHistory] = useState([]);
-  const [accountStatement, setAccountStatement] = useState<AccountStatementEntry[]>([]);
+  const [accountStatement, setAccountStatement] = useState([]);
   const [activeTab, setActiveTab] = useState("deliveries");
 
   // DATE RANGE FILTER
@@ -65,6 +65,20 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
     startDate: null,
     endDate: null,
   });
+
+  // NEW: filtered data functions
+  const filterDataByDate = (data: any[]) => {
+    return data.filter((entry) => {
+      const entryDate = new Date(entry.date);
+      const startDate = dateRange.startDate ? new Date(dateRange.startDate) : null;
+      const endDate = dateRange.endDate ? new Date(dateRange.endDate) : null;
+
+      if (startDate && entryDate < startDate) return false;
+      if (endDate && entryDate > endDate) return false;
+
+      return true;
+    });
+  };
 
   useEffect(() => {
     if (open && customer) {
@@ -144,6 +158,17 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
     }
   };
 
+  // إعلان أعمدة التصدير مثل المورد
+  const accountColumns: { title: string; key: string; format?: (v: any) => any }[] = [
+    { title: "التاريخ", key: "date" },
+    { title: "نوع الحركة", key: "type" },
+    { title: "البيان", key: "description" },
+    { title: "مدين", key: "debit", format: (v) => v > 0 ? v.toLocaleString() : "-" },
+    { title: "دائن", key: "credit", format: (v) => v > 0 ? v.toLocaleString() : "-" },
+    { title: "المرجع", key: "reference" },
+    { title: "الرصيد", key: "balance", format: (v) => v.toLocaleString() },
+  ];
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" dir="rtl">
@@ -154,7 +179,8 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* ====== FILTERS BAR ====== */}
+
+          {/* ====== FILTERS BAR (moved above Tabs) ====== */}
           <div className="flex flex-wrap items-center gap-4 bg-blue-50 rounded-lg p-2 mb-2">
             <span className="text-sm text-gray-500">من</span>
             <input
@@ -225,7 +251,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
 
                 <TabsContent value="deliveries" className="mt-4">
                   {/* Delivery History Table */}
-                  {customerHistory.length > 0 ? (
+                  {filterDataByDate(customerHistory).length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead className="bg-gray-50">
@@ -240,15 +266,15 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
                           </tr>
                         </thead>
                         <tbody>
-                          {customerHistory.map((entry, index) => (
+                          {filterDataByDate(customerHistory).map((entry, index) => (
                             <tr key={index} className="border-b hover:bg-gray-50">
                               <td className="p-3 text-sm">{entry.date}</td>
                               <td className="p-3 text-sm">{entry.battery_type}</td>
                               <td className="p-3 text-sm">{entry.quantity}</td>
                               <td className="p-3 text-sm">{entry.price_per_kg}</td>
-                              <td className="p-3 text-sm">{entry.total.toLocaleString()}</td>
-                              <td className="p-3 text-sm">{entry.discount?.toLocaleString() || 0}</td>
-                              <td className="p-3 text-sm font-bold text-green-600">{entry.final_total.toLocaleString()}</td>
+                              <td className="p-3 text-sm">{entry.total?.toLocaleString?.() || entry.total}</td>
+                              <td className="p-3 text-sm">{entry.discount?.toLocaleString?.() || 0}</td>
+                              <td className="p-3 text-sm font-bold text-green-600">{entry.final_total?.toLocaleString?.() || entry.final_total}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -262,8 +288,41 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
                 </TabsContent>
 
                 <TabsContent value="statement" className="mt-4">
+                  {/* أزرار التصدير */}
+                  {accountStatement.length > 0 && (
+                    <div className="mb-3 flex gap-2 justify-end">
+                      <button
+                        className="bg-green-600 text-white py-1 px-3 rounded shadow hover:bg-green-700 text-sm"
+                        onClick={() => {
+                          // استخدام الأعمدة المعلنة أعلاه وتطبيق الفلترة
+                          const filtered = filterDataByDate(accountStatement);
+                          import('@/utils/accountExportUtils').then(({ exportAccountStatementToExcel }) => {
+                            exportAccountStatementToExcel({
+                              data: filtered,
+                              columns: accountColumns,
+                              filename: `كشف حساب عميل ${customer.name}.xlsx`
+                            });
+                          });
+                        }}
+                      >تصدير Excel</button>
+                      <button
+                        className="bg-blue-600 text-white py-1 px-3 rounded shadow hover:bg-blue-700 text-sm"
+                        onClick={() => {
+                          const filtered = filterDataByDate(accountStatement);
+                          import('@/utils/accountExportUtils').then(({ exportAccountStatementToPDF }) => {
+                            exportAccountStatementToPDF({
+                              data: filtered,
+                              columns: accountColumns,
+                              filename: `كشف حساب عميل ${customer.name}.pdf`,
+                              title: `كشف حساب العميل: ${customer.name} (${customer.customerCode})`
+                            });
+                          });
+                        }}
+                      >تصدير PDF</button>
+                    </div>
+                  )}
                   {/* Account Statement Table */}
-                  {accountStatement.length > 0 ? (
+                  {filterDataByDate(accountStatement).length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm border">
                         <thead className="bg-gray-100 border-b">
@@ -278,14 +337,12 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
                           </tr>
                         </thead>
                         <tbody>
-                          {accountStatement.map((entry, index) => (
+                          {filterDataByDate(accountStatement).map((entry, index) => (
                             <tr key={index} className="border-b hover:bg-gray-50 text-center">
                               <td className="p-3 text-sm">{entry.date}</td>
                               <td className="p-3 text-sm">
                                 {entry.type === 'purchase' ? (
-                                  <span className="px-2 py-1 bg-blue-100 text-blue-600 rounded text-xs">
-                                    فاتورة مبيعات
-                                  </span>
+                                  <span className="px-2 py-1 bg-blue-100 text-blue-600 rounded text-xs">فاتورة مبيعات</span>
                                 ) : entry.type === 'voucher_receipt' ? (
                                   <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">سند قبض</span>
                                 ) : (
