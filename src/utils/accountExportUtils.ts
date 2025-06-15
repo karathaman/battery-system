@@ -1,7 +1,6 @@
 
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
-// الحل الصحيح لاستيراد autotype للـ jsPDF، يجب استيراده بهذه الطريقة:
 import autoTable from "jspdf-autotable";
 
 // columns: { title: string, key: string, format?: (x:any) => string }
@@ -40,10 +39,13 @@ export function exportAccountStatementToPDF({
   title: string;
 }) {
   const doc = new jsPDF({ orientation: "landscape" });
-  // @ts-ignore
-  doc.setFont("tajawal", "normal");
-  doc.text(title, 14, 14, { align: "right" });
-  // يجب استخدام autoTable مباشرة
+
+  // إزالة setFont("tajawal", "normal")
+  // doc.setFont("tajawal", "normal"); // خطأ، الخط غير موجود افتراضياً في jsPDF
+
+  // إعداد النص من اليمين لليسار
+  doc.text(title, doc.internal.pageSize.getWidth() - 14, 14, { align: "right" });
+
   autoTable(doc, {
     head: [columns.map((col) => col.title)],
     body: data.map((row) =>
@@ -51,9 +53,10 @@ export function exportAccountStatementToPDF({
         col.format ? col.format(row[col.key]) : row[col.key] ?? ""
       )
     ),
-    styles: { font: "tajawal", fontStyle: "normal" },
+    styles: { halign: "right" }, // ضبط المحاذاة للعربية
     margin: { top: 24 },
     html: undefined,
   });
   doc.save(filename.endsWith(".pdf") ? filename : filename + ".pdf");
 }
+
