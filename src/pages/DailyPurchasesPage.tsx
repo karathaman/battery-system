@@ -38,6 +38,8 @@ const DailyPurchasesPage = () => {
   const [addSupplierInitialName, setAddSupplierInitialName] = useState(""); // For carrying over search term
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
 
+  const [lastSearchedSupplierName, setLastSearchedSupplierName] = useState("");
+
   const calculateTotals = () => {
     const total = newPurchase.quantity * newPurchase.pricePerKg;
     const discountAmount = (total * newPurchase.discount) / 100;
@@ -190,6 +192,26 @@ const DailyPurchasesPage = () => {
     setTimeout(() => setSupplierSearchOpen(true), 400);
   };
 
+  // دالة عند مغادرة حقل المورد: تجلب الرصيد والمعلومات فقط إذا تغير الاسم وكان غير فارغ
+  const handleSupplierBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+    const name = e.target.value.trim();
+    // فقط إذا تغير الاسم أو لم يتم تحميل المورد مسبقًا
+    if (name && name !== lastSearchedSupplierName) {
+      setLastSearchedSupplierName(name);
+      // محاولة البحث عن مورد بنفس الاسم أو الكود 
+      if (newPurchase.supplierCode) {
+        const details = await fetchSupplierDetails(newPurchase.supplierCode);
+        setSelectedSupplier({
+          ...newPurchase,
+          ...details,
+          name: newPurchase.supplierName,
+        });
+      } else {
+        setSelectedSupplier(null);
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* إضافة دايلاوج بحث المورد */}
@@ -249,7 +271,8 @@ const DailyPurchasesPage = () => {
                 placeholder="أدخل اسم المورد"
                 style={{ fontFamily: 'Tajawal, sans-serif' }}
                 onFocus={() => setSupplierSearchOpen(true)}
-                readOnly
+                readOnly={false}
+                onBlur={handleSupplierBlur}
               />
             </div>
 
