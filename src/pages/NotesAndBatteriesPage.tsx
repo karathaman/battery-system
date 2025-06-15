@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StickyNote, Battery, Plus, Edit, Trash2, Search, CheckSquare } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { BatteryTypeManagement } from "@/components/BatteryTypeManagement";
-import { TaskList } from "@/components/TaskList";
+import { TaskListWidget } from "@/components/TaskListWidget";
 
 interface StickyNote {
   id: string;
@@ -229,7 +228,7 @@ const NotesAndBatteriesPage = () => {
 
         {/* Tasks Tab */}
         <TabsContent value="tasks" className="space-y-4">
-          <TaskList />
+          <TaskListWidget />
         </TabsContent>
 
         {/* Battery Types Tab */}
