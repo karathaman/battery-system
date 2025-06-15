@@ -9,6 +9,7 @@ import { Calendar, ShoppingCart, Save, Edit, Trash2, AlertCircle } from "lucide-
 import { DateNavigation } from "@/components/DateNavigation";
 import { DailyPurchases } from "@/components/DailyPurchases";
 import { DailyNotesAndTasks } from "@/components/DailyNotesAndTasks";
+import { StickyNotes } from "@/components/StickyNotes";
 import { useDailyPurchases } from "@/hooks/useDailyPurchases";
 import { BatteryTypeSelector } from "@/components/BatteryTypeSelector";
 import { toast } from "@/hooks/use-toast";
@@ -267,25 +268,38 @@ const DailyPurchasesPage = () => {
         </CardContent>
       </Card>
 
-      {/* Daily Purchases List - Pass a single purchase object with the correct props */}
+      {/* Daily Purchases List */}
       {purchases.length > 0 && (
-        <DailyPurchases 
-          id={purchases[0].id}
-          date={purchases[0].date}
-          supplierName={purchases[0].supplierName}
-          supplierCode={purchases[0].supplierCode}
-          supplierPhone={purchases[0].supplierPhone}
-          batteryType={purchases[0].batteryType}
-          batteryTypeId={purchases[0].batteryTypeId}
-          quantity={purchases[0].quantity}
-          pricePerKg={purchases[0].pricePerKg}
-          total={purchases[0].total}
-          discount={purchases[0].discount}
-          finalTotal={purchases[0].finalTotal}
-          isSaved={purchases[0].isSaved}
-          language="ar"
-        />
+        <div className="space-y-4">
+          {purchases.map((purchase) => (
+            <DailyPurchases 
+              key={purchase.id}
+              id={purchase.id}
+              date={purchase.date}
+              supplierName={purchase.supplierName}
+              supplierCode={purchase.supplierCode}
+              supplierPhone={purchase.supplierPhone}
+              batteryType={purchase.batteryType}
+              batteryTypeId={purchase.batteryTypeId}
+              quantity={purchase.quantity}
+              pricePerKg={purchase.pricePerKg}
+              total={purchase.total}
+              discount={purchase.discount}
+              finalTotal={purchase.finalTotal}
+              isSaved={purchase.isSaved}
+              language="ar"
+            />
+          ))}
+        </div>
       )}
+
+      {/* Sticky Notes - Compact View */}
+      <div>
+        <h3 className="text-lg font-semibold mb-4" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+          الملاحظات السريعة
+        </h3>
+        <StickyNotes compact={true} language="ar" />
+      </div>
 
       {/* Daily Notes and Tasks */}
       <DailyNotesAndTasks date={selectedDate} />

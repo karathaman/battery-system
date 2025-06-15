@@ -9,7 +9,6 @@ import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client.ts";
 
-
 interface ChecklistItem {
   id: string;
   text: string;
@@ -55,7 +54,11 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
   };
 
   useEffect(() => {
-    const fetchNotes = async () => {
+    fetchNotes();
+  }, []);
+
+  const fetchNotes = async () => {
+    try {
       const { data, error } = await supabase
         .from("notes")
         .select("*")
@@ -78,9 +81,10 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
           checklistItems: []
         }))
       );
-    };
-    fetchNotes();
-  }, []);
+    } catch (error) {
+      console.error('Error in fetchNotes:', error);
+    }
+  };
 
   const addNote = async () => {
     if (!newNote.title.trim()) {
@@ -93,94 +97,139 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
       return;
     }
 
-    const { data, error } = await supabase
-      .from("notes")
-      .insert({
-        title: newNote.title,
-        content: newNote.content,
-        color: newNote.color,
-        type: newNote.type,
-        date: new Date().toISOString().split('T')[0],
-        completed: false
-      })
-      .select()
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from("notes")
+        .insert({
+          title: newNote.title,
+          content: newNote.content,
+          color: newNote.color,
+          type: newNote.type,
+          date: new Date().toISOString().split('T')[0],
+          completed: false
+        })
+        .select()
+        .single();
 
-    if (error) {
-      console.error('Error creating note:', error);
+      if (error) {
+        console.error('Error creating note:', error);
+        toast({
+          title: language === "ar" ? "خطأ" : "Error",
+          description: language === "ar" ? "فشل في إنشاء الملاحظة" : "Failed to create note",
+          variant: "destructive",
+          duration: 2000,
+        });
+        return;
+      }
+
+      const note: Note = {
+        id: data.id,
+        title: data.title,
+        content: data.content || "",
+        completed: data.completed || false,
+        createdAt: data.created_at,
+        color: data.color || "yellow",
+        type: (data.type === 'checklist' ? 'checklist' : 'note') as 'note' | 'checklist',
+        checklistItems: []
+      };
+
+      setNotes(prev => [note, ...prev]);
+      setNewNote({ title: "", content: "", color: "yellow", type: "note" });
+      setNewChecklistItems([""]);
+      
       toast({
-        title: language === "ar" ? "خطأ" : "Error",
-        description: language === "ar" ? "فشل في إنشاء الملاحظة" : "Failed to create note",
-        variant: "destructive",
+        title: language === "ar" ? "تم إضافة الملاحظة" : "Note Added",
+        description: language === "ar" ? "تم إضافة الملاحظة بنجاح" : "Note added successfully",
         duration: 2000,
       });
-      return;
+    } catch (error) {
+      console.error('Error in addNote:', error);
     }
-
-    const note: Note = {
-      id: data.id,
-      title: data.title,
-      content: data.content || "",
-      completed: data.completed || false,
-      createdAt: data.created_at,
-      color: data.color || "yellow",
-      type: (data.type === 'checklist' ? 'checklist' : 'note') as 'note' | 'checklist',
-      checklistItems: []
-    };
-
-    setNotes(prev => [note, ...prev]);
-    setNewNote({ title: "", content: "", color: "yellow", type: "note" });
-    setNewChecklistItems([""]);
-    
-    toast({
-      title: language === "ar" ? "تم إضافة الملاحظة" : "Note Added",
-      description: language === "ar" ? "تم إضافة الملاحظة بنجاح" : "Note added successfully",
-      duration: 2000,
-    });
   };
 
   const deleteNote = async (id: string) => {
-    const { error } = await supabase
-      .from("notes")
-      .delete()
-      .eq("id", id);
+    try {
+      const { error } = await supabase
+        .from("notes")
+        .delete()
+        .eq("id", id);
 
-    if (error) {
-      console.error('Error deleting note:', error);
+      if (error) {
+        console.error('Error deleting note:', error);
+        toast({
+          title: language === "ar" ? "خطأ" : "Error",
+          description: language === "ar" ? "فشل في حذف الملاحظة" : "Failed to delete note",
+          variant: "destructive",
+          duration: 2000,
+        });
+        return;
+      }
+
+      setNotes(prev => prev.filter(note => note.id !== id));
       toast({
-        title: language === "ar" ? "خطأ" : "Error",
-        description: language === "ar" ? "فشل في حذف الملاحظة" : "Failed to delete note",
-        variant: "destructive",
+        title: language === "ar" ? "تم حذف الملاحظة" : "Note Deleted",
+        description: language === "ar" ? "تم حذف الملاحظة بنجاح" : "Note deleted successfully",
         duration: 2000,
       });
-      return;
+    } catch (error) {
+      console.error('Error in deleteNote:', error);
     }
-
-    setNotes(prev => prev.filter(note => note.id !== id));
-    toast({
-      title: language === "ar" ? "تم حذف الملاحظة" : "Note Deleted",
-      description: language === "ar" ? "تم حذف الملاحظة بنجاح" : "Note deleted successfully",
-      duration: 2000,
-    });
   };
 
   const toggleCompleted = async (id: string) => {
     const note = notes.find(n => n.id === id);
     if (!note) return;
 
-    const { error } = await supabase
-      .from("notes")
-      .update({ completed: !note.completed })
-      .eq("id", id);
+    try {
+      const { error } = await supabase
+        .from("notes")
+        .update({ completed: !note.completed })
+        .eq("id", id);
 
-    if (error) {
-      console.error('Error updating note:', error);
-      return;
+      if (error) {
+        console.error('Error updating note:', error);
+        return;
+      }
+
+      setNotes(prev => prev.map(note => 
+        note.id === id ? { ...note, completed: !note.completed } : note
+      ));
+    } catch (error) {
+      console.error('Error in toggleCompleted:', error);
     }
+  };
 
-    setNotes(prev => prev.map(note => 
-      note.id === id ? { ...note, completed: !note.completed } : note
-    ));
+  const updateNote = async (id: string, title: string, content: string, color: string) => {
+    try {
+      const { error } = await supabase
+        .from("notes")
+        .update({ title, content, color })
+        .eq("id", id);
+
+      if (error) {
+        console.error('Error updating note:', error);
+        toast({
+          title: language === "ar" ? "خطأ" : "Error",
+          description: language === "ar" ? "فشل في تحديث الملاحظة" : "Failed to update note",
+          variant: "destructive",
+          duration: 2000,
+        });
+        return;
+      }
+
+      setNotes(prev => prev.map(note => 
+        note.id === id ? { ...note, title, content, color } : note
+      ));
+      setEditingNote(null);
+      
+      toast({
+        title: language === "ar" ? "تم التحديث" : "Updated",
+        description: language === "ar" ? "تم تحديث الملاحظة بنجاح" : "Note updated successfully",
+        duration: 2000,
+      });
+    } catch (error) {
+      console.error('Error in updateNote:', error);
+    }
   };
 
   const addChecklistItem = (noteId: string, text: string) => {
@@ -215,23 +264,6 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
         checklistItems: note.checklistItems?.filter(item => item.id !== itemId)
       } : note
     ));
-  };
-
-  const updateNote = async (id: string, title: string, content: string, color: string) => {
-    const { error } = await supabase
-      .from("notes")
-      .update({ title, content, color })
-      .eq("id", id);
-
-    if (error) {
-      console.error('Error updating note:', error);
-      return;
-    }
-
-    setNotes(prev => prev.map(note => 
-      note.id === id ? { ...note, title, content, color } : note
-    ));
-    setEditingNote(null);
   };
 
   const addNewChecklistItemField = () => {
