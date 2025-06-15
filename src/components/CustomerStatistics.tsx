@@ -41,27 +41,50 @@ interface CustomerStatisticsProps {
 
 export const CustomerStatistics = ({ language = "ar", customers }: CustomerStatisticsProps) => {
   const [searchTerm, setSearchTerm] = useState("");
-  
   const isRTL = language === "ar";
-  
   const { sales, isLoading } = useSales();
-  
+
+  // حساب بيانات كل عميل بشكل صحيح للإحصائيات
   const mappedCustomers = customers.map((customer) => {
     const customerSales = (sales || []).filter((sale) => sale.customerId === customer.id);
-    
+
+    // حساب إجمالي المبلغ
     const totalAmount = customerSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
-    const averagePrice =
+
+    // حساب إجمالي الكمية
+    const totalQuantity = customerSales.reduce((sum, sale) => {
+      // جمع كميات جميع الأصناف في كل فاتورة
+      if (Array.isArray(sale.items)) {
+        return sum + sale.items.reduce((s, si) => s + (si.quantity || 0), 0);
+      }
+      return sum;
+    }, 0);
+
+    // حساب متوسط السعر (لكل وحدة) = مجموع (سعر الكيلو × الكمية) ÷ مجموع الكمية
+    let totalWeightedPrice = 0;
+    customerSales.forEach(sale => {
+      if (Array.isArray(sale.items)) {
+        sale.items.forEach(item => {
+          totalWeightedPrice += (item.price || 0) * (item.quantity || 0);
+        });
+      }
+    });
+    const averagePricePerKg = totalQuantity > 0 ? Math.round(totalWeightedPrice / totalQuantity) : 0;
+
+    // متوسط البيع (متوسط مبلغ الفاتورة)
+    const averageInvoiceAmount =
       customerSales.length > 0
         ? Math.round(
             customerSales.reduce((sum, sale) => sum + (sale.total || 0), 0) /
               customerSales.length
           )
         : 0;
+
     const lastSaleObj = customerSales.length
       ? customerSales.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
       : undefined;
     const lastSale = lastSaleObj ? lastSaleObj.date : "";
-    
+
     return {
       ...customer,
       sales: customerSales.map((sale) => ({
@@ -75,7 +98,9 @@ export const CustomerStatistics = ({ language = "ar", customers }: CustomerStati
         finalTotal: sale.total || 0,
       })),
       totalAmount,
-      averagePrice,
+      totalQuantity,
+      averagePricePerKg,
+      averageInvoiceAmount,
       lastSale,
     };
   });
@@ -86,7 +111,8 @@ export const CustomerStatistics = ({ language = "ar", customers }: CustomerStati
       customer.phone.includes(searchTerm)
   );
 
-  const CustomerDetailsDialog = ({ customer }: { customer: Customer }) => (
+  // عنصر تفاصيل العميل مع إحصائيات جديدة
+  const CustomerDetailsDialog = ({ customer }: { customer: any }) => (
     <Dialog>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
@@ -101,8 +127,9 @@ export const CustomerStatistics = ({ language = "ar", customers }: CustomerStati
         </DialogHeader>
         
         <div className="space-y-6">
-          {/* Customer Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Customer Summary (add new stat cards) */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            {/* عدد المبيعات */}
             <Card>
               <CardContent className="p-4">
                 <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -116,7 +143,22 @@ export const CustomerStatistics = ({ language = "ar", customers }: CustomerStati
                 </div>
               </CardContent>
             </Card>
-            
+            {/* إجمالي الكمية */}
+            <Card>
+              <CardContent className="p-4">
+                <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  {/* يمكن استخدام أيقونة مناسبة من lucide أو النص فقط */}
+                  <TrendingUp className="w-5 h-5 text-orange-600" />
+                  <div>
+                    <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      {language === "ar" ? "إجمالي الكمية" : "Total Quantity"}
+                    </p>
+                    <p className="text-2xl font-bold">{customer.totalQuantity.toLocaleString()}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            {/* إجمالي المبلغ */}
             <Card>
               <CardContent className="p-4">
                 <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -132,38 +174,36 @@ export const CustomerStatistics = ({ language = "ar", customers }: CustomerStati
                 </div>
               </CardContent>
             </Card>
-            
+            {/* متوسط السعر (لكل الكيلو) */}
             <Card>
               <CardContent className="p-4">
                 <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                  <Calendar className="w-5 h-5 text-purple-600" />
+                  <DollarSign className="w-5 h-5 text-yellow-600" />
                   <div>
                     <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                      {language === "ar" ? "آخر بيع" : "Last Sale"}
+                      {language === "ar" ? "متوسط السعر" : "Avg. Price/Kg"}
                     </p>
-                    <p className="font-semibold">{customer.lastSale}</p>
+                    <p className="text-2xl font-bold">{customer.averagePricePerKg.toLocaleString()} {language === "ar" ? "ريال" : "SAR"}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            
+            {/* متوسط مبلغ الفاتورة */}
             <Card>
               <CardContent className="p-4">
                 <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                  <TrendingUp className="w-5 h-5 text-orange-600" />
+                  <BarChart3 className="w-5 h-5 text-purple-600" />
                   <div>
                     <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                      {language === "ar" ? "متوسط البيع" : "Average Sale"}
+                      {language === "ar" ? "متوسط الفاتورة" : "Avg. Invoice"}
                     </p>
-                    <p className="font-semibold">
-                      {customer.averagePrice.toLocaleString()} {language === "ar" ? "ريال" : "SAR"}
-                    </p>
+                    <p className="text-2xl font-bold">{customer.averageInvoiceAmount.toLocaleString()} {language === "ar" ? "ريال" : "SAR"}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
-
+          
           {/* Sales History */}
           <Card>
             <CardHeader>
