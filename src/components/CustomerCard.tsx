@@ -1,5 +1,7 @@
 
-import { Card, CardContent, Badge, Button } from "@/components/ui";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Calendar, MessageCircle, User, DollarSign, FileText, Edit, X, Ban, CheckCircle } from "lucide-react";
 import { useCustomerLastSales } from "@/hooks/useCustomerLastSales";
 import { Customer } from "@/types";
