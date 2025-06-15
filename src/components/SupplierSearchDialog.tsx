@@ -10,9 +10,10 @@ import { useSuppliers } from "@/hooks/useSuppliers";
 interface SupplierSearchDialogProps {
   open: boolean;
   onClose: () => void;
-  onSupplierSelect: (supplier: { id: string; name: string; supplierCode: string; phone: string }) => void;
+  onSupplierSelect: (supplier: { id: string; name: string; supplierCode: string; phone: string, balance?: number }) => void;
   searchTerm: string;
   language?: string;
+  onAddSupplier?: (initialName: string) => void;
 }
 
 export const SupplierSearchDialog = ({
@@ -20,7 +21,8 @@ export const SupplierSearchDialog = ({
   onClose,
   onSupplierSelect,
   searchTerm,
-  language = "ar"
+  language = "ar",
+  onAddSupplier
 }: SupplierSearchDialogProps) => {
   const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
 
@@ -36,9 +38,16 @@ export const SupplierSearchDialog = ({
       id: supplier.id,
       name: supplier.name,
       supplierCode: supplier.supplierCode,
-      phone: supplier.phone || ''
+      phone: supplier.phone || '',
+      balance: supplier.balance
     });
     onClose();
+  };
+
+  const handleAddSupplier = () => {
+    if (onAddSupplier) {
+      onAddSupplier(localSearchTerm);
+    }
   };
 
   return (
@@ -81,10 +90,7 @@ export const SupplierSearchDialog = ({
                 {language === "ar" ? "هل تريد إضافته كمورد جديد؟" : "Would you like to add them as a new supplier?"}
               </p>
               <Button
-                onClick={() => {
-                  // Here you would typically open an "Add Supplier" dialog
-                  onClose();
-                }}
+                onClick={handleAddSupplier}
                 className="flex items-center gap-2"
                 style={{ fontFamily: 'Tajawal, sans-serif' }}
               >
@@ -126,7 +132,7 @@ export const SupplierSearchDialog = ({
                           {language === "ar" ? "المشتريات:" : "Purchases:"} {supplier.totalPurchases}
                         </span>
                         <span>
-                          {language === "ar" ? "الإجمالي:" : "Total:"} {supplier.totalAmount.toLocaleString()}
+                          {language === "ar" ? "الإجمالي:" : "Total:"} {supplier.totalAmount?.toLocaleString()}
                         </span>
                       </div>
                       {supplier.lastPurchase && (
@@ -149,10 +155,7 @@ export const SupplierSearchDialog = ({
 
           {suppliers.length > 0 && (
             <Button
-              onClick={() => {
-                // Here you would typically open an "Add Supplier" dialog
-                onClose();
-              }}
+              onClick={handleAddSupplier}
               variant="outline"
               className="w-full flex items-center gap-2"
               style={{ fontFamily: 'Tajawal, sans-serif' }}
