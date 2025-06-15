@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,9 +14,6 @@ import { TaskListWidget } from "@/components/TaskListWidget";
 import { useDailyPurchases } from "@/hooks/useDailyPurchases";
 import { BatteryTypeSelector } from "@/components/BatteryTypeSelector";
 import { toast } from "@/hooks/use-toast";
-import { SupplierSearchDialog } from "@/components/SupplierSearchDialog";
-import { AddSupplierDialog } from "@/components/AddSupplierDialog";
-import { supabase } from "@/integrations/supabase/client";
 
 const DailyPurchasesPage = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -32,13 +30,6 @@ const DailyPurchasesPage = () => {
   });
 
   const [editingId, setEditingId] = useState<string | null>(null);
-
-  const [supplierSearchOpen, setSupplierSearchOpen] = useState(false);
-  const [addSupplierDialogOpen, setAddSupplierDialogOpen] = useState(false);
-  const [addSupplierInitialName, setAddSupplierInitialName] = useState(""); // For carrying over search term
-  const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
-
-  const [lastSearchedSupplierName, setLastSearchedSupplierName] = useState("");
 
   const calculateTotals = () => {
     const total = newPurchase.quantity * newPurchase.pricePerKg;
@@ -105,136 +96,8 @@ const DailyPurchasesPage = () => {
 
   const { total, discountAmount, finalTotal } = calculateTotals();
 
-  // Display supplier info box if selectedSupplier exists
-  const SupplierInfo = () => {
-    if (!selectedSupplier) return null;
-    // تأكد من أن الرصيد ظاهر ومطبوع دومًا
-    return (
-      <div className="bg-blue-50 rounded-md p-3 mb-2 flex flex-col md:flex-row md:items-center md:gap-6" dir="rtl">
-        <span className="font-bold text-blue-900 flex items-center" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-          المورد: <span className="mx-2">{selectedSupplier.name}</span>
-          <span className="px-2">الرصيد : {selectedSupplier.balance ?? 0}</span>
-        </span>
-        {selectedSupplier.lastPurchase && (
-          <div className="text-gray-700 text-sm mt-2 md:mt-0 flex flex-wrap gap-4">
-            {Object.entries(selectedSupplier.lastPurchase).map(([batteryType, data]: any, idx) => (
-              <span key={idx}>
-                آخر توريد ({batteryType}): {data.date} | كمية: {data.quantity} | سعر: {data.price_per_kg} | منذ: {data.daysAgo} يوم
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const fetchSupplierDetails = async (supplierCode: string) => {
-    if (!supplierCode) return null;
-    // جلب بيانات الرصيد
-    const { data: sData } = await supabase
-      .from('suppliers')
-      .select('id,balance')
-      .eq('supplier_code', supplierCode)
-      .maybeSingle();
-
-    // جلب آخر توريد بحسب الأنواع
-    const { data } = await supabase
-      .from('daily_purchases')
-      .select('battery_type, date, quantity, price_per_kg')
-      .eq('supplier_code', supplierCode)
-      .order('date', { ascending: false })
-      .limit(20);
-
-    // ترتيب بأحدث لكل نوع بطارية
-    const lastPurchase: Record<string, any> = {};
-    if (data) {
-      for (const purchase of data) {
-        if (!lastPurchase[purchase.battery_type]) {
-          // احسب منذ كم يوم
-          const daysAgo = Math.floor((new Date().getTime() - new Date(purchase.date).getTime()) / (1000 * 60 * 60 * 24));
-          lastPurchase[purchase.battery_type] = { ...purchase, daysAgo };
-        }
-      }
-    }
-
-    // rصيد المورد بشكل آمن
-    console.log("Fetched supplier balance:", sData?.balance ?? 0);
-
-    return {
-      balance: (typeof sData?.balance === 'number' && !isNaN(sData.balance)) ? sData.balance : 0,
-      lastPurchase
-    };
-  };
-
-  // handler for selecting supplier
-  const handleSupplierSelect = async (supplier: any) => {
-    setNewPurchase({
-      ...newPurchase,
-      supplierName: supplier.name,
-      supplierCode: supplier.supplierCode,
-      supplierPhone: supplier.phone
-    });
-    // fetch supplier balance and last purchase
-    const details = await fetchSupplierDetails(supplier.supplierCode);
-    setSelectedSupplier({
-      ...supplier,
-      ...details
-    });
-  };
-
-  // handler Add supplier dialog
-  const handleAddSupplier = (initialName: string) => {
-    setAddSupplierDialogOpen(true);
-    setAddSupplierInitialName(initialName);
-    setSupplierSearchOpen(false);
-  };
-
-  // after supplier added
-  const handleSupplierAdded = async (supplier: any) => {
-    setAddSupplierDialogOpen(false);
-    // fetch supplier record again
-    setTimeout(() => setSupplierSearchOpen(true), 400);
-  };
-
-  // دالة عند مغادرة حقل المورد: تجلب الرصيد والمعلومات فقط إذا تغير الاسم وكان غير فارغ
-  const handleSupplierBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
-    const name = e.target.value.trim();
-    // فقط إذا تغير الاسم أو لم يتم تحميل المورد مسبقًا
-    if (name && name !== lastSearchedSupplierName) {
-      setLastSearchedSupplierName(name);
-      // محاولة البحث عن مورد بنفس الاسم أو الكود 
-      if (newPurchase.supplierCode) {
-        const details = await fetchSupplierDetails(newPurchase.supplierCode);
-        setSelectedSupplier({
-          ...newPurchase,
-          ...details,
-          name: newPurchase.supplierName,
-        });
-      } else {
-        setSelectedSupplier(null);
-      }
-    }
-  };
-
   return (
     <div className="space-y-6">
-      {/* إضافة دايلاوج بحث المورد */}
-      <SupplierSearchDialog
-        open={supplierSearchOpen}
-        onClose={() => setSupplierSearchOpen(false)}
-        searchTerm={newPurchase.supplierName}
-        onSupplierSelect={handleSupplierSelect}
-        language="ar"
-        onAddSupplier={handleAddSupplier}
-      />
-      <AddSupplierDialog
-        open={addSupplierDialogOpen}
-        onClose={() => setAddSupplierDialogOpen(false)}
-        onSupplierAdded={handleSupplierAdded}
-        language="ar"
-        nextSupplierCode={null}
-      />
-
       {/* Header */}
       <Card className="shadow-lg">
         <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 text-white">
@@ -251,9 +114,6 @@ const DailyPurchasesPage = () => {
         onDateChange={setSelectedDate}
         onClearData={handleClearDay}
       />
-
-      {/* Supplier info box before the purchase form */}
-      <SupplierInfo />
 
       {/* Add New Purchase Form */}
       <Card>
@@ -274,9 +134,6 @@ const DailyPurchasesPage = () => {
                 onChange={(e) => setNewPurchase({ ...newPurchase, supplierName: e.target.value })}
                 placeholder="أدخل اسم المورد"
                 style={{ fontFamily: 'Tajawal, sans-serif' }}
-                onFocus={() => setSupplierSearchOpen(true)}
-                readOnly={false}
-                onBlur={handleSupplierBlur}
               />
             </div>
 
