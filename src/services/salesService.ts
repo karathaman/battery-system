@@ -271,8 +271,11 @@ const salesService = {
       throw new Error('فشل في جلب بيانات الفاتورة الأصلية');
     }
 
+    console.log('Original sale payment method:', originalSale.payment_method);
+
     // Revert the original sale effects
-    if (originalSale.payment_method === 'check') { // credit sales
+    if (originalSale.payment_method === 'check') { // credit sales are stored as 'check' in DB
+      console.log('Reverting customer balance for credit sale:', originalSale.total);
       await updateCustomerBalance(originalSale.customer_id, originalSale.total, false);
     }
 
@@ -286,18 +289,19 @@ const salesService = {
     }
 
     // Update the sale
+    const updateData: any = {};
+    if (data.customer_id !== undefined) updateData.customer_id = data.customer_id;
+    if (data.date !== undefined) updateData.date = data.date;
+    if (data.subtotal !== undefined) updateData.subtotal = data.subtotal;
+    if (data.discount !== undefined) updateData.discount = data.discount;
+    if (data.tax !== undefined) updateData.tax = data.tax;
+    if (data.total !== undefined) updateData.total = data.total;
+    if (data.payment_method !== undefined) updateData.payment_method = mapPaymentMethod(data.payment_method);
+    if (data.notes !== undefined) updateData.notes = data.notes;
+
     const { error: saleError } = await supabase
       .from('sales')
-      .update({
-        customer_id: data.customer_id,
-        date: data.date,
-        subtotal: data.subtotal,
-        discount: data.discount,
-        tax: data.tax,
-        total: data.total,
-        payment_method: data.payment_method ? mapPaymentMethod(data.payment_method) : undefined,
-        notes: data.notes
-      })
+      .update(updateData)
       .eq('id', id);
 
     if (saleError) {
@@ -336,7 +340,9 @@ const salesService = {
       }
 
       // Apply new sale effects
+      console.log('New payment method:', data.payment_method);
       if (data.payment_method === 'credit' && data.customer_id && data.total) {
+        console.log('Adding customer balance for credit sale:', data.total);
         await updateCustomerBalance(data.customer_id, data.total, true);
       }
 
