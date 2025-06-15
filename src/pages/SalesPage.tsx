@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { ShoppingCart, Plus, Search, CreditCard, Banknote, Smartphone, Calendar, Printer, Edit, Trash2 } from "lucide-react";
+import { ShoppingCart, Plus, Search, Calendar, Printer, Edit, Trash2, Banknote, CreditCard } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Sale, SaleItem } from "@/types/sales";
 import { printInvoice } from "@/utils/printUtils";
@@ -23,9 +22,7 @@ interface ExtendedSaleItem extends SaleItem {
 
 const paymentMethods = [
   { value: "cash", label: "نقداً", icon: Banknote },
-  { value: "card", label: "بطاقة", icon: CreditCard },
-  { value: "transfer", label: "تحويل", icon: Smartphone },
-  { value: "credit", label: "آجل", icon: Calendar }
+  { value: "credit", label: "آجل", icon: CreditCard }
 ];
 
 const SalesPage = () => {
@@ -326,7 +323,7 @@ const SalesPage = () => {
               {/* Payment Method */}
               <div>
                 <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>طريقة الدفع</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+                <div className="grid grid-cols-2 gap-2 mt-2">
                   {paymentMethods.map(method => {
                     const Icon = method.icon;
                     return (

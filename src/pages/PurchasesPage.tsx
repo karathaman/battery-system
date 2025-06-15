@@ -1,11 +1,10 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ShoppingCart, Search, Plus, Calendar, DollarSign, TrendingUp, Users, Edit, Printer, Trash2, Banknote, CreditCard, Smartphone } from "lucide-react";
+import { ShoppingCart, Search, Plus, Calendar, DollarSign, TrendingUp, Users, Edit, Printer, Trash2, Banknote, CreditCard } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { BatteryTypeSelector } from "@/components/BatteryTypeSelector";
 import { PurchaseItem } from "@/types/purchases";
@@ -16,8 +15,6 @@ import { Purchase as ServicePurchase, PurchaseFormData } from "@/services/purcha
 
 const paymentMethodMap: Record<string, "cash" | "card" | "bank_transfer" | "check"> = {
   "نقداً": "cash",
-  "بطاقة": "card", 
-  "تحويل": "bank_transfer",
   "آجل": "check"
 };
 
@@ -501,12 +498,10 @@ const PurchasesPage = () => {
 
             <div>
               <Label style={{ fontFamily: 'Tajawal, sans-serif' }}>طريقة الدفع</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+              <div className="grid grid-cols-2 gap-2 mt-2">
                   {[
-                    { value: "نقداً", label: "نقداً", icon: DollarSign },
-                    { value: "بطاقة", label: "بطاقة", icon: CreditCard },
-                    { value: "تحويل", label: "تحويل", icon: Banknote },
-                    { value: "آجل", label: "آجل", icon: Smartphone }
+                    { value: "نقداً", label: "نقداً", icon: Banknote },
+                    { value: "آجل", label: "آجل", icon: CreditCard }
                   ].map(method => {
                     const Icon = method.icon;
                     return (
@@ -575,58 +570,57 @@ const PurchasesPage = () => {
         </CardContent>
       </Card>
 
-      {/* Purchases List */}
+      {/* Statistics */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 px-5 py-5 gap-4 mb-6">
+        <Card>
+          <CardContent className="p-4 text-center">
+            <ShoppingCart className="w-8 h-8 mx-auto mb-2 text-green-600" />
+            <p className="text-2xl font-bold">{purchases.length}</p>
+            <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+              إجمالي المشتريات
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 text-center">
+            <img src="/assets/icons/SaudiRG.svg" alt="Custom Icon" className="w-8 h-8 mx-auto mb-2" />
+            <p className="text-2xl font-bold">
+              {purchases.reduce((sum, p) => sum + p.total, 0).toFixed(2)}
+            </p>
+            <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+              إجمالي القيمة
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 text-center">
+            <TrendingUp className="w-8 h-8 mx-auto mb-2 text-purple-600" />
+            <p className="text-2xl font-bold">
+              {purchases.reduce((sum, p) => sum + p.tax, 0).toFixed(2)}
+            </p>
+            <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+              إجمالي الضريبة
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="mb-6 px-5">
+        <div className="relative">
+          <Search className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="ابحث عن فاتورة مشتريات..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pr-10 text-sm"
+            style={{ fontFamily: 'Tajawal, sans-serif' }}
+          />
+        </div>
+      </div>
+
       <Card>
-        {/* Statistics */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 px-5 py-5 gap-4 mb-6">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <ShoppingCart className="w-8 h-8 mx-auto mb-2 text-green-600" />
-              <p className="text-2xl font-bold">{purchases.length}</p>
-              <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                إجمالي المشتريات
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4 text-center">
-              <img src="/assets/icons/SaudiRG.svg" alt="Custom Icon" className="w-8 h-8 mx-auto mb-2" />
-              <p className="text-2xl font-bold">
-                {purchases.reduce((sum, p) => sum + p.total, 0).toFixed(2)}
-              </p>
-              <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                إجمالي القيمة
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4 text-center">
-              <TrendingUp className="w-8 h-8 mx-auto mb-2 text-purple-600" />
-              <p className="text-2xl font-bold">
-                {purchases.reduce((sum, p) => sum + p.tax, 0).toFixed(2)}
-              </p>
-              <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                إجمالي الضريبة
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="mb-6 px-5">
-          <div className="relative">
-            <Search className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="ابحث عن فاتورة مشتريات..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pr-10 text-sm"
-              style={{ fontFamily: 'Tajawal, sans-serif' }}
-            />
-          </div>
-        </div>
-
         <CardHeader>
           <CardTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>قائمة المشتريات</CardTitle>
         </CardHeader>
