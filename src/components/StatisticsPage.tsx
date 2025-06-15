@@ -10,7 +10,8 @@ import {
   Truck,
   FileText,
   Calendar,
-  Filter
+  Filter,
+  BarChart
 } from 'lucide-react';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useSales } from '@/hooks/useSales';
@@ -257,7 +258,7 @@ export const StatisticsPage = ({ language, onTabChange }: StatisticsPageProps) =
         <Card>
           <CardHeader>
             <CardTitle className={`flex items-center gap-2 justify-center ${isRTL ? 'flex-row-reverse' : ''}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
-              <BarChartIcon className="w-5 h-5" />
+              <BarChart className="w-5 h-5" />
               {language === "ar" ? "المبيعات والمشتريات (آخر 6 أشهر)" : "Sales vs Purchases (6 Months)"}
             </CardTitle>
           </CardHeader>
