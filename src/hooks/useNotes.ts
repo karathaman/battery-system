@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -113,6 +112,7 @@ const notesService = {
   },
 
   updateNote: async (id: string, data: Partial<NoteFormData>): Promise<Note> => {
+    // Update the note
     const { data: noteData, error: noteError } = await supabase
       .from('notes')
       .update({
@@ -128,6 +128,38 @@ const notesService = {
     if (noteError) {
       console.error('Error updating note:', noteError);
       throw new Error(noteError.message);
+    }
+
+    // If it's a checklist and has checklist_items, update them
+    if (data.type === 'checklist' && data.checklist_items !== undefined) {
+      // First, delete existing checklist items
+      const { error: deleteError } = await supabase
+        .from('checklist_items')
+        .delete()
+        .eq('note_id', id);
+
+      if (deleteError) {
+        console.error('Error deleting old checklist items:', deleteError);
+        throw new Error(deleteError.message);
+      }
+
+      // Then, insert new checklist items if any
+      if (data.checklist_items.length > 0) {
+        const { error: itemsError } = await supabase
+          .from('checklist_items')
+          .insert(
+            data.checklist_items.map(item => ({
+              note_id: id,
+              text: item.text,
+              completed: item.completed
+            }))
+          );
+
+        if (itemsError) {
+          console.error('Error creating new checklist items:', itemsError);
+          throw new Error(itemsError.message);
+        }
+      }
     }
 
     return {
