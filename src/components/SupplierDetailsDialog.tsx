@@ -283,7 +283,7 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
 
       // إدراج فواتير المشتريات (الآجلة والنقدية)
       (purchases || []).forEach(purchase => {
-        // هنا نميز الفاتورة "آجلة" إذا كان payment_method != 'cash'
+        // هنا نميز الفاتورة "آجل" إذا كان payment_method != 'cash'
         const isCredit = purchase.payment_method !== 'cash' && !!purchase.invoice_number;
         entries.push({
           id: purchase.id,
@@ -295,7 +295,7 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
           debit: purchase.total,
           credit: 0,
           balance: 0,
-          reference: purchase.invoice_number || '-'
+          reference: purchase.invoice_number ? purchase.invoice_number : '-', // هنا نضيف رقم الفاتورة إذا موجود
         });
       });
 
@@ -727,7 +727,10 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
                               <td className={`border px-3 py-2 text-center font-bold ${entry.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                 {entry.balance.toLocaleString()}
                               </td>
-                              <td className="border px-3 py-2 text-center">{entry.reference || "-"}</td>
+                              {/* هنا نظهر رقم الفاتورة إذا وجد (reference), وليس مجرد "-" */}
+                              <td className="border px-3 py-2 text-center">
+                                {entry.reference && entry.reference !== '-' ? entry.reference : "-"}
+                              </td>
                             </tr>
                           ))
                         )}
