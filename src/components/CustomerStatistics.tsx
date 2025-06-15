@@ -61,27 +61,29 @@ export const CustomerStatistics = ({
   const isRTL = language === "ar";
   const { sales, isLoading } = useSales();
 
-  // يتم احتساب إحصائيات العميل ديناميكيًا من جداول المبيعات
+  // يتم احتساب إحصائيات العميل حصريًا من جداول المبيعات (sales ONLY)
   const mappedCustomers = customers.map((customer) => {
-    // مبيعات العميل من جميع الفواتير
+    // جميع مبيعات العميل من جدول المبيعات فقط
     const customerSales = (sales || []).filter(
       (sale) => sale.customerId === customer.id
     );
 
-    // مجموع الكمية والإجمالي ومعدل السعر
+    // إحصائيات العميل من مبيعاته فقط (sales + sale_items)
     let totalQuantity = 0;
     let totalAmount = 0;
     let totalWeightedPrice = 0;
     let totalSaleCount = customerSales.length;
 
     customerSales.forEach((sale) => {
+      // اجمع إجماليات الأصناف من sale_items
       if (Array.isArray(sale.items) && sale.items.length) {
         sale.items.forEach((item) => {
-          totalQuantity += item.quantity || 0;
-          totalWeightedPrice += (item.price || 0) * (item.quantity || 0);
+          totalQuantity += Number(item.quantity) || 0;
+          totalWeightedPrice += (Number(item.price) || 0) * (Number(item.quantity) || 0);
         });
       }
-      totalAmount += sale.total || 0;
+      // اجمع إجمالي المبلغ للفاتورة كاملة
+      totalAmount += Number(sale.total) || 0;
     });
 
     const averagePricePerKg =
@@ -90,7 +92,7 @@ export const CustomerStatistics = ({
     const averageInvoiceAmount =
       totalSaleCount > 0 ? Math.round(totalAmount / totalSaleCount) : 0;
 
-    // آخر تاريخ بيع للعميل
+    // آخر تاريخ بيع (الأحدث)
     const lastSaleObj = customerSales.length
       ? [...customerSales].sort(
           (a, b) =>
@@ -101,7 +103,16 @@ export const CustomerStatistics = ({
 
     return {
       ...customer,
-      sales: customerSales,
+      sales: customerSales.map((sale) => ({
+        id: sale.id,
+        date: sale.date,
+        batteryType: sale.items && sale.items[0] ? sale.items[0].batteryType : '', // أول نوع كتمثيل (ممكن تطوير لاحقاً)
+        quantity: sale.items && sale.items[0] ? sale.items[0].quantity : 0,
+        pricePerKg: sale.items && sale.items[0] ? sale.items[0].price : 0,
+        total: sale.total,
+        discount: sale.discount ?? 0,
+        finalTotal: sale.total - (sale.discount ?? 0),
+      })),
       totalSales: totalSaleCount,
       totalQuantity,
       totalAmount,
