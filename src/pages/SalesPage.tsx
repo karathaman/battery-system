@@ -17,6 +17,11 @@ import { useBatteryTypes } from "@/hooks/useBatteryTypes";
 import { SaleFormData, ExtendedSale } from "@/services/salesService";
 import { AlertCircle } from "lucide-react";
 import { InvoiceDialog } from "@/components/InvoiceDialog";
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Save, FileDown, FileText } from "lucide-react";
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
 
 interface ExtendedSaleItem extends SaleItem {
   batteryTypeId: string;
@@ -40,6 +45,10 @@ const SalesPage = () => {
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [dialogInvoice, setDialogInvoice] = useState<ExtendedSale | null>(null);
+  const [confirmDeleteSaleId, setConfirmDeleteSaleId] = useState<string | null>(null);
+
+  const [salesSearch, setSalesSearch] = useState("");
+  const [salesFilterDate, setSalesFilterDate] = useState("");
 
   const { sales, createSale, updateSale, deleteSale, isCreating, isUpdating, isDeleting } = useSales();
   const { batteryTypes, isLoading: batteryTypesLoading } = useBatteryTypes();
@@ -197,6 +206,41 @@ const SalesPage = () => {
     setSelectedCustomer(customer);
     setShowCustomerDialog(false);
   };
+
+  // تصدير كشف الحساب للعميل إلى Excel
+  const exportSalesToExcel = () => {
+    if (!sales.length) return;
+    const ws = XLSX.utils.json_to_sheet(sales.map(sale => ({
+      "رقم الفاتورة": sale.invoiceNumber,
+      "اسم العميل": sale.customerName,
+      "التاريخ": sale.date,
+      "المجموع": sale.total,
+      "الطريقة": sale.paymentMethod === "credit" ? "آجل" : "نقداً"
+    })));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "كشف حساب المبيعات");
+    XLSX.writeFile(wb, "sales-account.xlsx");
+  };
+
+  // تصدير كشف الحساب إلى PDF
+  const exportSalesToPDF = () => {
+    const doc = new jsPDF();
+    doc.text("كشف حساب المبيعات:", 10, 10);
+    let y = 20;
+    sales.forEach(sale => {
+      doc.text(`فاتورة: ${sale.invoiceNumber} | عميل: ${sale.customerName} | التاريخ: ${sale.date} | الإجمالي: ${sale.total} | طريقة: ${sale.paymentMethod === "credit" ? "آجل" : "نقداً"}`, 10, y);
+      y += 8;
+      if (y > 270) { doc.addPage(); y = 20; }
+    });
+    doc.save("sales-account.pdf");
+  };
+
+  // تصفية قائمة آخر المبيعات
+  const filteredSales = sales
+    .filter(sale => (
+      (!salesSearch || sale.customerName.includes(salesSearch)) &&
+      (!salesFilterDate || sale.date.startsWith(salesFilterDate))
+    ));
 
   return (
     <div className="space-y-6">
@@ -394,7 +438,7 @@ const SalesPage = () => {
           </Card>
         </div>
 
-        {/* Invoice Summary */}
+        {/* Invoice Summary & قائمة آخر الفواتير + خيارات البحث والتصدير */}
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -434,17 +478,42 @@ const SalesPage = () => {
             </CardContent>
           </Card>
 
-          {/* Recent Sales */}
+          {/* البحث والتصفية و أزرار التصدير */}
           {sales.length > 0 && (
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-col items-start gap-2">
                 <CardTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
                   آخر بيع
                 </CardTitle>
+                <div className="flex flex-wrap gap-2 mb-2 w-full">
+                  <Input
+                    placeholder="بحث باسم العميل"
+                    className="w-44"
+                    value={salesSearch}
+                    onChange={e => setSalesSearch(e.target.value)}
+                  />
+                  <Input
+                    type="date"
+                    className="w-44"
+                    value={salesFilterDate}
+                    onChange={e => setSalesFilterDate(e.target.value)}
+                  />
+                  <Button variant="outline" onClick={exportSalesToExcel} className="flex gap-1">
+                    <FileDown className="w-4 h-4" /> تصدير Excel
+                  </Button>
+                  <Button variant="outline" onClick={exportSalesToPDF} className="flex gap-1">
+                    <FileText className="w-4 h-4" /> تصدير PDF
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
+                {isLoading ? (
+                  <div className="flex justify-center py-10">
+                    <LoadingSpinner size="lg" />
+                  </div>
+                ) : (
                 <div className="space-y-3">
-                  {sales.slice(0, 5).map(sale => {
+                  {filteredSales.slice(0, 5).map(sale => {
                     // helper to show payment method as فقط "آجل" أو "نقداً"
                     let paymentMethodLabel = "نقداً";
                     let badgeVariant: "default" | "destructive" = "default";
@@ -462,10 +531,10 @@ const SalesPage = () => {
                               {sale.customerName}
                             </p>
                             <Badge
-                              variant={badgeVariant}
+                              variant={sale.paymentMethod === "credit" || sale.paymentMethod === "check" ? "destructive" : "default"}
                               className="text-xs mt-1"
                             >
-                              {paymentMethodLabel}
+                              {sale.paymentMethod === "credit" || sale.paymentMethod === "check" ? "آجل" : "نقداً"}
                             </Badge>
                           </div>
                           <div className="text-left flex gap-1 items-center">
@@ -495,21 +564,43 @@ const SalesPage = () => {
                             >
                               <Edit className="w-3 h-3" />
                             </Button>
-                            <Button 
-                              variant="destructive" 
-                              size="sm" 
-                              onClick={() => handleDeleteSale(sale)}
-                              title="حذف"
-                              disabled={isDeleting}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
+                            {/* زر الحذف مع التأكيد */}
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button 
+                                  variant="destructive" 
+                                  size="sm" 
+                                  title="حذف"
+                                  disabled={isDeleting}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>تأكيد حذف الفاتورة</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    هل أنت متأكد أنك تريد حذف هذه الفاتورة؟ لا يمكن التراجع بعد الحذف.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDeleteSale(sale)}>
+                                    نعم، حذف
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </div>
                       </div>
                     );
                   })}
+                  {filteredSales.length === 0 && (
+                    <div className="text-center text-muted-foreground py-4">لا توجد فواتير مطابقة</div>
+                  )}
                 </div>
+                )}
               </CardContent>
             </Card>
           )}
