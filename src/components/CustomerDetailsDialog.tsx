@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Phone, Calendar, Package, DollarSign, TrendingUp, ShoppingCart, MessageCircle, FileText, FileExcel, FilePdf } from "lucide-react";
+import { User, Phone, Calendar, Package, DollarSign, TrendingUp, ShoppingCart, MessageCircle, FileText, FileExcel, FilePdf, File } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { exportAccountStatementToExcel, exportAccountStatementToPDF } from "@/utils/accountExportUtils";
@@ -539,7 +539,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
                   </TabsContent>
 
                   <TabsContent value="statement">
-                    {/* --- أزرار التصدير الجدد لمشاركة كشف الحساب --- */}
+                    {/* --- أزرار التصدير الجديدة لمشاركة كشف الحساب --- */}
                     {accountStatement.length > 0 && (
                       <div className="mb-3 flex gap-2 justify-end">
                         <button
@@ -567,7 +567,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
                             });
                           }}
                         >
-                          <FileExcel className="w-4 h-4" /> مشاركة كـ Excel
+                          <File className="w-4 h-4" /> مشاركة كـ Excel
                         </button>
                         <button
                           className="flex items-center gap-2 bg-blue-600 text-white py-1 px-3 rounded shadow hover:bg-blue-700 text-sm transition-all"
@@ -595,7 +595,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
                             });
                           }}
                         >
-                          <FilePdf className="w-4 h-4" /> مشاركة كـ PDF
+                          <File className="w-4 h-4" /> مشاركة كـ PDF
                         </button>
                       </div>
                     )}
