@@ -1,7 +1,8 @@
 
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+// الحل الصحيح لاستيراد autotype للـ jsPDF، يجب استيراده بهذه الطريقة:
+import autoTable from "jspdf-autotable";
 
 // columns: { title: string, key: string, format?: (x:any) => string }
 export function exportAccountStatementToExcel({
@@ -42,8 +43,8 @@ export function exportAccountStatementToPDF({
   // @ts-ignore
   doc.setFont("tajawal", "normal");
   doc.text(title, 14, 14, { align: "right" });
-  // @ts-ignore
-  doc.autoTable({
+  // يجب استخدام autoTable مباشرة
+  autoTable(doc, {
     head: [columns.map((col) => col.title)],
     body: data.map((row) =>
       columns.map((col) =>
