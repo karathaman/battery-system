@@ -250,14 +250,24 @@ export const StatisticsPage = ({ language, onTabChange }: StatisticsPageProps) =
     }
   }
 
-  // --- الشيفرة الجديدة: تجميع البطاريات المباعة والمشتراة ---
-  // 1- تجميع المنتجات للمبيعات
+  // --- شيفرة الفلاتر للأكثر مبيعًا وشراءً ---
+  const [soldSortBy, setSoldSortBy] = useState<'quantity' | 'total'>('quantity');
+  const [soldSortDir, setSoldSortDir] = useState<'asc' | 'desc'>('desc');
+  const [purchasedSortBy, setPurchasedSortBy] = useState<'quantity' | 'total'>('quantity');
+  const [purchasedSortDir, setPurchasedSortDir] = useState<'asc' | 'desc'>('desc');
+
+  // استخراج اسم الصنف بشكل مضمون
+  function getBatteryName(bt: string | null | undefined) {
+    if (!bt || bt === "null" || bt === "undefined") return "-";
+    return String(bt);
+  }
+
+  // --- تجميع الأصناف (مبيعات) ---
   const salesProductStats: Record<string, { name: string, quantity: number, total: number }> = {};
   (sales || []).forEach(sale => {
     const items = sale.sale_items || sale.items || [];
     items.forEach((item: any) => {
-      // احصل على اسم المنتج من البطارية المرتبطة إذا توفرت
-      const btName = (item.battery_types?.name || item.batteryType || item.battery_type || "-");
+      const btName = getBatteryName(item?.battery_types?.name || item?.batteryType || item?.battery_type);
       if (!salesProductStats[btName]) {
         salesProductStats[btName] = { name: btName, quantity: 0, total: 0 };
       }
@@ -265,17 +275,20 @@ export const StatisticsPage = ({ language, onTabChange }: StatisticsPageProps) =
       salesProductStats[btName].total += Number(item.total) || 0;
     });
   });
-  // ترتيب بحسب الكمية المباعة
-  const topSoldProducts = Object.values(salesProductStats)
-    .sort((a, b) => b.quantity - a.quantity)
+
+  let topSoldProducts = Object.values(salesProductStats)
+    .sort((a,b) => soldSortDir === 'asc'
+      ? (a[soldSortBy] - b[soldSortBy])
+      : (b[soldSortBy] - a[soldSortBy])
+    )
     .slice(0, 5);
 
-  // 2- تجميع المنتجات للمشتريات
+  // --- تجميع الأصناف (مشتريات) ---
   const purchasesProductStats: Record<string, { name: string, quantity: number, total: number }> = {};
   (purchases || []).forEach(purchase => {
     const items = purchase.purchase_items || purchase.items || [];
     items.forEach((item: any) => {
-      const btName = (item.battery_types?.name || item.batteryType || item.battery_type || "-");
+      const btName = getBatteryName(item?.battery_types?.name || item?.batteryType || item?.battery_type);
       if (!purchasesProductStats[btName]) {
         purchasesProductStats[btName] = { name: btName, quantity: 0, total: 0 };
       }
@@ -283,9 +296,12 @@ export const StatisticsPage = ({ language, onTabChange }: StatisticsPageProps) =
       purchasesProductStats[btName].total += Number(item.total) || 0;
     });
   });
-  // ترتيب بحسب الكمية المشتراة
-  const topPurchasedProducts = Object.values(purchasesProductStats)
-    .sort((a, b) => b.quantity - a.quantity)
+
+  let topPurchasedProducts = Object.values(purchasesProductStats)
+    .sort((a,b) => purchasedSortDir === 'asc'
+      ? (a[purchasedSortBy] - b[purchasedSortBy])
+      : (b[purchasedSortBy] - a[purchasedSortBy])
+    )
     .slice(0, 5);
 
   return (
@@ -581,6 +597,26 @@ export const StatisticsPage = ({ language, onTabChange }: StatisticsPageProps) =
             <CardTitle className="text-lg" style={{ fontFamily: 'Tajawal, sans-serif' }}>
               {language === "ar" ? "أفضل المنتجات مبيعًا" : "Top Sold Products"}
             </CardTitle>
+            {/* فلتر */}
+            <div className="flex gap-2 mt-2">
+              <select
+                className="border rounded px-2 py-1 text-sm"
+                value={soldSortBy}
+                onChange={e => setSoldSortBy(e.target.value as 'quantity' | 'total')}
+              >
+                <option value="quantity">{language==="ar"?"الكمية":"Quantity"}</option>
+                <option value="total">{language==="ar"?"المبلغ":"Total Amount"}</option>
+              </select>
+              <button
+                type="button"
+                className="border rounded px-2 py-1 text-sm"
+                onClick={() => setSoldSortDir(soldSortDir==="asc"?"desc":"asc")}
+              >
+                {soldSortDir === "asc" 
+                  ? (language==="ar" ? "تصاعدي" : "Ascending")
+                  : (language==="ar" ? "تنازلي" : "Descending")}
+              </button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -595,7 +631,7 @@ export const StatisticsPage = ({ language, onTabChange }: StatisticsPageProps) =
                 <tbody>
                   {topSoldProducts.map((prod, i) => (
                     <tr key={prod.name + i} className="border-b">
-                      <td className="p-2 font-medium">{prod.name}</td>
+                      <td className="p-2 font-medium">{getBatteryName(prod.name)}</td>
                       <td className="p-2">{prod.quantity.toLocaleString()}</td>
                       <td className="p-2">{prod.total.toLocaleString()} {language === "ar" ? "ريال" : "SAR"}</td>
                     </tr>
@@ -619,6 +655,26 @@ export const StatisticsPage = ({ language, onTabChange }: StatisticsPageProps) =
             <CardTitle className="text-lg" style={{ fontFamily: 'Tajawal, sans-serif' }}>
               {language === "ar" ? "أفضل المنتجات شراءً" : "Top Purchased Products"}
             </CardTitle>
+            {/* فلتر */}
+            <div className="flex gap-2 mt-2">
+              <select
+                className="border rounded px-2 py-1 text-sm"
+                value={purchasedSortBy}
+                onChange={e => setPurchasedSortBy(e.target.value as 'quantity' | 'total')}
+              >
+                <option value="quantity">{language==="ar"?"الكمية":"Quantity"}</option>
+                <option value="total">{language==="ar"?"المبلغ":"Total Amount"}</option>
+              </select>
+              <button
+                type="button"
+                className="border rounded px-2 py-1 text-sm"
+                onClick={() => setPurchasedSortDir(purchasedSortDir==="asc"?"desc":"asc")}
+              >
+                {purchasedSortDir === "asc" 
+                  ? (language==="ar" ? "تصاعدي" : "Ascending")
+                  : (language==="ar" ? "تنازلي" : "Descending")}
+              </button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -633,7 +689,7 @@ export const StatisticsPage = ({ language, onTabChange }: StatisticsPageProps) =
                 <tbody>
                   {topPurchasedProducts.map((prod, i) => (
                     <tr key={prod.name + i} className="border-b">
-                      <td className="p-2 font-medium">{prod.name}</td>
+                      <td className="p-2 font-medium">{getBatteryName(prod.name)}</td>
                       <td className="p-2">{prod.quantity.toLocaleString()}</td>
                       <td className="p-2">{prod.total.toLocaleString()} {language === "ar" ? "ريال" : "SAR"}</td>
                     </tr>
