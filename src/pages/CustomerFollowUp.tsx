@@ -20,6 +20,8 @@ const CustomerFollowUp = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [sortField, setSortField] = useState("balance");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   const filters: FilterOptions = {
     searchTerm,
@@ -103,6 +105,22 @@ const CustomerFollowUp = () => {
     const differenceInTime = currentDate.getTime() - lastSaleDate.getTime();
     return Math.floor(differenceInTime / (1000 * 3600 * 24));
   };
+
+  // فرز العملاء حسب الفلتر المختار
+  const sortedCustomers = [...customers].sort((a, b) => {
+    let aValue: any = a[sortField as keyof Customer] ?? 0;
+    let bValue: any = b[sortField as keyof Customer] ?? 0;
+    // آخر بيع يحتاج تحويل لتاريخ
+    if (sortField === "lastSale") {
+      aValue = aValue ? new Date(aValue).getTime() : 0;
+      bValue = bValue ? new Date(bValue).getTime() : 0;
+    }
+    if (sortDirection === "asc") {
+      return aValue - bValue;
+    } else {
+      return bValue - aValue;
+    }
+  });
 
   if (isLoading) {
     return (
@@ -210,6 +228,34 @@ const CustomerFollowUp = () => {
               </Select>
             </div>
 
+            <div className="flex-1 min-w-0">
+              <label className="text-sm font-medium text-gray-700 block mb-2" style={{ fontFamily: "Tajawal, sans-serif" }}>
+                ترتيب حسب
+              </label>
+              <div className="flex gap-2">
+                <Select value={sortField} onValueChange={setSortField}>
+                  <SelectTrigger className="text-right w-32" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="balance">الرصيد</SelectItem>
+                    <SelectItem value="lastSale">آخر عملية بيع</SelectItem>
+                    <SelectItem value="totalSoldQuantity">مجموع الكميات</SelectItem>
+                    <SelectItem value="totalAmount">إجمالي المبالغ</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={sortDirection} onValueChange={val => setSortDirection(val as "asc" | "desc")}>
+                  <SelectTrigger className="text-right w-28" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="asc">تصاعدي</SelectItem>
+                    <SelectItem value="desc">تنازلي</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0 w-full sm:w-auto sm:items-end">
               <Button
                 onClick={() => {
@@ -237,7 +283,7 @@ const CustomerFollowUp = () => {
       </Card>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {customers.map(customer => (
+        {sortedCustomers.map(customer => (
           <Card
             key={customer.id}
             className={`shadow-md hover:shadow-lg transition-shadow ${customer.isBlocked ? 'border-red-200 bg-red-50' : customer.description?.includes("عميل مميز") ? 'border-green-200 bg-green-50 ' : ''}`}

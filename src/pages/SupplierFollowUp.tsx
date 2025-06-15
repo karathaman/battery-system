@@ -11,6 +11,7 @@ import { SupplierDetailsDialog } from "@/components/SupplierDetailsDialog";
 import { EditSupplierDialog } from "@/components/EditSupplierDialog";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { supabase } from "@/integrations/supabase/client"; // تأكد من أن المسار صحيح حسب مشروعك
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const SupplierFollowUp = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -36,7 +37,8 @@ const SupplierFollowUp = () => {
     isDeleting
   } = useSuppliers(1, 50, { searchTerm });
 
- 
+  const [sortField, setSortField] = useState("balance");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   const generateNextSupplierCode = () => {
     if (suppliers.length === 0) return "S001";
@@ -64,7 +66,7 @@ const SupplierFollowUp = () => {
     ];
   
     // إعداد الصفوف
-    const rows = filteredSuppliers.map(supplier => [
+    const rows = sortedSuppliers.map(supplier => [
       supplier.supplierCode,
       supplier.name,
       supplier.phone,
@@ -216,68 +218,81 @@ const SupplierFollowUp = () => {
   const [filterLastMessageDays, setFilterLastMessageDays] = useState<number | "never" | null>(null); // فلتر آخر رسالة
   const [filterLastPurchaseDays, setFilterLastPurchaseDays] = useState<number | null>(null); // فلتر آخر توريد
 
-const filteredSuppliers = suppliers.filter(supplier => {
-  const matchesSearchTerm =
-    supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    supplier.phone.includes(searchTerm) ||
-    supplier.supplierCode.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredSuppliers = suppliers.filter(supplier => {
+    const matchesSearchTerm =
+      supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      supplier.phone.includes(searchTerm) ||
+      supplier.supplierCode.toLowerCase().includes(searchTerm.toLowerCase());
 
-  const matchesDescription =
-    filterDescription === "" || supplier.description?.includes(filterDescription);
+    const matchesDescription =
+      filterDescription === "" || supplier.description?.includes(filterDescription);
 
-  const matchesLastMessage =
-    filterLastMessageDays === null ||
-    (filterLastMessageDays === "never"
-      ? !supplier.lastMessageSent
-      : supplier.lastMessageSent &&
-        getDaysSinceLastMessage(supplier.lastMessageSent) <= filterLastMessageDays);
+    const matchesLastMessage =
+      filterLastMessageDays === null ||
+      (filterLastMessageDays === "never"
+        ? !supplier.lastMessageSent
+        : supplier.lastMessageSent &&
+          getDaysSinceLastMessage(supplier.lastMessageSent) <= filterLastMessageDays);
 
-  const matchesLastPurchase =
-    filterLastPurchaseDays === null ||
-    (supplier.lastPurchase &&
-      getDaysSinceLastPurchase(supplier.lastPurchase) >= filterLastPurchaseDays); // تعديل الشرط ليشمل الموردين الذين مر على آخر توريد لهم عدد الأيام المحدد
+    const matchesLastPurchase =
+      filterLastPurchaseDays === null ||
+      (supplier.lastPurchase &&
+        getDaysSinceLastPurchase(supplier.lastPurchase) >= filterLastPurchaseDays); // تعديل الشرط ليشمل الموردين الذين مر على آخر توريد لهم عدد الأيام المحدد
 
-  return matchesSearchTerm && matchesDescription && matchesLastMessage && matchesLastPurchase;
-});
+    return matchesSearchTerm && matchesDescription && matchesLastMessage && matchesLastPurchase;
+  });
 
+  // فرز الموردين حسب الفلتر المختار
+  const sortedSuppliers = [...filteredSuppliers].sort((a, b) => {
+    let aValue: any = a[sortField as keyof typeof a] ?? 0;
+    let bValue: any = b[sortField as keyof typeof b] ?? 0;
+    if (sortField === "lastPurchase") {
+      aValue = aValue ? new Date(aValue).getTime() : 0;
+      bValue = bValue ? new Date(bValue).getTime() : 0;
+    }
+    if (sortDirection === "asc") {
+      return aValue - bValue;
+    } else {
+      return bValue - aValue;
+    }
+  });
 
+  const resetBalance = async (supplierId) => {
+    try {
+      // تأكد من أن لديك طريقة لتحديث الرصيد في قاعدة البيانات
+      const { error } = await supabase
+        .from("suppliers")
+        .update({ balance: 0 })
+        .eq("id", supplierId);
 
-const resetBalance = async (supplierId) => {
-  try {
-    // تأكد من أن لديك طريقة لتحديث الرصيد في قاعدة البيانات
-    const { error } = await supabase
-      .from("suppliers")
-      .update({ balance: 0 })
-      .eq("id", supplierId);
-
-    if (error) {
+      if (error) {
+        console.error("Error resetting balance:", error);
+        toast({
+          title: "خطأ",
+          description: "فشل في تصفير الرصيد",
+          variant: "destructive",
+          duration: 2000,
+        });
+      } else {
+        toast({
+          title: "تم تصفير الرصيد",
+          description: "تم تصفير رصيد المورد بنجاح",
+          duration: 2000,
+        });
+      }
+    } catch (error) {
       console.error("Error resetting balance:", error);
       toast({
         title: "خطأ",
-        description: "فشل في تصفير الرصيد",
+        description: "حدث خطأ أثناء محاولة تصفير الرصيد",
         variant: "destructive",
         duration: 2000,
       });
-    } else {
-      toast({
-        title: "تم تصفير الرصيد",
-        description: "تم تصفير رصيد المورد بنجاح",
-        duration: 2000,
-      });
     }
-  } catch (error) {
-    console.error("Error resetting balance:", error);
-    toast({
-      title: "خطأ",
-      description: "حدث خطأ أثناء محاولة تصفير الرصيد",
-      variant: "destructive",
-      duration: 2000,
-    });
-  }
-};
+  };
 
 
-if (isLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
@@ -299,7 +314,7 @@ if (isLoading) {
             className="flex items-center gap-2 flex-row-reverse text-[#2a4ed8] text-lg sm:text-xl justify-center"
             style={{ fontFamily: 'Tajawal, sans-serif' }}
           >
-            إدارة الموردين [ {filteredSuppliers.length} ]
+            إدارة الموردين [ {sortedSuppliers.length} ]
             <Truck className="w-4 h-4 sm:w-5 sm:h-5" />
           </CardTitle>
         </CardHeader>
@@ -439,6 +454,34 @@ if (isLoading) {
 
               <div className="flex flex-col gap-2 flex-1 min-w-[180px] max-w-[220px]">
                 <label className="text-xs text-gray-600 mb-1" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  ترتيب حسب
+                </label>
+                <div className="flex gap-2">
+                  <Select value={sortField} onValueChange={setSortField}>
+                    <SelectTrigger className="text-right w-32" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="balance">الرصيد</SelectItem>
+                      <SelectItem value="lastPurchase">آخر توريد</SelectItem>
+                      <SelectItem value="totalPurchases">مجموع الكميات</SelectItem>
+                      <SelectItem value="totalAmount">إجمالي المبالغ</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={sortDirection} onValueChange={val => setSortDirection(val as "asc" | "desc")}>
+                    <SelectTrigger className="text-right w-24" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="asc">تصاعدي</SelectItem>
+                      <SelectItem value="desc">تنازلي</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 flex-1 min-w-[180px] max-w-[220px]">
+                <label className="text-xs text-gray-600 mb-1" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                   إعادة تعيين الفلاتر
                 </label>
                 <Button
@@ -473,7 +516,7 @@ if (isLoading) {
 
       {/* Suppliers Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {filteredSuppliers.map(supplier => (
+        {sortedSuppliers.map(supplier => (
           <Card
             key={supplier.id}
             className={`shadow-md hover:shadow-lg transition-shadow ${supplier.isBlocked ? 'border-red-200 bg-red-50' : supplier.description?.includes("عميل مميز") ? 'border-green-200 bg-green-50 ' : ''
