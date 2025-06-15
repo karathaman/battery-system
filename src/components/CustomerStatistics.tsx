@@ -75,9 +75,8 @@ export const CustomerStatistics = ({
     }
   }
 
-  // احصائيات العميل فقط من جدول المبيعات وسلة الأصناف sale_items
+  // احصائيات العميل فقط من جدول المبيعات وسلة الأصناف sale_items بشكل صارم
   const mappedCustomers = customers.map((customer) => {
-    // جميع مبيعات العميل من جدول المبيعات فقط (sales)
     const customerSales = (sales || []).filter(
       (sale) => sale.customerId === customer.id
     );
@@ -90,35 +89,30 @@ export const CustomerStatistics = ({
     let foundItems = false;
 
     customerSales.forEach((sale) => {
-      // استخدم sale.sale_items إذا موجودة (لأن supabase يرجعها هكذا)
-      let items = [];
-
-      if (Array.isArray(sale.sale_items) && sale.sale_items.length > 0) {
-        items = sale.sale_items.map((item: any) => ({
-          batteryType: item.battery_types?.name || "-",
-          quantity: Number(item.quantity) || 0,
-          price: Number(item.price_per_kg) || 0,
-          total: Number(item.total) || 0,
-        }));
-      } else if (Array.isArray(sale.items) && sale.items.length > 0) {
-        // احتياطي خلفي لو كان يوجد .items (توافق قديم)
-        items = sale.items.map((item: any) => ({
-          batteryType: item.batteryType || "-",
-          quantity: Number(item.quantity) || 0,
-          price: Number(item.price) || 0,
-          total: Number(item.total) || 0,
-        }));
+      // لنتأكد من بنية sale.sale_items فعليا ونطبعها للكونسول
+      if (typeof window !== "undefined") {
+        console.log(`[CUSTOMER_STATS] sale.id=${sale.id} sale_items:`, sale.sale_items);
       }
 
-      if (items.length) {
+      // استخدم حصرا sale.sale_items فقط
+      if (Array.isArray(sale.sale_items) && sale.sale_items.length > 0) {
         foundItems = true;
-        items.forEach((item: any) => {
-          totalQuantity += Number(item.quantity) || 0;
-          totalWeightedPrice += (Number(item.price) || 0) * (Number(item.quantity) || 0);
+        sale.sale_items.forEach((item: any) => {
+          const quantity = Number(item.quantity) || 0;
+          const pricePerKg =
+            typeof item.price_per_kg !== "undefined"
+              ? Number(item.price_per_kg)
+              : Number(item.price); // fallback
+          const total =
+            typeof item.total !== "undefined"
+              ? Number(item.total)
+              : quantity * pricePerKg;
+          totalQuantity += quantity;
+          totalWeightedPrice += pricePerKg * quantity;
+          // نكتفي بحساب إجمالي الفاتورة لاحقًا
         });
       }
-
-      // مبالغ الفاتورة تحسب من sale.total وليس من اصنافها (للدقة)
+      // المبلغ الإجمالي يؤخذ دائما من sale.total
       totalAmount += Number(sale.total) || 0;
     });
 
@@ -128,7 +122,6 @@ export const CustomerStatistics = ({
     const averageInvoiceAmount =
       totalSaleCount > 0 ? Math.round(totalAmount / totalSaleCount) : 0;
 
-    // آخر عملية بيع حسب الاحدث
     const lastSaleObj = customerSales.length
       ? [...customerSales].sort(
           (a, b) =>
@@ -137,25 +130,25 @@ export const CustomerStatistics = ({
       : undefined;
     const lastSale = lastSaleObj ? lastSaleObj.date : "";
 
-    // تجهيز البيانات للجدول التفصيلي في الديالوج
+    // جدول تفاصيل المبيعات في الديالوج (نعرض فقط أول صنف من كل فاتورة لمعاينة نوع الصنف)
     const uiSales = customerSales.map((sale) => {
       let items = [];
       if (Array.isArray(sale.sale_items) && sale.sale_items.length > 0) {
         items = sale.sale_items.map((item: any) => ({
           batteryType: item.battery_types?.name || "-",
           quantity: Number(item.quantity) || 0,
-          price: Number(item.price_per_kg) || 0,
-          total: Number(item.total) || 0,
-        }));
-      } else if (Array.isArray(sale.items) && sale.items.length > 0) {
-        items = sale.items.map((item: any) => ({
-          batteryType: item.batteryType || "-",
-          quantity: Number(item.quantity) || 0,
-          price: Number(item.price) || 0,
-          total: Number(item.total) || 0,
+          price: Number(
+            typeof item.price_per_kg !== "undefined"
+              ? item.price_per_kg
+              : item.price
+          ) || 0,
+          total:
+            typeof item.total !== "undefined"
+              ? Number(item.total)
+              : (Number(item.quantity) || 0) *
+                (Number(item.price_per_kg) || Number(item.price) || 0),
         }));
       }
-      // Show only first item as preview (لو يوجد عدة اصناف بالفاتورة)
       const firstItem = items[0] || {};
       return {
         id: sale.id,
@@ -178,7 +171,7 @@ export const CustomerStatistics = ({
       averagePricePerKg,
       averageInvoiceAmount,
       lastSale,
-      __foundItems: foundItems, // debug useful
+      __foundItems: foundItems, // debug مفيد
     };
   });
 
