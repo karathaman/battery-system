@@ -13,6 +13,7 @@ interface SupplierSearchDialogProps {
   onSupplierSelect: (supplier: { id: string; name: string; supplierCode: string; phone: string }) => void;
   searchTerm: string;
   language?: string;
+  onAddSupplier: (initialName: string) => void; // دالة لفتح دايلاوج إضافة مورد مع تمرير الاسم المقترح
 }
 
 export const SupplierSearchDialog = ({
@@ -20,11 +21,12 @@ export const SupplierSearchDialog = ({
   onClose,
   onSupplierSelect,
   searchTerm,
-  language = "ar"
+  language = "ar",
+  onAddSupplier
 }: SupplierSearchDialogProps) => {
   const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
 
-  // Use the real suppliers hook with search filter
+  // استخدام hook لجلب الموردين مع الفلتر
   const { suppliers, isLoading } = useSuppliers(1, 50, {
     searchTerm: localSearchTerm
   });
@@ -82,8 +84,7 @@ export const SupplierSearchDialog = ({
               </p>
               <Button
                 onClick={() => {
-                  // Here you would typically open an "Add Supplier" dialog
-                  onClose();
+                  onAddSupplier(localSearchTerm);
                 }}
                 className="flex items-center gap-2"
                 style={{ fontFamily: 'Tajawal, sans-serif' }}
@@ -126,7 +127,7 @@ export const SupplierSearchDialog = ({
                           {language === "ar" ? "المشتريات:" : "Purchases:"} {supplier.totalPurchases}
                         </span>
                         <span>
-                          {language === "ar" ? "الإجمالي:" : "Total:"} {supplier.totalAmount.toLocaleString()}
+                          {language === "ar" ? "الإجمالي:" : "Total:"} {supplier.totalAmount?.toLocaleString?.()}
                         </span>
                       </div>
                       {supplier.lastPurchase && (
@@ -146,21 +147,6 @@ export const SupplierSearchDialog = ({
               </div>
             ) : null}
           </div>
-
-          {suppliers.length > 0 && (
-            <Button
-              onClick={() => {
-                // Here you would typically open an "Add Supplier" dialog
-                onClose();
-              }}
-              variant="outline"
-              className="w-full flex items-center gap-2"
-              style={{ fontFamily: 'Tajawal, sans-serif' }}
-            >
-              <UserPlus className="w-4 h-4" />
-              {language === "ar" ? "إضافة مورد جديد" : "Add New Supplier"}
-            </Button>
-          )}
         </div>
       </DialogContent>
     </Dialog>

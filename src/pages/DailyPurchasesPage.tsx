@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,8 @@ import { TaskListWidget } from "@/components/TaskListWidget";
 import { useDailyPurchases } from "@/hooks/useDailyPurchases";
 import { BatteryTypeSelector } from "@/components/BatteryTypeSelector";
 import { toast } from "@/hooks/use-toast";
+import { SupplierSearchDialog } from "@/components/SupplierSearchDialog";
+import { AddSupplierDialog } from "@/components/AddSupplierDialog";
 
 const DailyPurchasesPage = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -30,6 +31,10 @@ const DailyPurchasesPage = () => {
   });
 
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  const [showSupplierSearch, setShowSupplierSearch] = useState(false);
+  const [showAddSupplier, setShowAddSupplier] = useState(false);
+  const [pendingSupplierName, setPendingSupplierName] = useState("");
 
   const calculateTotals = () => {
     const total = newPurchase.quantity * newPurchase.pricePerKg;
@@ -92,6 +97,26 @@ const DailyPurchasesPage = () => {
     if (confirm("هل أنت متأكد من مسح جميع بيانات هذا اليوم؟")) {
       clearDay();
     }
+  };
+
+  const handleOpenSupplierSearch = () => setShowSupplierSearch(true);
+
+  const handleAddSupplier = (initialName: string) => {
+    setShowSupplierSearch(false);
+    setPendingSupplierName(initialName);
+    setShowAddSupplier(true);
+  };
+
+  const handleSupplierAdded = (supplier: any) => {
+    // عند إضافة المورد يتم تعبئة اسمه في حقل اسم المورد مباشرة
+    setNewPurchase(prev => ({
+      ...prev,
+      supplierName: supplier.name,
+      supplierPhone: supplier.phone || "",
+      supplierCode: "", // إذا كان لكود لا يتوفر مباشرة عند الإضافة
+    }));
+    setShowAddSupplier(false);
+    setShowSupplierSearch(false);
   };
 
   const { total, discountAmount, finalTotal } = calculateTotals();
@@ -268,6 +293,31 @@ const DailyPurchasesPage = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Dialogs لإدارة بحث المورد وإضافته */}
+      <SupplierSearchDialog
+        open={showSupplierSearch}
+        onClose={() => setShowSupplierSearch(false)}
+        onSupplierSelect={supplier => {
+          setNewPurchase(prev => ({
+            ...prev,
+            supplierName: supplier.name,
+            supplierCode: supplier.supplierCode,
+            supplierPhone: supplier.phone,
+          }));
+          setShowSupplierSearch(false);
+        }}
+        searchTerm={newPurchase.supplierName}
+        language="ar"
+        onAddSupplier={handleAddSupplier}
+      />
+
+      <AddSupplierDialog
+        open={showAddSupplier}
+        onClose={() => setShowAddSupplier(false)}
+        onSupplierAdded={handleSupplierAdded}
+        language="ar"
+      />
 
       {/* Daily Purchases List */}
       {purchases.length > 0 && (
