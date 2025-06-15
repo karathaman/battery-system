@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { addDays } from 'date-fns';
 import { DataFilterDialog } from "./DataFilterDialog";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, BarChart3 } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 interface StatisticsPageProps {
   language: string;
@@ -257,7 +257,7 @@ export const StatisticsPage = ({ language, onTabChange }: StatisticsPageProps) =
         <Card>
           <CardHeader>
             <CardTitle className={`flex items-center gap-2 justify-center ${isRTL ? 'flex-row-reverse' : ''}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
-              <BarChart3 className="w-5 h-5" />
+              <BarChartIcon className="w-5 h-5" />
               {language === "ar" ? "المبيعات والمشتريات (آخر 6 أشهر)" : "Sales vs Purchases (6 Months)"}
             </CardTitle>
           </CardHeader>
