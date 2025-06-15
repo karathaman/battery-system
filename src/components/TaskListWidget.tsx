@@ -13,6 +13,7 @@ export const TaskListWidget = () => {
   const { notes, createNote, updateNote, deleteNote, toggleChecklistItem } = useNotes(today);
   
   const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskItems, setNewTaskItems] = useState<{ [key: string]: string }>({});
 
   // Filter for checklist notes only
   const taskLists = notes.filter(note => note.type === 'checklist');
@@ -38,6 +39,41 @@ export const TaskListWidget = () => {
 
     createNote(noteData);
     setNewTaskTitle("");
+  };
+
+  const addTaskToList = async (taskListId: string) => {
+    const newTaskText = newTaskItems[taskListId];
+    if (!newTaskText?.trim()) {
+      toast({
+        title: "خطأ",
+        description: "يرجى إدخال نص المهمة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Find the task list
+    const taskList = taskLists.find(list => list.id === taskListId);
+    if (!taskList) return;
+
+    // Create new checklist items array with the new task
+    const updatedItems = [
+      ...(taskList.checklist_items || []),
+      { text: newTaskText, completed: false }
+    ];
+
+    const noteData = {
+      title: taskList.title,
+      content: taskList.content,
+      color: taskList.color,
+      type: "checklist" as const,
+      checklist_items: updatedItems
+    };
+
+    updateNote({ id: taskListId, data: noteData });
+    
+    // Clear the input for this task list
+    setNewTaskItems(prev => ({ ...prev, [taskListId]: "" }));
   };
 
   const deleteTaskList = (id: string) => {
@@ -88,6 +124,24 @@ export const TaskListWidget = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 space-y-4">
+              {/* Add New Task to This List */}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="أدخل مهمة جديدة..."
+                  value={newTaskItems[taskList.id] || ""}
+                  onChange={(e) => setNewTaskItems(prev => ({ ...prev, [taskList.id]: e.target.value }))}
+                  style={{ fontFamily: "Tajawal, sans-serif" }}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={() => addTaskToList(taskList.id)}
+                  size="sm"
+                  title="إضافة مهمة"
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+
               {/* Task List */}
               <div className="space-y-2">
                 {taskList.checklist_items && taskList.checklist_items.map((task) => (
@@ -116,7 +170,7 @@ export const TaskListWidget = () => {
                 ))}
                 {(!taskList.checklist_items || taskList.checklist_items.length === 0) && (
                   <p className="text-gray-500 text-center py-4" style={{ fontFamily: "Tajawal, sans-serif" }}>
-                    لا توجد مهام في هذه القائمة
+                    لا توجد مهام في هذه القائمة. استخدم الحقل أعلاه لإضافة مهام.
                   </p>
                 )}
               </div>

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,43 +10,29 @@ import { StickyNote, Battery, Plus, Edit, Trash2, Search, CheckSquare } from "lu
 import { toast } from "@/hooks/use-toast";
 import { BatteryTypeManagement } from "@/components/BatteryTypeManagement";
 import { TaskListWidget } from "@/components/TaskListWidget";
-
-interface StickyNote {
-  id: string;
-  title: string;
-  content: string;
-  color: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import { useNotes } from "@/hooks/useNotes";
 
 const NotesAndBatteriesPage = () => {
-  // Sticky Notes State
-  const [notes, setNotes] = useState<StickyNote[]>([
-    {
-      id: "1",
-      title: "ملاحظة مهمة",
-      content: "تذكير بموعد تسليم الطلبية الكبيرة",
-      color: "bg-yellow-200",
-      createdAt: "2024-01-20",
-      updatedAt: "2024-01-20"
-    }
-  ]);
+  const today = new Date().toISOString().split('T')[0];
+  const { notes, createNote, updateNote, deleteNote, isCreating } = useNotes(today);
+  
+  // Filter for regular notes only (not checklists)
+  const stickyNotes = notes.filter(note => note.type === 'note');
   
   const [newNote, setNewNote] = useState({
     title: "",
     content: "",
-    color: "bg-yellow-200"
+    color: "yellow"
   });
 
-  const [editingNote, setEditingNote] = useState<StickyNote | null>(null);
+  const [editingNote, setEditingNote] = useState<any | null>(null);
 
   const noteColors = [
-    { name: "أصفر", value: "bg-yellow-200" },
-    { name: "أزرق", value: "bg-blue-200" },
-    { name: "أخضر", value: "bg-green-200" },
-    { name: "وردي", value: "bg-pink-200" },
-    { name: "بنفسجي", value: "bg-purple-200" }
+    { name: "أصفر", value: "yellow" },
+    { name: "أزرق", value: "blue" },
+    { name: "أخضر", value: "green" },
+    { name: "وردي", value: "pink" },
+    { name: "بنفسجي", value: "purple" }
   ];
 
   // Sticky Notes Functions
@@ -59,46 +46,38 @@ const NotesAndBatteriesPage = () => {
       return;
     }
 
-    const note: StickyNote = {
-      id: Date.now().toString(),
+    const noteData = {
       title: newNote.title,
       content: newNote.content,
       color: newNote.color,
-      createdAt: new Date().toISOString().split('T')[0],
-      updatedAt: new Date().toISOString().split('T')[0]
+      type: "note" as const,
+      date: today
     };
 
-    setNotes(prev => [note, ...prev]);
-    setNewNote({ title: "", content: "", color: "bg-yellow-200" });
-    
-    toast({
-      title: "تمت الإضافة",
-      description: "تمت إضافة الملاحظة بنجاح"
-    });
+    createNote(noteData);
+    setNewNote({ title: "", content: "", color: "yellow" });
   };
 
-  const updateNote = () => {
+  const updateNoteFunction = () => {
     if (!editingNote) return;
 
-    setNotes(prev => prev.map(note => 
-      note.id === editingNote.id 
-        ? { ...editingNote, updatedAt: new Date().toISOString().split('T')[0] }
-        : note
-    ));
+    const noteData = {
+      title: editingNote.title,
+      content: editingNote.content,
+      color: editingNote.color,
+      type: "note" as const
+    };
+
+    updateNote({ id: editingNote.id, data: noteData });
     setEditingNote(null);
-    
-    toast({
-      title: "تم التحديث",
-      description: "تم تحديث الملاحظة بنجاح"
-    });
   };
 
-  const deleteNote = (noteId: string) => {
-    setNotes(prev => prev.filter(note => note.id !== noteId));
-    toast({
-      title: "تم الحذف",
-      description: "تم حذف الملاحظة بنجاح"
-    });
+  const deleteNoteFunction = (noteId: string) => {
+    deleteNote(noteId);
+  };
+
+  const startEditing = (note: any) => {
+    setEditingNote({ ...note });
   };
 
   return (
@@ -171,7 +150,7 @@ const NotesAndBatteriesPage = () => {
                   {noteColors.map((color) => (
                     <button
                       key={color.value}
-                      className={`w-8 h-8 rounded-full border-2 ${color.value} ${
+                      className={`w-8 h-8 rounded-full border-2 bg-${color.value}-200 ${
                         newNote.color === color.value ? 'border-gray-800' : 'border-gray-300'
                       }`}
                       onClick={() => setNewNote({ ...newNote, color: color.value })}
@@ -181,7 +160,12 @@ const NotesAndBatteriesPage = () => {
                 </div>
               </div>
 
-              <Button onClick={addNote} className="w-full" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+              <Button 
+                onClick={addNote} 
+                className="w-full" 
+                style={{ fontFamily: 'Tajawal, sans-serif' }}
+                disabled={isCreating}
+              >
                 <Plus className="w-4 h-4 ml-2" />
                 إضافة ملاحظة
               </Button>
@@ -190,8 +174,8 @@ const NotesAndBatteriesPage = () => {
 
           {/* Notes Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {notes.map((note) => (
-              <Card key={note.id} className={`${note.color} border-2`}>
+            {stickyNotes.map((note) => (
+              <Card key={note.id} className={`bg-${note.color}-200 border-2`}>
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-bold text-lg" style={{ fontFamily: 'Tajawal, sans-serif' }}>
@@ -201,14 +185,14 @@ const NotesAndBatteriesPage = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setEditingNote(note)}
+                        onClick={() => startEditing(note)}
                       >
                         <Edit className="w-3 h-3" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => deleteNote(note.id)}
+                        onClick={() => deleteNoteFunction(note.id)}
                       >
                         <Trash2 className="w-3 h-3" />
                       </Button>
@@ -218,11 +202,20 @@ const NotesAndBatteriesPage = () => {
                     {note.content}
                   </p>
                   <p className="text-xs text-gray-600">
-                    آخر تحديث: {note.updatedAt}
+                    آخر تحديث: {new Date(note.updated_at).toLocaleDateString('ar-SA')}
                   </p>
                 </CardContent>
               </Card>
             ))}
+            
+            {stickyNotes.length === 0 && (
+              <div className="col-span-full text-center py-8">
+                <StickyNote className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                <p className="text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  لا توجد ملاحظات. ابدأ بإنشاء ملاحظة جديدة!
+                </p>
+              </div>
+            )}
           </div>
         </TabsContent>
 
@@ -262,7 +255,7 @@ const NotesAndBatteriesPage = () => {
                 {noteColors.map((color) => (
                   <button
                     key={color.value}
-                    className={`w-8 h-8 rounded-full border-2 ${color.value} ${
+                    className={`w-8 h-8 rounded-full border-2 bg-${color.value}-200 ${
                       editingNote.color === color.value ? 'border-gray-800' : 'border-gray-300'
                     }`}
                     onClick={() => setEditingNote({ ...editingNote, color: color.value })}
@@ -270,7 +263,7 @@ const NotesAndBatteriesPage = () => {
                 ))}
               </div>
               <div className="flex gap-2">
-                <Button onClick={updateNote} className="flex-1">حفظ</Button>
+                <Button onClick={updateNoteFunction} className="flex-1">حفظ</Button>
                 <Button variant="outline" onClick={() => setEditingNote(null)} className="flex-1">إلغاء</Button>
               </div>
             </div>
