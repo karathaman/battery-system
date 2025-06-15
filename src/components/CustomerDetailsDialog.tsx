@@ -290,6 +290,67 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
           </DialogTitle>
         </DialogHeader>
 
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className="text-sm text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>من</span>
+          <input
+            type="date"
+            value={dateRange.startDate || ""}
+            onChange={(e) =>
+              setDateRange((prev) => ({ ...prev, startDate: e.target.value }))
+            }
+            className="border rounded-md p-2 text-sm text-gray-600"
+          />
+          <span className="text-sm text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>إلى</span>
+          <input
+            type="date"
+            value={dateRange.endDate || ""}
+            onChange={(e) =>
+              setDateRange((prev) => ({ ...prev, endDate: e.target.value }))
+            }
+            className="border rounded-md p-2 text-sm text-gray-600"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              const today = new Date();
+              const lastWeek = new Date(today);
+              lastWeek.setDate(today.getDate() - 7);
+              setDateRange({
+                startDate: lastWeek.toISOString().split("T")[0],
+                endDate: today.toISOString().split("T")[0],
+              });
+            }}
+            className="bg-blue-400 text-white text-sm py-1 px-2 rounded-md"
+            style={{ fontFamily: 'Tajawal, sans-serif' }}
+          >آخر أسبوع</button>
+          <span className="text-gray-400">-</span>
+          <button
+            type="button"
+            onClick={() => {
+              const today = new Date();
+              const lastMonth = new Date(today);
+              lastMonth.setMonth(today.getMonth() - 1);
+              setDateRange({
+                startDate: lastMonth.toISOString().split("T")[0],
+                endDate: today.toISOString().split("T")[0],
+              });
+            }}
+            className="bg-blue-400 text-white text-sm py-1 px-2 rounded-md"
+            style={{ fontFamily: 'Tajawal, sans-serif' }}
+          >آخر شهر</button>
+          <select
+            value={batteryTypeFilter}
+            onChange={(e) => setBatteryTypeFilter(e.target.value)}
+            className="border rounded-md p-2 text-sm text-gray-600"
+            style={{ minWidth: 110 }}
+          >
+            <option value="all">كل الأصناف</option>
+            {batteryTypesList.map((bt) => (
+              <option key={bt} value={bt}>{bt}</option>
+            ))}
+          </select>
+        </div>
+
         <div className="space-y-6">
           {/* Customer Basic Info */}
           <Card>
@@ -422,83 +483,16 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
               <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                 {/* Tabs */}
                 <Tabs defaultValue="sales" className="w-full">
-                  <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4">
-                    <TabsList className="grid w-full md:w-auto grid-cols-2">
-                      <TabsTrigger value="sales" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                        <ShoppingCart className="w-4 h-4 ml-2" />
-                        تاريخ المبيعات
-                      </TabsTrigger>
-                      <TabsTrigger value="statement" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                        <FileText className="w-4 h-4 ml-2" />
-                        كشف الحساب
-                      </TabsTrigger>
-                    </TabsList>
-
-                    {/* Date Filters + Battery Type Filter */}
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>من</span>
-                      <input
-                        type="date"
-                        value={dateRange.startDate || ""}
-                        onChange={(e) =>
-                          setDateRange((prev) => ({ ...prev, startDate: e.target.value }))
-                        }
-                        className="border rounded-md p-2 text-sm text-gray-600"
-                      />
-                      <span className="text-sm text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>إلى</span>
-                      <input
-                        type="date"
-                        value={dateRange.endDate || ""}
-                        onChange={(e) =>
-                          setDateRange((prev) => ({ ...prev, endDate: e.target.value }))
-                        }
-                        className="border rounded-md p-2 text-sm text-gray-600"
-                      />
-                      <button
-                        onClick={() => {
-                          const today = new Date();
-                          const lastWeek = new Date(today);
-                          lastWeek.setDate(today.getDate() - 7);
-                          setDateRange({
-                            startDate: lastWeek.toISOString().split("T")[0],
-                            endDate: today.toISOString().split("T")[0],
-                          });
-                        }}
-                        className="bg-blue-400 text-white text-sm py-1 px-2 rounded-md"
-                        style={{ fontFamily: 'Tajawal, sans-serif' }}
-                      >
-                        آخر أسبوع
-                      </button>
-                      <span className="text-gray-400">-</span>
-                      <button
-                        onClick={() => {
-                          const today = new Date();
-                          const lastMonth = new Date(today);
-                          lastMonth.setMonth(today.getMonth() - 1);
-                          setDateRange({
-                            startDate: lastMonth.toISOString().split("T")[0],
-                            endDate: today.toISOString().split("T")[0],
-                          });
-                        }}
-                        className="bg-blue-400 text-white text-sm py-1 px-2 rounded-md"
-                        style={{ fontFamily: 'Tajawal, sans-serif' }}
-                      >
-                        آخر شهر
-                      </button>
-                      {/* قائمة أنواع البطاريات من قاعدة البيانات */}
-                      <select
-                        value={batteryTypeFilter}
-                        onChange={(e) => setBatteryTypeFilter(e.target.value)}
-                        className="border rounded-md p-2 text-sm text-gray-600"
-                        style={{ minWidth: 110 }}
-                      >
-                        <option value="all">كل الأصناف</option>
-                        {batteryTypesList.map((bt) => (
-                          <option key={bt} value={bt}>{bt}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
+                  <TabsList className="grid w-full md:w-auto grid-cols-2">
+                    <TabsTrigger value="sales" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      <ShoppingCart className="w-4 h-4 ml-2" />
+                      تاريخ المبيعات
+                    </TabsTrigger>
+                    <TabsTrigger value="statement" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      <FileText className="w-4 h-4 ml-2" />
+                      كشف الحساب
+                    </TabsTrigger>
+                  </TabsList>
 
                   <TabsContent value="sales">
                     {/* Sales History */}
