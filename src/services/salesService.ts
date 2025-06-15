@@ -182,6 +182,15 @@ const salesService = {
       throw new Error(saleError.message);
     }
 
+    // --- تحديث تاريخ آخر بيع للعميل هنا ---
+    const { error: lastPurchaseError } = await supabase
+      .from('customers')
+      .update({ last_purchase: data.date })
+      .eq('id', data.customer_id);
+    if (lastPurchaseError) {
+      console.error('فشل في تحديث تاريخ آخر بيع للعميل:', lastPurchaseError);
+    }
+
     // Create sale items
     const saleItems = data.items.map(item => ({
       sale_id: saleData.id,
