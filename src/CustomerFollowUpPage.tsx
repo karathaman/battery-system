@@ -21,7 +21,7 @@ const mockCustomers: Customer[] = [
     phone: "0501234567",
     description: "عميل مميز وموثوق",
     lastSale: "2024-01-15",
-    totalSoldQuantity: 15, // FIXED: was totalPurchases
+    totalSoldQuantity: 15,
     totalAmount: 4500,
     averagePrice: 300,
     notes: "عميل مميز، يشتري بانتظام كل شهر",
@@ -35,13 +35,13 @@ const mockCustomers: Customer[] = [
     last2BatteryTypes: ["بطاريات عادية", "بطاريات جافة"]
   },
   {
-    id: "2", 
+    id: "2",
     customerCode: "C002",
     name: "فاطمة علي",
     phone: "0507654321",
     description: "تتعامل مع البطاريات اليابانية فقط",
     lastSale: "2024-01-10",
-    totalSoldQuantity: 8, // FIXED: was totalPurchases
+    totalSoldQuantity: 8,
     totalAmount: 2400,
     averagePrice: 300,
     notes: "تفضل البطاريات اليابانية",
@@ -57,10 +57,10 @@ const mockCustomers: Customer[] = [
   {
     id: "3",
     customerCode: "C003",
-    name: "خالد أحمد", 
+    name: "خالد أحمد",
     phone: "0501111111",
     lastSale: "2024-01-05",
-    totalSoldQuantity: 22, // FIXED: was totalPurchases
+    totalSoldQuantity: 22,
     totalAmount: 6600,
     averagePrice: 300,
     isBlocked: true,

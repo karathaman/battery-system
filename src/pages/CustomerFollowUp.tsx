@@ -251,7 +251,7 @@ const CustomerFollowUp = () => {
                         </Badge>
                       )}
           
-                      {getDaysSinceLastPurchase(customer.lastSale) > 30 && (
+                      {customer.lastSale && getDaysSinceLastPurchase(customer.lastSale) > 30 && (
                         <Badge variant="destructive" className="text-xs">
                           متأخر
                         </Badge>
