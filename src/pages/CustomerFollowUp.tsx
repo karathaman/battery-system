@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Users, Search, Filter, UserPlus, TrendingUp, Calendar, Edit3, Trash2, Ban, UnlockIcon, Phone, User, DollarSign, RotateCcw, MessageCircle, Edit, X, FileText, CheckCircle } from "lucide-react";
+import { Users, Search, Filter, UserPlus, TrendingUp, Calendar, Edit3, Trash2, Ban, UnlockIcon, Phone, User, DollarSign, RotateCcw, MessageCircle, Edit, X, FileText, CheckCircle, Package } from "lucide-react";
 import { useCustomers } from "@/hooks/useCustomers";
 import { Customer, FilterOptions } from "@/types";
 import { AddCustomerDialog } from "@/components/AddCustomerDialog";
@@ -129,7 +129,7 @@ const CustomerFollowUp = () => {
           </div>
         </CardHeader>
         
-        <div className="grid px-7 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <div className="grid px-7 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <Card>
             <CardContent className="p-3 sm:p-4 text-center !block">
               <Users className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-blue-600" />
@@ -139,7 +139,6 @@ const CustomerFollowUp = () => {
               </p>
             </CardContent>
           </Card>
-
           <Card>
             <CardContent className="p-3 sm:p-4 text-center !block">
               <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-green-600" />
@@ -151,7 +150,17 @@ const CustomerFollowUp = () => {
               </p>
             </CardContent>
           </Card>
-
+          <Card>
+            <CardContent className="p-3 sm:p-4 text-center !block">
+              <Package className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-yellow-700" />
+              <p className="text-lg sm:text-2xl font-bold">
+                {customers.reduce((sum, c) => sum + c.totalSoldQuantity, 0).toLocaleString()}
+              </p>
+              <p className="text-xs sm:text-sm text-yellow-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                إجمالي الكميات الموردة
+              </p>
+            </CardContent>
+          </Card>
           <Card>
             <CardContent className="p-3 sm:p-4 text-center !block">
               <Calendar className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-orange-600" />
