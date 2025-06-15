@@ -21,7 +21,7 @@ const mockCustomers: Customer[] = [
     phone: "0501234567",
     description: "عميل مميز وموثوق",
     lastSale: "2024-01-15",
-    totalSoldQuantity: 15, // كان هنا ربما totalPurchases
+    totalSoldQuantity: 15,
     totalAmount: 4500,
     averagePrice: 300,
     notes: "عميل مميز، يشتري بانتظام كل شهر",
