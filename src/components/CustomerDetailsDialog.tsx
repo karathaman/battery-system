@@ -2,7 +2,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Phone, Calendar, Package, DollarSign, TrendingUp, ShoppingCart, MessageCircle } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { User, Phone, Calendar, Package, DollarSign, TrendingUp, ShoppingCart, MessageCircle, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 
@@ -45,8 +46,19 @@ interface CustomerDetailsDialogProps {
   customer: Customer | null;
 }
 
+interface AccountStatementEntry {
+  id: string;
+  date: string;
+  description: string;
+  debit: number;
+  credit: number;
+  balance: number;
+  type: 'sale' | 'voucher';
+}
+
 export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetailsDialogProps) => {
   const [customerHistory, setCustomerHistory] = useState([]);
+  const [accountStatement, setAccountStatement] = useState<AccountStatementEntry[]>([]);
   const [dateRange, setDateRange] = useState<{ startDate: string | null; endDate: string | null }>({
     startDate: null,
     endDate: null,
@@ -59,7 +71,13 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
         setCustomerHistory(history);
       };
 
+      const fetchStatement = async () => {
+        const statement = await fetchAccountStatement(customer.id);
+        setAccountStatement(statement);
+      };
+
       fetchHistory();
+      fetchStatement();
     }
   }, [open, customer]);
 
@@ -110,6 +128,81 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
       return history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     } catch (error) {
       console.error("Unexpected error fetching customer history:", error);
+      return [];
+    }
+  };
+
+  const fetchAccountStatement = async (customerId: string) => {
+    try {
+      console.log("Fetching account statement for customer:", customerId);
+
+      // Fetch all sales for the customer (we'll show all sales that affect account balance)
+      const { data: sales, error: salesError } = await supabase
+        .from("sales")
+        .select("id, date, total, invoice_number")
+        .eq("customer_id", customerId);
+
+      if (salesError) {
+        console.error("Error fetching sales:", salesError);
+      }
+
+      // Fetch vouchers (receipts and payments)
+      const { data: vouchers, error: voucherError } = await supabase
+        .from("vouchers")
+        .select("id, date, amount, voucher_number, type")
+        .eq("entity_type", "customer")
+        .eq("entity_id", customerId);
+
+      if (voucherError) {
+        console.error("Error fetching vouchers:", voucherError);
+      }
+
+      console.log("Sales:", sales);
+      console.log("Vouchers:", vouchers);
+
+      // Format account statement entries
+      const entries: AccountStatementEntry[] = [];
+
+      // Add sales as debit entries (increase customer debt)
+      (sales || []).forEach(sale => {
+        entries.push({
+          id: sale.id,
+          date: sale.date,
+          description: `فاتورة مبيعات رقم ${sale.invoice_number}`,
+          debit: sale.total,
+          credit: 0,
+          balance: 0, // Will be calculated below
+          type: 'sale'
+        });
+      });
+
+      // Add vouchers as credit/debit entries
+      (vouchers || []).forEach(voucher => {
+        const isReceipt = voucher.type === 'receipt';
+        entries.push({
+          id: voucher.id,
+          date: voucher.date,
+          description: `${isReceipt ? 'سند قبض' : 'سند صرف'} رقم ${voucher.voucher_number}`,
+          debit: isReceipt ? 0 : voucher.amount,
+          credit: isReceipt ? voucher.amount : 0,
+          balance: 0, // Will be calculated below
+          type: 'voucher'
+        });
+      });
+
+      // Sort by date
+      entries.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+      // Calculate running balance
+      let runningBalance = 0;
+      entries.forEach(entry => {
+        runningBalance += entry.debit - entry.credit;
+        entry.balance = runningBalance;
+      });
+
+      return entries;
+    } catch (error) {
+      console.error("Unexpected error fetching account statement:", error);
       return [];
     }
   };
@@ -235,7 +328,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
                 className="flex items-center gap-2 px-2 py-2 rounded-md bg-green-50 flex-row-reverse justify-center text-center w-full"
                 style={{ fontFamily: 'Tajawal, sans-serif' }}
               >
-                <span className="text-green-500">إحصائيات المشتريات</span>
+                <span className="text-green-500">إحصائيات المبيعات</span>
                 <TrendingUp className="w-6 h-6 text-green-500" />
               </CardTitle>
             </CardHeader>
@@ -267,118 +360,176 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
             </CardContent>
           </Card>
 
-          {/* Purchase History */}
+          {/* Sales History and Account Statement Tabs */}
           <Card>
             <CardHeader>
-              <CardTitle
-                className="flex flex-col md:flex-row justify-between items-center gap-2 px-2 py-2 rounded-md bg-blue-50 flex-row-reverse"
-                style={{ fontFamily: "Tajawal, sans-serif" }}
-              >
-                {/* التواريخ والأزرار على اليمين */}
-                <div className="flex flex-wrap items-center gap-2 mb-2 md:mb-0 order-2 md:order-1">
-                  <span className="text-sm text-gray-500">من</span>
-                  <input
-                    type="date"
-                    value={dateRange.startDate || ""}
-                    onChange={(e) =>
-                      setDateRange((prev) => ({ ...prev, startDate: e.target.value }))
-                    }
-                    className="border rounded-md p-2 text-sm text-gray-600"
-                  />
-                  <span className="text-sm text-gray-500">إلى</span>
-                  <input
-                    type="date"
-                    value={dateRange.endDate || ""}
-                    onChange={(e) =>
-                      setDateRange((prev) => ({ ...prev, endDate: e.target.value }))
-                    }
-                    className="border rounded-md p-2 text-sm text-gray-600"
-                  />
-                  <button
-                    onClick={() => {
-                      const today = new Date();
-                      const lastWeek = new Date(today);
-                      lastWeek.setDate(today.getDate() - 7);
-                      setDateRange({
-                        startDate: lastWeek.toISOString().split("T")[0],
-                        endDate: today.toISOString().split("T")[0],
-                      });
-                    }}
-                    className="bg-blue-400 text-white text-sm py-1 px-2 rounded-md"
-                  >
-                    آخر أسبوع
-                  </button>
-                  <span className="text-gray-400">-</span>
-                  <button
-                    onClick={() => {
-                      const today = new Date();
-                      const lastMonth = new Date(today);
-                      lastMonth.setMonth(today.getMonth() - 1);
-                      setDateRange({
-                        startDate: lastMonth.toISOString().split("T")[0],
-                        endDate: today.toISOString().split("T")[0],
-                      });
-                    }}
-                    className="bg-blue-400 text-white text-sm py-1 px-2 rounded-md"
-                  >
-                    آخر شهر
-                  </button>
-                </div>
-                {/* العنوان على اليسار */}
-                <span className="flex text-blue-800 items-center gap-2 order-1 md:order-2">
-                  <ShoppingCart className="w-5 h-5" />
-                  تاريخ المشتريات
-                </span>
-              </CardTitle>
+              <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                {/* Tabs */}
+                <Tabs defaultValue="sales" className="w-full">
+                  <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4">
+                    <TabsList className="grid w-full md:w-auto grid-cols-2">
+                      <TabsTrigger value="sales" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                        <ShoppingCart className="w-4 h-4 ml-2" />
+                        تاريخ المبيعات
+                      </TabsTrigger>
+                      <TabsTrigger value="statement" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                        <FileText className="w-4 h-4 ml-2" />
+                        كشف الحساب
+                      </TabsTrigger>
+                    </TabsList>
+
+                    {/* Date Filters */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>من</span>
+                      <input
+                        type="date"
+                        value={dateRange.startDate || ""}
+                        onChange={(e) =>
+                          setDateRange((prev) => ({ ...prev, startDate: e.target.value }))
+                        }
+                        className="border rounded-md p-2 text-sm text-gray-600"
+                      />
+                      <span className="text-sm text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>إلى</span>
+                      <input
+                        type="date"
+                        value={dateRange.endDate || ""}
+                        onChange={(e) =>
+                          setDateRange((prev) => ({ ...prev, endDate: e.target.value }))
+                        }
+                        className="border rounded-md p-2 text-sm text-gray-600"
+                      />
+                      <button
+                        onClick={() => {
+                          const today = new Date();
+                          const lastWeek = new Date(today);
+                          lastWeek.setDate(today.getDate() - 7);
+                          setDateRange({
+                            startDate: lastWeek.toISOString().split("T")[0],
+                            endDate: today.toISOString().split("T")[0],
+                          });
+                        }}
+                        className="bg-blue-400 text-white text-sm py-1 px-2 rounded-md"
+                        style={{ fontFamily: 'Tajawal, sans-serif' }}
+                      >
+                        آخر أسبوع
+                      </button>
+                      <span className="text-gray-400">-</span>
+                      <button
+                        onClick={() => {
+                          const today = new Date();
+                          const lastMonth = new Date(today);
+                          lastMonth.setMonth(today.getMonth() - 1);
+                          setDateRange({
+                            startDate: lastMonth.toISOString().split("T")[0],
+                            endDate: today.toISOString().split("T")[0],
+                          });
+                        }}
+                        className="bg-blue-400 text-white text-sm py-1 px-2 rounded-md"
+                        style={{ fontFamily: 'Tajawal, sans-serif' }}
+                      >
+                        آخر شهر
+                      </button>
+                    </div>
+                  </div>
+
+                  <TabsContent value="sales">
+                    {/* Sales History */}
+                    {customerHistory.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>التاريخ</th>
+                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الصنف</th>
+                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الكمية</th>
+                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>سعر الكيلو</th>
+                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجمالي</th>
+                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الخصم</th>
+                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>المبلغ النهائي</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {customerHistory
+                              .filter((entry) => {
+                                const entryDate = new Date(entry.date);
+                                const startDate = dateRange.startDate ? new Date(dateRange.startDate) : null;
+                                const endDate = dateRange.endDate ? new Date(dateRange.endDate) : null;
+
+                                if (startDate && entryDate < startDate) return false;
+                                if (endDate && entryDate > endDate) return false;
+
+                                return true;
+                              })
+                              .map((entry, index) => (
+                                <tr key={index} className="border-b hover:bg-gray-50">
+                                  <td className="p-3 text-sm">{entry.date}</td>
+                                  <td className="p-3 text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{entry.battery_type}</td>
+                                  <td className="p-3 text-sm">{entry.quantity}</td>
+                                  <td className="p-3 text-sm">{entry.price_per_kg}</td>
+                                  <td className="p-3 text-sm">{entry.total.toLocaleString()}</td>
+                                  <td className="p-3 text-sm">{entry.discount?.toLocaleString() || 0}</td>
+                                  <td className="p-3 text-sm font-bold text-green-600">{entry.final_total.toLocaleString()}</td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-center text-gray-500 py-8" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                        لا توجد مبيعات مسجلة
+                      </p>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="statement">
+                    {/* Account Statement */}
+                    {accountStatement.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>التاريخ</th>
+                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>البيان</th>
+                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>مدين</th>
+                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>دائن</th>
+                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الرصيد</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {accountStatement
+                              .filter((entry) => {
+                                const entryDate = new Date(entry.date);
+                                const startDate = dateRange.startDate ? new Date(dateRange.startDate) : null;
+                                const endDate = dateRange.endDate ? new Date(dateRange.endDate) : null;
+
+                                if (startDate && entryDate < startDate) return false;
+                                if (endDate && entryDate > endDate) return false;
+
+                                return true;
+                              })
+                              .map((entry, index) => (
+                                <tr key={index} className="border-b hover:bg-gray-50">
+                                  <td className="p-3 text-sm">{entry.date}</td>
+                                  <td className="p-3 text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{entry.description}</td>
+                                  <td className="p-3 text-sm text-red-600">{entry.debit > 0 ? entry.debit.toLocaleString() : '-'}</td>
+                                  <td className="p-3 text-sm text-green-600">{entry.credit > 0 ? entry.credit.toLocaleString() : '-'}</td>
+                                  <td className={`p-3 text-sm font-bold ${entry.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                    {entry.balance.toLocaleString()}
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-center text-gray-500 py-8" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                        لا توجد حركات على الحساب
+                      </p>
+                    )}
+                  </TabsContent>
+                </Tabs>
+              </div>
             </CardHeader>
-            <CardContent>
-              {/* Filtered Data */}
-              {customerHistory.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>التاريخ</th>
-                        <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الصنف</th>
-                        <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الكمية</th>
-                        <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>سعر الكيلو</th>
-                        <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجمالي</th>
-                        <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الخصم</th>
-                        <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>المبلغ النهائي</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {customerHistory
-                        .filter((entry) => {
-                          const entryDate = new Date(entry.date);
-                          const startDate = dateRange.startDate ? new Date(dateRange.startDate) : null;
-                          const endDate = dateRange.endDate ? new Date(dateRange.endDate) : null;
-
-                          if (startDate && entryDate < startDate) return false;
-                          if (endDate && entryDate > endDate) return false;
-
-                          return true;
-                        })
-                        .map((entry, index) => (
-                          <tr key={index} className="border-b hover:bg-gray-50">
-                            <td className="p-3 text-sm">{entry.date}</td>
-                            <td className="p-3 text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{entry.battery_type}</td>
-                            <td className="p-3 text-sm">{entry.quantity}</td>
-                            <td className="p-3 text-sm">{entry.price_per_kg}</td>
-                            <td className="p-3 text-sm">{entry.total.toLocaleString()}</td>
-                            <td className="p-3 text-sm">{entry.discount?.toLocaleString() || 0}</td>
-                            <td className="p-3 text-sm font-bold text-green-600">{entry.final_total.toLocaleString()}</td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="text-center text-gray-500 py-8" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                  لا توجد مشتريات مسجلة
-                </p>
-              )}
-            </CardContent>
           </Card>
         </div>
       </DialogContent>
