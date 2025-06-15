@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -62,23 +61,21 @@ export const CustomerStatistics = ({
   const isRTL = language === "ar";
   const { sales, isLoading } = useSales();
 
-  // New: Calculate real statistics from sales for each customer
+  // يتم احتساب إحصائيات العميل ديناميكيًا من جداول المبيعات
   const mappedCustomers = customers.map((customer) => {
-    // Get related sales from full sales (from supabase)
+    // مبيعات العميل من جميع الفواتير
     const customerSales = (sales || []).filter(
       (sale) => sale.customerId === customer.id
     );
 
-    // Number of sales
-    const totalSales = customerSales.length;
-
-    // Gather all items from all sales for this customer
+    // مجموع الكمية والإجمالي ومعدل السعر
     let totalQuantity = 0;
     let totalAmount = 0;
     let totalWeightedPrice = 0;
+    let totalSaleCount = customerSales.length;
 
     customerSales.forEach((sale) => {
-      if (Array.isArray(sale.items)) {
+      if (Array.isArray(sale.items) && sale.items.length) {
         sale.items.forEach((item) => {
           totalQuantity += item.quantity || 0;
           totalWeightedPrice += (item.price || 0) * (item.quantity || 0);
@@ -91,43 +88,21 @@ export const CustomerStatistics = ({
       totalQuantity > 0 ? Math.round(totalWeightedPrice / totalQuantity) : 0;
 
     const averageInvoiceAmount =
-      totalSales > 0 ? Math.round(totalAmount / totalSales) : 0;
+      totalSaleCount > 0 ? Math.round(totalAmount / totalSaleCount) : 0;
 
-    // آخر تاريخ عملية بيع
+    // آخر تاريخ بيع للعميل
     const lastSaleObj = customerSales.length
-      ? [...customerSales]
-          .sort(
-            (a, b) =>
-              new Date(b.date).getTime() - new Date(a.date).getTime()
-          )[0]
+      ? [...customerSales].sort(
+          (a, b) =>
+            new Date(b.date).getTime() - new Date(a.date).getTime()
+        )[0]
       : undefined;
     const lastSale = lastSaleObj ? lastSaleObj.date : "";
 
     return {
       ...customer,
-      sales: customerSales.map((sale) => ({
-        id: sale.id,
-        date: sale.date,
-        batteryType:
-          sale.items && sale.items.length > 0
-            ? sale.items[0].batteryType
-            : "",
-        quantity:
-          sale.items && sale.items.length > 0
-            ? sale.items[0].quantity
-            : 0,
-        pricePerKg:
-          sale.items && sale.items.length > 0
-            ? sale.items[0].price
-            : 0,
-        total:
-          sale.items && sale.items.length > 0
-            ? sale.items[0].total
-            : sale.total || 0,
-        discount: sale.discount || 0,
-        finalTotal: sale.total || 0,
-      })),
-      totalSales,
+      sales: customerSales,
+      totalSales: totalSaleCount,
       totalQuantity,
       totalAmount,
       averagePricePerKg,
@@ -142,7 +117,6 @@ export const CustomerStatistics = ({
       customer.phone.includes(searchTerm)
   );
 
-  // عنصر تفاصيل العميل مع إحصائيات جديدة
   const CustomerDetailsDialog = ({ customer }: { customer: any }) => (
     <Dialog>
       <DialogTrigger asChild>
@@ -153,12 +127,12 @@ export const CustomerStatistics = ({
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto" dir={isRTL ? "rtl" : "ltr"}>
         <DialogHeader>
           <DialogTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
-            {language === "ar" ? `إحصائيات العميل: ${customer.name}` : `Customer Statistics: ${customer.name}`}
+            {language === "ar"
+              ? `إحصائيات العميل: ${customer.name}`
+              : `Customer Statistics: ${customer.name}`}
           </DialogTitle>
         </DialogHeader>
-        
         <div className="space-y-6">
-          {/* Customer Summary (add new stat cards) */}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             {/* عدد المبيعات */}
             <Card>
@@ -169,7 +143,7 @@ export const CustomerStatistics = ({
                     <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                       {language === "ar" ? "عدد المبيعات" : "Total Sales"}
                     </p>
-                    <p className="text-2xl font-bold">{customer.sales?.length || 0}</p>
+                    <p className="text-2xl font-bold">{customer.totalSales || 0}</p>
                   </div>
                 </div>
               </CardContent>
@@ -178,13 +152,12 @@ export const CustomerStatistics = ({
             <Card>
               <CardContent className="p-4">
                 <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                  {/* يمكن استخدام أيقونة مناسبة من lucide أو النص فقط */}
                   <TrendingUp className="w-5 h-5 text-orange-600" />
                   <div>
                     <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                       {language === "ar" ? "إجمالي الكمية" : "Total Quantity"}
                     </p>
-                    <p className="text-2xl font-bold">{customer.totalQuantity.toLocaleString()}</p>
+                    <p className="text-2xl font-bold">{customer.totalQuantity?.toLocaleString()}</p>
                   </div>
                 </div>
               </CardContent>
@@ -199,13 +172,13 @@ export const CustomerStatistics = ({
                       {language === "ar" ? "إجمالي المبلغ" : "Total Amount"}
                     </p>
                     <p className="text-2xl font-bold text-green-600">
-                      {customer.totalAmount.toLocaleString()} {language === "ar" ? "ريال" : "SAR"}
+                      {customer.totalAmount?.toLocaleString()} {language === "ar" ? "ريال" : "SAR"}
                     </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            {/* متوسط السعر (لكل الكيلو) */}
+            {/* متوسط السعر */}
             <Card>
               <CardContent className="p-4">
                 <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -214,7 +187,9 @@ export const CustomerStatistics = ({
                     <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                       {language === "ar" ? "متوسط السعر" : "Avg. Price/Kg"}
                     </p>
-                    <p className="text-2xl font-bold">{customer.averagePricePerKg.toLocaleString()} {language === "ar" ? "ريال" : "SAR"}</p>
+                    <p className="text-2xl font-bold">
+                      {customer.averagePricePerKg?.toLocaleString()} {language === "ar" ? "ريال" : "SAR"}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -228,13 +203,14 @@ export const CustomerStatistics = ({
                     <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                       {language === "ar" ? "متوسط الفاتورة" : "Avg. Invoice"}
                     </p>
-                    <p className="text-2xl font-bold">{customer.averageInvoiceAmount.toLocaleString()} {language === "ar" ? "ريال" : "SAR"}</p>
+                    <p className="text-2xl font-bold">
+                      {customer.averageInvoiceAmount?.toLocaleString()} {language === "ar" ? "ريال" : "SAR"}
+                    </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
-          
           {/* Sales History */}
           <Card>
             <CardHeader>
@@ -301,7 +277,6 @@ export const CustomerStatistics = ({
             {language === "ar" ? "إحصائيات العملاء" : "Customer Statistics"}
           </CardTitle>
         </CardHeader>
-        
         <CardContent className="p-6">
           <div className="mb-6">
             <Input
@@ -312,7 +287,6 @@ export const CustomerStatistics = ({
               style={{ fontFamily: 'Tajawal, sans-serif' }}
             />
           </div>
-
           <div className="grid gap-4">
             {filteredCustomers.map((customer) => (
               <Card key={customer.id} className="hover:shadow-md transition-shadow">
@@ -332,15 +306,14 @@ export const CustomerStatistics = ({
                         </div>
                         <div className={`flex items-center gap-4 text-sm text-gray-500 mt-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
                           <span style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                            {language === "ar" ? "عدد المبيعات:" : "Sales:"} {customer.sales?.length || 0}
+                            {language === "ar" ? "عدد المبيعات:" : "Sales:"} {customer.totalSales || 0}
                           </span>
                           <span style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                            {language === "ar" ? "إجمالي المبلغ:" : "Total Amount:"} {customer.totalAmount.toLocaleString()} {language === "ar" ? "ريال" : "SAR"}
+                            {language === "ar" ? "إجمالي المبلغ:" : "Total Amount:"} {customer.totalAmount?.toLocaleString()} {language === "ar" ? "ريال" : "SAR"}
                           </span>
                         </div>
                       </div>
                     </div>
-                    
                     <CustomerDetailsDialog customer={customer} />
                   </div>
                 </CardContent>
