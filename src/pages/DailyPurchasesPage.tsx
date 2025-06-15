@@ -15,6 +15,7 @@ import { BatteryTypeSelector } from "@/components/BatteryTypeSelector";
 import { toast } from "@/hooks/use-toast";
 import { SupplierSearchDialog } from "@/components/SupplierSearchDialog";
 import { AddSupplierDialog } from "@/components/AddSupplierDialog";
+import { SupplierComboBox } from "@/components/SupplierComboBox";
 
 const DailyPurchasesPage = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -35,6 +36,42 @@ const DailyPurchasesPage = () => {
   const [showSupplierSearch, setShowSupplierSearch] = useState(false);
   const [showAddSupplier, setShowAddSupplier] = useState(false);
   const [pendingSupplierName, setPendingSupplierName] = useState("");
+
+  const [topSuppliers, setTopSuppliers] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    async function fetchSuppliers() {
+      // Fetch all suppliers
+      const { data: suppliersData, error: sErr } = await supabase
+        .from("suppliers")
+        .select("name,supplier_code,phone,id");
+
+      // Fetch sum of quantities per supplier from daily_purchases
+      const { data: totalData, error: tErr } = await supabase
+        .from("daily_purchases")
+        .select("supplier_name, supplier_code, sum:quantity")
+        .group("supplier_code,supplier_name");
+
+      let merged: any[] = [];
+      if (suppliersData && totalData) {
+        merged = suppliersData.map((s) => {
+          const stats = totalData.find(
+            (d) => d.supplier_code === s.supplier_code
+          );
+          return {
+            name: s.name,
+            supplierCode: s.supplier_code,
+            phone: s.phone,
+            totalQuantity: stats ? stats.sum : 0,
+          };
+        });
+      }
+      // Sort descending
+      merged = merged.sort((a, b) => (b.totalQuantity || 0) - (a.totalQuantity || 0));
+      setTopSuppliers(merged);
+    }
+    fetchSuppliers();
+  }, []);
 
   const calculateTotals = () => {
     const total = newPurchase.quantity * newPurchase.pricePerKg;
@@ -153,12 +190,18 @@ const DailyPurchasesPage = () => {
               <Label htmlFor="supplierName" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                 اسم المورد *
               </Label>
-              <Input
-                id="supplierName"
+              <SupplierComboBox
+                suppliers={topSuppliers}
                 value={newPurchase.supplierName}
-                onChange={(e) => setNewPurchase({ ...newPurchase, supplierName: e.target.value })}
-                placeholder="أدخل اسم المورد"
-                style={{ fontFamily: 'Tajawal, sans-serif' }}
+                onChange={(name, supplier) => {
+                  setNewPurchase((prev) => ({
+                    ...prev,
+                    supplierName: name,
+                    supplierCode: supplier?.supplierCode ?? "",
+                    supplierPhone: supplier?.phone ?? "",
+                  }));
+                }}
+                placeholder="ابحث باسم أو كود المورد"
               />
             </div>
 
