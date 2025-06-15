@@ -61,34 +61,65 @@ export const CustomerStatistics = ({
   const isRTL = language === "ar";
   const { sales, isLoading } = useSales();
 
-  // يتم احتساب إحصائيات العميل حصريًا من جداول المبيعات (sales ONLY)
+  // --- Debug: Print all sales structure at runtime
+  if (typeof window !== "undefined" && sales && sales.length) {
+    // Show a sample sale and its keys for debugging
+    // Won't re-execute on every render as long as sales reference is unchanged
+    // @ts-ignore
+    window.__LOV_DEBUG_SALES = sales;
+    console.log("All fetched sales for statistics:", sales);
+    if (sales[0]) {
+      console.log("[Debug] Example sale keys:", Object.keys(sales[0]));
+      console.log("[Debug] Example sale items (from .items):", sales[0].items);
+      console.log("[Debug] Example sale sale_items (from .sale_items):", sales[0].sale_items);
+    }
+  }
+
+  // احصائيات العميل حصريا من جدول المبيعات وأصناف البيع الفرعية
   const mappedCustomers = customers.map((customer) => {
-    // جميع مبيعات العميل من جدول المبيعات فقط
+    // جميع مبيعات العميل من جدول المبيعات فقط (sales)
     const customerSales = (sales || []).filter(
       (sale) => sale.customerId === customer.id
     );
 
-    // إحصائيات العميل من مبيعاته فقط (sales + sale_items)
     let totalQuantity = 0;
     let totalAmount = 0;
     let totalWeightedPrice = 0;
     let totalSaleCount = customerSales.length;
 
+    // Flag: Was any item data found for this client?
+    let foundItems = false;
+
     customerSales.forEach((sale) => {
-      // اجمع إجماليات الأصناف من sale_items
+      // أولاً نحاول القراءة من sale.items وإذا غير موجودة نستخدم sale.sale_items
+      let items = [];
+
       if (Array.isArray(sale.items) && sale.items.length) {
-        sale.items.forEach((item) => {
+        items = sale.items;
+      } else if (Array.isArray(sale.sale_items) && sale.sale_items.length) {
+        // حقل sale_items يأتي من ربط الجداول مباشرة في Supabase
+        items = sale.sale_items.map((item: any) => ({
+          batteryType: item.battery_types?.name || "-",
+          quantity: Number(item.quantity) || 0,
+          price: Number(item.price_per_kg) || 0,
+          total: Number(item.total) || 0,
+        }));
+      }
+
+      if (items.length) {
+        foundItems = true;
+        items.forEach((item: any) => {
           totalQuantity += Number(item.quantity) || 0;
           totalWeightedPrice += (Number(item.price) || 0) * (Number(item.quantity) || 0);
         });
       }
-      // اجمع إجمالي المبلغ للفاتورة كاملة
+
+      // نضيف مبلغ الفاتورة مباشرة
       totalAmount += Number(sale.total) || 0;
     });
 
     const averagePricePerKg =
       totalQuantity > 0 ? Math.round(totalWeightedPrice / totalQuantity) : 0;
-
     const averageInvoiceAmount =
       totalSaleCount > 0 ? Math.round(totalAmount / totalSaleCount) : 0;
 
@@ -101,24 +132,42 @@ export const CustomerStatistics = ({
       : undefined;
     const lastSale = lastSaleObj ? lastSaleObj.date : "";
 
-    return {
-      ...customer,
-      sales: customerSales.map((sale) => ({
+    // for Dialog sales table: لنفس مشكلة العناصر، نظهر أصناف كل فاتورة اعتمادًا على items أو sale_items
+    const uiSales = customerSales.map((sale) => {
+      let items = [];
+      if (Array.isArray(sale.items) && sale.items.length) {
+        items = sale.items;
+      } else if (Array.isArray(sale.sale_items) && sale.sale_items.length) {
+        items = sale.sale_items.map((item: any) => ({
+          batteryType: item.battery_types?.name || "-",
+          quantity: Number(item.quantity) || 0,
+          price: Number(item.price_per_kg) || 0,
+          total: Number(item.total) || 0,
+        }));
+      }
+      const firstItem = items[0] || {};
+      return {
         id: sale.id,
         date: sale.date,
-        batteryType: sale.items && sale.items[0] ? sale.items[0].batteryType : '', // أول نوع كتمثيل (ممكن تطوير لاحقاً)
-        quantity: sale.items && sale.items[0] ? sale.items[0].quantity : 0,
-        pricePerKg: sale.items && sale.items[0] ? sale.items[0].price : 0,
+        batteryType: firstItem.batteryType || "",
+        quantity: firstItem.quantity || 0,
+        pricePerKg: firstItem.price || 0,
         total: sale.total,
         discount: sale.discount ?? 0,
-        finalTotal: sale.total - (sale.discount ?? 0),
-      })),
+        finalTotal: (Number(sale.total) || 0) - (Number(sale.discount) || 0),
+      };
+    });
+
+    return {
+      ...customer,
+      sales: uiSales,
       totalSales: totalSaleCount,
       totalQuantity,
       totalAmount,
       averagePricePerKg,
       averageInvoiceAmount,
       lastSale,
+      __foundItems: foundItems, // مساعد Debug إن أردت
     };
   });
 
@@ -264,9 +313,9 @@ export const CustomerStatistics = ({
                         <td className="p-3" style={{ fontFamily: 'Tajawal, sans-serif' }}>{sale.batteryType}</td>
                         <td className="p-3">{sale.quantity}</td>
                         <td className="p-3">{sale.pricePerKg}</td>
-                        <td className="p-3">{sale.total.toLocaleString()}</td>
-                        <td className="p-3">{sale.discount.toLocaleString()}</td>
-                        <td className="p-3 font-bold text-green-600">{sale.finalTotal.toLocaleString()}</td>
+                        <td className="p-3">{sale.total?.toLocaleString?.() ?? sale.total}</td>
+                        <td className="p-3">{sale.discount?.toLocaleString?.() ?? sale.discount}</td>
+                        <td className="p-3 font-bold text-green-600">{sale.finalTotal?.toLocaleString?.() ?? sale.finalTotal}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -274,6 +323,14 @@ export const CustomerStatistics = ({
               </div>
             </CardContent>
           </Card>
+          {/* حالة لا يوجد بيانات */}
+          {!customer.__foundItems && (
+            <div className="text-red-500 text-center mt-4 text-lg" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+              {language === "ar"
+                ? "لا توجد بيانات صنف للمبيعات لهذا العميل. تحقق من جلب بيانات المبيعات والأصناف جيدًا."
+                : "No sale item data found for this customer. Please check your sales data structure."}
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
