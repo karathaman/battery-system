@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { StickyNote, Plus, Trash2, Edit3, Palette, CheckSquare, Square } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client.ts";
 
 
@@ -43,8 +42,7 @@ const noteColors = [
 ];
 
 export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesProps) => {
- const [notes, setNotes] = useState<Note[]>([]); // إزالة البيانات الافتراضية
- 
+  const [notes, setNotes] = useState<Note[]>([]);
   const [newNote, setNewNote] = useState({ title: "", content: "", color: "yellow", type: "note" as 'note' | 'checklist' });
   const [newChecklistItems, setNewChecklistItems] = useState<string[]>([""]);
   const [editingNote, setEditingNote] = useState<string | null>(null);
@@ -58,25 +56,34 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
 
   useEffect(() => {
     const fetchNotes = async () => {
-      const { data, error } = await supabase.from("tasks").select("*");
-      if (error) console.error(error);
-      else setNotes(
+      const { data, error } = await supabase
+        .from("notes")
+        .select("*")
+        .eq('type', 'note')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching notes:', error);
+        return;
+      }
+      
+      setNotes(
         (data || []).map((item: any) => ({
           id: item.id,
           title: item.title,
-          content: item.content ?? "",
-          completed: item.completed ?? false,
-          createdAt: item.createdAt ?? item.created_date ?? new Date().toISOString(),
-          color: item.color ?? "yellow",
-          type: item.type ?? "note",
-          checklistItems: item.checklistItems ?? undefined
+          content: item.content || "",
+          completed: item.completed || false,
+          createdAt: item.created_at || new Date().toISOString(),
+          color: item.color || "yellow",
+          type: item.type || "note",
+          checklistItems: []
         }))
       );
     };
     fetchNotes();
   }, []);
 
-  const addNote = () => {
+  const addNote = async () => {
     if (!newNote.title.trim()) {
       toast({
         title: language === "ar" ? "خطأ" : "Error",
@@ -87,26 +94,39 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
       return;
     }
 
-    let checklistItems: ChecklistItem[] = [];
-    if (newNote.type === 'checklist') {
-      checklistItems = newChecklistItems
-        .filter(item => item.trim())
-        .map((item, index) => ({
-          id: `item_${Date.now()}_${index}`,
-          text: item.trim(),
-          completed: false
-        }));
+    const { data, error } = await supabase
+      .from("notes")
+      .insert({
+        title: newNote.title,
+        content: newNote.content,
+        color: newNote.color,
+        type: newNote.type,
+        date: new Date().toISOString().split('T')[0],
+        completed: false
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating note:', error);
+      toast({
+        title: language === "ar" ? "خطأ" : "Error",
+        description: language === "ar" ? "فشل في إنشاء الملاحظة" : "Failed to create note",
+        variant: "destructive",
+        duration: 2000,
+      });
+      return;
     }
 
     const note: Note = {
-      id: Date.now().toString(),
-      title: newNote.title,
-      content: newNote.content,
-      completed: false,
-      createdAt: new Date().toISOString(),
-      color: newNote.color,
-      type: newNote.type,
-      checklistItems: newNote.type === 'checklist' ? checklistItems : undefined
+      id: data.id,
+      title: data.title,
+      content: data.content || "",
+      completed: data.completed || false,
+      createdAt: data.created_at,
+      color: data.color || "yellow",
+      type: data.type || "note",
+      checklistItems: []
     };
 
     setNotes(prev => [note, ...prev]);
@@ -120,7 +140,23 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
     });
   };
 
-  const deleteNote = (id: string) => {
+  const deleteNote = async (id: string) => {
+    const { error } = await supabase
+      .from("notes")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error('Error deleting note:', error);
+      toast({
+        title: language === "ar" ? "خطأ" : "Error",
+        description: language === "ar" ? "فشل في حذف الملاحظة" : "Failed to delete note",
+        variant: "destructive",
+        duration: 2000,
+      });
+      return;
+    }
+
     setNotes(prev => prev.filter(note => note.id !== id));
     toast({
       title: language === "ar" ? "تم حذف الملاحظة" : "Note Deleted",
@@ -129,7 +165,20 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
     });
   };
 
-  const toggleCompleted = (id: string) => {
+  const toggleCompleted = async (id: string) => {
+    const note = notes.find(n => n.id === id);
+    if (!note) return;
+
+    const { error } = await supabase
+      .from("notes")
+      .update({ completed: !note.completed })
+      .eq("id", id);
+
+    if (error) {
+      console.error('Error updating note:', error);
+      return;
+    }
+
     setNotes(prev => prev.map(note => 
       note.id === id ? { ...note, completed: !note.completed } : note
     ));
@@ -169,7 +218,17 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
     ));
   };
 
-  const updateNote = (id: string, title: string, content: string, color: string) => {
+  const updateNote = async (id: string, title: string, content: string, color: string) => {
+    const { error } = await supabase
+      .from("notes")
+      .update({ title, content, color })
+      .eq("id", id);
+
+    if (error) {
+      console.error('Error updating note:', error);
+      return;
+    }
+
     setNotes(prev => prev.map(note => 
       note.id === id ? { ...note, title, content, color } : note
     ));
@@ -782,7 +841,3 @@ const EditNoteForm = ({ note, onSave, onCancel, language = "ar", compact = false
     </div>
   );
 };
-function setNotes(arg0: { color: string | null; completed: boolean | null; completed_date: string | null; created_date: string | null; id: string; title: string; }[]) {
-  throw new Error("Function not implemented.");
-}
-

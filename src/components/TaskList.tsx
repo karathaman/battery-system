@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -295,8 +296,8 @@ export const TaskList = () => {
           return (
             <Card key={group.id} className={`shadow-lg ${colorClasses.bg} ${colorClasses.border}`}>
               <CardHeader className={`bg-gradient-to-r ${colorClasses.header} text-white`}>
-                <CardTitle className="flex items-center h-2 justify-between" style={{ fontFamily: "Tajawal, sans-serif" }}>
-                  {group.title}
+                <CardTitle className="flex items-center justify-between" style={{ fontFamily: "Tajawal, sans-serif" }}>
+                  <span>{group.title}</span>
                   <Button
                     variant="destructive"
                     size="sm"
@@ -334,44 +335,44 @@ export const TaskList = () => {
                 </div>
 
                 {/* Task List */}
-                <div>
+                <div className="space-y-2">
                   {group.tasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className={`rounded-lg p-3 shadow-sm cursor-pointer ${task.completed ? "opacity-60" : ""}`}
-                    style={{ backgroundColor: "rgba(255, 255, 255, 0.47)" }}
-                    onClick={() => toggleTaskCompletion(group.id, task.id)}
-                  >
-                    <div className="flex items-center h-3 justify-between">
-                    <div className="flex text-sm items-center gap-2">
-                      <Checkbox
-                      checked={task.completed}
-                      onCheckedChange={() => toggleTaskCompletion(group.id, task.id)}
-                      onClick={e => e.stopPropagation()}
-                      />
-                      <span
-                      className={`${
-                        task.completed ? "line-through text-gray-500" : "text-gray-900"
-                      }`}
-                      style={{ fontFamily: "Tajawal, sans-serif" }}
-                      >
-                      {task.title}
-                      </span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 p-0 text-white bg-red-500"
-                      onClick={e => {
-                      e.stopPropagation();
-                      deleteTask(group.id, task.id);
-                      }}
-                      title="حذف المهمة"
+                    <div
+                      key={task.id}
+                      className={`rounded-lg p-3 shadow-sm cursor-pointer ${task.completed ? "opacity-60" : ""}`}
+                      style={{ backgroundColor: "rgba(255, 255, 255, 0.47)" }}
+                      onClick={() => toggleTaskCompletion(group.id, task.id)}
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={task.completed}
+                            onCheckedChange={() => toggleTaskCompletion(group.id, task.id)}
+                            onClick={e => e.stopPropagation()}
+                          />
+                          <span
+                            className={`${
+                              task.completed ? "line-through text-gray-500" : "text-gray-900"
+                            }`}
+                            style={{ fontFamily: "Tajawal, sans-serif" }}
+                          >
+                            {task.title}
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 p-0 text-white bg-red-500"
+                          onClick={e => {
+                            e.stopPropagation();
+                            deleteTask(group.id, task.id);
+                          }}
+                          title="حذف المهمة"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
                   ))}
                 </div>
               </CardContent>
