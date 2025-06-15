@@ -265,7 +265,7 @@ const salesService = {
   },
 
   updateSale: async (id: string, data: Partial<SaleFormData>): Promise<ExtendedSale> => {
-    // First, get the original sale data to revert changes
+    // أولاً: الحصول على بيانات الفاتورة الأصلية
     const { data: originalSale, error: fetchOriginalError } = await supabase
       .from('sales')
       .select(`
@@ -280,13 +280,31 @@ const salesService = {
       throw new Error('فشل في جلب بيانات الفاتورة الأصلية');
     }
 
-    // Revert the original sale effects only if it was credit
-    const originalWasCredit = originalSale.payment_method === 'check';
-    if (originalWasCredit) {
-      await updateCustomerBalance(originalSale.customer_id, originalSale.total, false);
+    // --- حساب نوع الفاتورة قبل وبعد ---
+    const originalWasCredit = originalSale.payment_method === 'check'; // الفواتير الآجلة مخزنة كـ check
+    let newIsCredit = false;
+    if (data.payment_method) {
+      newIsCredit = data.payment_method === 'credit';
+    } else {
+      // إذا لم يتم إرسال طريقة الدفع الجديدة، استخدم طريقة الدفع الأصلية
+      newIsCredit = originalSale.payment_method === 'check';
     }
 
-    // Revert battery quantities (add back the sold quantities)
+    // --- تحديث رصيد العميل إذا لزم الأمر ---
+    if (originalWasCredit && !newIsCredit) {
+      // كان آجل وأصبح نقدي ⇒ إزالة رصيد الفاتورة الأصلية من العميل
+      await updateCustomerBalance(originalSale.customer_id, originalSale.total, false);
+    } else if (!originalWasCredit && newIsCredit && data.customer_id && data.total !== undefined) {
+      // كان نقدي وأصبح آجل ⇒ إضافة رصيد الفاتورة الجديدة
+      await updateCustomerBalance(data.customer_id, data.total, true);
+    } else if (originalWasCredit && newIsCredit) {
+      // بقي "آجل" لكن القيم تغيّرت ⇒ أزل القديمة وأضف الجديدة
+      await updateCustomerBalance(originalSale.customer_id, originalSale.total, false);
+      await updateCustomerBalance(data.customer_id || originalSale.customer_id, data.total ?? originalSale.total, true);
+    }
+    // في حال نقدي --> نقدي: لا تفعل شيء
+
+    // إعادة الكمية للبطاريات (إرجاع الأصناف الأصلية للمخزن)
     if (originalSale.sale_items) {
       const originalItems = originalSale.sale_items.map(item => ({
         battery_type_id: item.battery_type_id,
@@ -295,7 +313,7 @@ const salesService = {
       await updateBatteryTypeQuantities(originalItems, false);
     }
 
-    // Update the sale
+    // تحديث بيانات الفاتورة الأساسية
     const updateData: any = {};
     if (data.customer_id !== undefined) updateData.customer_id = data.customer_id;
     if (data.date !== undefined) updateData.date = data.date;
@@ -316,7 +334,7 @@ const salesService = {
       throw new Error(saleError.message);
     }
 
-    // Delete existing sale items
+    // حذف الأصناف القديمة
     const { error: deleteError } = await supabase
       .from('sale_items')
       .delete()
@@ -327,7 +345,7 @@ const salesService = {
       throw new Error(deleteError.message);
     }
 
-    // Create new sale items
+    // إضافة الأصناف الجديدة
     if (data.items) {
       const saleItems = data.items.map(item => ({
         sale_id: id,
@@ -346,18 +364,11 @@ const salesService = {
         throw new Error(itemsError.message);
       }
 
-      // تحديد ما إذا كانت الفاتورة الجديدة "آجل"
-      const isNewCredit = data.payment_method === 'credit';
-      if (isNewCredit && data.customer_id && data.total !== undefined) {
-        await updateCustomerBalance(data.customer_id, data.total, true);
-      }
-      // لا داعي لأي إضافة/خصم إذا لم تعد آجل (لأنها عولجت أعلاه)، أو إذا لم تتغير طريقة الدفع
-
-      // Update battery quantities for new items
+      // تحديث الكميات الجديدة (طرح من المخزن)
       await updateBatteryTypeQuantities(data.items, true);
     }
 
-    // تحديث تاريخ آخر بيع للعميل
+    // دائمًا حدّث تاريخ آخر بيع في بطاقة العميل إذا توفر تاريخ وعميل
     if (data.customer_id && data.date) {
       const { error: lastPurchaseError } = await supabase
         .from('customers')
@@ -368,7 +379,7 @@ const salesService = {
       }
     }
 
-    // Fetch the updated sale with all details
+    // جلب الفاتورة بعد التعديل
     const { data: saleData, error: fetchError } = await supabase
       .from('sales')
       .select(`
