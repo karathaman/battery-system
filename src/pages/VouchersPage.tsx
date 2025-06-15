@@ -45,6 +45,18 @@ const VouchersPage = () => {
     type: voucherTypeFilter
   });
 
+  // تحديد لون الخلفية على حسب نوع السند المختار
+  const getVoucherBgColor = () => {
+    switch (newVoucher.type) {
+      case "receipt":
+        return "bg-green-50 border-green-300";
+      case "payment":
+        return "bg-red-50 border-red-300";
+      default:
+        return "bg-white";
+    }
+  };
+
   const handleCustomerSelect = (customer: Customer) => {
     setNewVoucher(prev => ({
       ...prev,
@@ -189,7 +201,9 @@ const VouchersPage = () => {
           </div>
 
           {/* Add New Voucher Form */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div
+            className={`grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 rounded-lg border transition-colors duration-300 ${getVoucherBgColor()}`}
+          >
             <div>
               <Label htmlFor="date" style={{ fontFamily: 'Tajawal, sans-serif' }}>التاريخ</Label>
               <Input
