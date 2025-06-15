@@ -175,11 +175,11 @@ const PurchasesPage = () => {
     setSelectedSupplier(supplier);
     
     // Convert purchase items to extended purchase items
-    const extendedItems: ExtendedPurchaseItem[] = (purchase.items || purchase.purchase_items || []).map(item => {
-      const batteryType = batteryTypes.find(bt => bt.name === item.batteryType);
+    const extendedItems: ExtendedPurchaseItem[] = (purchase.items || purchase.purchase_items || []).map((item: any) => {
+      const batteryType = batteryTypes.find(bt => bt.name === (item.batteryType || item.battery_types?.name));
       return {
         id: item.id || Date.now().toString(),
-        batteryType: item.batteryType || 'غير معروف',
+        batteryType: item.batteryType || item.battery_types?.name || 'غير معروف',
         batteryTypeId: batteryType?.id || "",
         quantity: item.quantity,
         price: item.price_per_kg || item.price || 0,
@@ -281,7 +281,7 @@ const PurchasesPage = () => {
           <tbody>
             ${(purchase.items || purchase.purchase_items || []).map((item: any) => `
               <tr>
-                <td>${item.batteryType || 'غير معروف'}</td>
+                <td>${item.batteryType || item.battery_types?.name || 'غير معروف'}</td>
                 <td>${item.quantity}</td>
                 <td>${(item.price_per_kg || item.price || 0).toLocaleString()} ريال</td>
                 <td>${item.total.toLocaleString()} ريال</td>
