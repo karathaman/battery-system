@@ -6,8 +6,8 @@ export interface Customer {
   phone: string;
   description?: string;
   notes?: string;
-  lastPurchase?: string;
-  totalPurchases: number;
+  lastPurchase?: string; // تم الحفاظ على الحقل، سيتم عرض التسمية "آخر بيع"
+  totalPurchases: number; // سيتم عرض التسمية "مجموع الكميات المباعة"
   totalAmount: number;
   averagePrice: number;
   purchases: CustomerPurchase[];
@@ -16,8 +16,6 @@ export interface Customer {
   last2BatteryTypes?: string[];
   isBlocked?: boolean;
   blockReason?: string;
-  messageSent?: boolean;
-  lastMessageSent?: string;
   balance: number; // Made required to match usage
 }
 

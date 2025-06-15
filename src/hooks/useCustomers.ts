@@ -48,7 +48,6 @@ const customerService = {
       last2BatteryTypes: [],
       isBlocked: customer.is_blocked || false,
       blockReason: customer.block_reason,
-      messageSent: customer.message_sent || false,
       balance: customer.balance || 0
     }));
 
@@ -104,7 +103,6 @@ const customerService = {
       averagePrice: 0,
       purchases: [],
       isBlocked: false,
-      messageSent: false,
       balance: newCustomer.balance || 0
     };
   },
@@ -143,7 +141,6 @@ const customerService = {
       purchases: [],
       isBlocked: updatedCustomer.is_blocked || false,
       blockReason: updatedCustomer.block_reason,
-      messageSent: updatedCustomer.message_sent || false,
       balance: updatedCustomer.balance || 0
     };
   },
@@ -189,7 +186,6 @@ const customerService = {
       purchases: [],
       isBlocked: true,
       blockReason: reason,
-      messageSent: blockedCustomer.message_sent || false,
       balance: blockedCustomer.balance || 0
     };
   },
@@ -222,7 +218,6 @@ const customerService = {
       averagePrice: unblockedCustomer.average_price || 0,
       purchases: [],
       isBlocked: false,
-      messageSent: unblockedCustomer.message_sent || false,
       balance: unblockedCustomer.balance || 0
     };
   },
@@ -253,7 +248,6 @@ const customerService = {
       purchases: [],
       isBlocked: updatedCustomer.is_blocked || false,
       blockReason: updatedCustomer.block_reason,
-      messageSent: updatedCustomer.message_sent || false,
       balance: updatedCustomer.balance || 0
     };
   },
@@ -283,7 +277,6 @@ const customerService = {
       purchases: [],
       isBlocked: customer.is_blocked || false,
       blockReason: customer.block_reason,
-      messageSent: customer.message_sent || false,
       balance: customer.balance || 0
     }));
   }

@@ -97,7 +97,7 @@ const CustomerFollowUp = () => {
     setShowDetailsDialog(true);
   };
 
-    const getDaysSinceLastPurchase = (date: string): number => {
+  const getDaysSinceLastPurchase = (date: string): number => {
     const lastPurchaseDate = new Date(date);
     const currentDate = new Date();
     const differenceInTime = currentDate.getTime() - lastPurchaseDate.getTime();
@@ -236,7 +236,7 @@ const CustomerFollowUp = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {customers.map(customer => (
-                   <Card
+          <Card
             key={customer.id}
             className={`shadow-md hover:shadow-lg transition-shadow ${customer.isBlocked ? 'border-red-200 bg-red-50' : customer.description?.includes("عميل مميز") ? 'border-green-200 bg-green-50 ' : ''}`}
           >
@@ -321,7 +321,7 @@ const CustomerFollowUp = () => {
           
                 <div className="grid grid-cols-2 gap-2 text-center">
                   <div className="bg-gray-50 rounded p-2 border-gray-300 border">
-                    <p className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>الكميات</p>
+                    <p className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>مجموع الكميات المباعة</p>
                     <p className="font-semibold text-xs sm:text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{customer.totalPurchases}</p>
                   </div>
                   <div className="bg-gray-50 rounded p-2 border-gray-300 border">
