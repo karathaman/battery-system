@@ -25,7 +25,7 @@ interface Customer {
   phone: string;
   description?: string;
   lastPurchase?: string;
-  totalPurchases: number;
+  total_sold_quantity: number;
   totalAmount: number;
   averagePrice: number;
   purchases: Purchase[];
@@ -336,7 +336,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-blue-50 rounded-lg p-4 text-center">
                   <Package className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-                  <p className="text-2xl font-bold text-blue-600">{customer.totalPurchases}</p>
+                  <p className="text-2xl font-bold text-blue-600">{customer.total_sold_quantity}</p>
                   <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>إجمالي الكمية</p>
                 </div>
                 <div className="bg-green-50 rounded-lg p-4 text-center">
