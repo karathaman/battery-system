@@ -246,17 +246,17 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
     try {
       console.log("Fetching account statement for supplier:", supplierId);
 
-      // Fetch all purchases for the supplier (we'll show all purchases that affect account balance)
+      // جلب جميع فواتير المشتريات الخاصة بالمورد
       const { data: purchases, error: purchaseError } = await supabase
         .from("purchases")
-        .select("id, date, total, invoice_number")
+        .select("id, date, total, invoice_number, payment_method")
         .eq("supplier_id", supplierId);
 
       if (purchaseError) {
         console.error("Error fetching purchases:", purchaseError);
       }
 
-      // Fetch vouchers (receipts and payments)
+      // جلب السندات (قبض وصرف)
       const { data: vouchers, error: voucherError } = await supabase
         .from("vouchers")
         .select("id, date, amount, type, voucher_number, reference, notes")
@@ -267,53 +267,54 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
         console.error("Error fetching vouchers:", voucherError);
       }
 
-      console.log("Purchases:", purchases);
-      console.log("Vouchers:", vouchers);
-
-      // Format account statement entries
+      // تجهيز كشف الحساب
       const entries: AccountStatementEntry[] = [];
 
-      // Add purchases as debit entries (increase supplier balance/debt)
+      // إدراج فواتير المشتريات (الآجلة والنقدية)
       (purchases || []).forEach(purchase => {
+        // هنا نميز الفاتورة "آجلة" إذا كان payment_method != 'cash'
+        const isCredit = purchase.payment_method !== 'cash' && !!purchase.invoice_number;
         entries.push({
           id: purchase.id,
           date: purchase.date,
           type: 'purchase',
-          description: `فاتورة مشتريات - ${purchase.invoice_number}`,
+          description: isCredit
+            ? `فاتورة مشتريات (آجل) - ${purchase.invoice_number || '-'}` 
+            : `فاتورة مشتريات - ${purchase.invoice_number || '-'}`,
           debit: purchase.total,
           credit: 0,
-          balance: 0, // Will be calculated later
-          reference: purchase.invoice_number
+          balance: 0,
+          reference: purchase.invoice_number || '-'
         });
       });
 
-      // Add vouchers
+      // إدراج السندات
       (vouchers || []).forEach(voucher => {
         entries.push({
           id: voucher.id,
           date: voucher.date,
           type: voucher.type === 'receipt' ? 'voucher_receipt' : 'voucher_payment',
-          description: voucher.type === 'receipt' 
-            ? `سند قبض - ${voucher.voucher_number}` 
+          description: voucher.type === 'receipt'
+            ? `سند قبض - ${voucher.voucher_number}`
             : `سند صرف - ${voucher.voucher_number}`,
           debit: voucher.type === 'payment' ? voucher.amount : 0,
           credit: voucher.type === 'receipt' ? voucher.amount : 0,
-          balance: 0, // Will be calculated later
-          reference: voucher.voucher_number
+          balance: 0,
+          reference: voucher.voucher_number || '-'
         });
       });
 
-      // Sort by date (oldest first for balance calculation)
+      // ترتيب حسب التاريخ للأقدم للأحدث لتسهيل الترصيد
       entries.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-      // Calculate running balance
+      // حساب الرصيد الجاري لكل صف
       let runningBalance = 0;
       entries.forEach(entry => {
         runningBalance += entry.debit - entry.credit;
         entry.balance = runningBalance;
       });
 
-      // Sort by date (newest first for display)
+      // قلب الترتيب للعرض (الأحدث أولًا)
       entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       return entries;
@@ -611,31 +612,43 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
                   </TabsContent>
 
                   <TabsContent value="statement" className="mt-4">
-                    {/* Account Statement Table */}
+                    {/* جدول كشف الحساب مُعاد التصميم */}
                     {accountStatement.length > 0 ? (
                       <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead className="bg-gray-50">
+                        <table className="w-full text-sm border">
+                          <thead className="bg-gray-100 border-b">
                             <tr>
-                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>التاريخ</th>
-                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>البيان</th>
-                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>مدين</th>
-                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>دائن</th>
-                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الرصيد</th>
-                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>المرجع</th>
+                              <th className="p-3 font-semibold text-right">التاريخ</th>
+                              <th className="p-3 font-semibold text-right">نوع الحركة</th>
+                              <th className="p-3 font-semibold text-right">البيان</th>
+                              <th className="p-3 font-semibold text-right">مدين</th>
+                              <th className="p-3 font-semibold text-right">دائن</th>
+                              <th className="p-3 font-semibold text-right">المرجع (رقم الفاتورة)</th>
+                              <th className="p-3 font-semibold text-right">الرصيد</th>
                             </tr>
                           </thead>
                           <tbody>
                             {filterDataByDate(accountStatement).map((entry, index) => (
-                              <tr key={index} className="border-b hover:bg-gray-50">
+                              <tr key={index} className="border-b hover:bg-gray-50 text-center">
                                 <td className="p-3 text-sm">{entry.date}</td>
+                                <td className="p-3 text-sm">
+                                  {entry.type === 'purchase' ? (
+                                    <span className="px-2 py-1 bg-blue-100 text-blue-600 rounded text-xs">
+                                      {entry.description.includes('آجل') ? 'فاتورة مشتريات (آجل)' : 'فاتورة مشتريات'}
+                                    </span>
+                                  ) : entry.type === 'voucher_receipt' ? (
+                                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">سند قبض</span>
+                                  ) : (
+                                    <span className="px-2 py-1 bg-red-100 text-red-800 rounded text-xs">سند صرف</span>
+                                  )}
+                                </td>
                                 <td className="p-3 text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{entry.description}</td>
                                 <td className="p-3 text-sm text-red-600">{entry.debit > 0 ? entry.debit.toLocaleString() : '-'}</td>
                                 <td className="p-3 text-sm text-green-600">{entry.credit > 0 ? entry.credit.toLocaleString() : '-'}</td>
+                                <td className="p-3 text-sm font-mono">{entry.reference || '-'}</td>
                                 <td className={`p-3 text-sm font-bold ${entry.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                   {entry.balance.toLocaleString()}
                                 </td>
-                                <td className="p-3 text-sm">{entry.reference || '-'}</td>
                               </tr>
                             ))}
                           </tbody>
