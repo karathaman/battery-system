@@ -163,12 +163,12 @@ const CustomerFollowUp = () => {
           </Card>
           <Card>
             <CardContent className="p-3 sm:p-4 text-center !block">
-              <Calendar className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-orange-600" />
+              <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-purple-600" />
               <p className="text-lg sm:text-2xl font-bold">
-                {customers.length > 0 ? Math.round(customers.reduce((sum, c) => sum + c.averagePrice, 0) / customers.length) : 0}
+                {customers.reduce((sum, c) => sum + (c.balance ?? 0), 0).toLocaleString()}
               </p>
-              <p className="text-xs sm:text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                متوسط سعر الكيلو
+              <p className="text-xs sm:text-sm text-purple-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                الأرصدة
               </p>
             </CardContent>
           </Card>
