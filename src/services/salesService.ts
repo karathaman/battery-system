@@ -265,7 +265,7 @@ const salesService = {
   },
 
   updateSale: async (id: string, data: Partial<SaleFormData>): Promise<ExtendedSale> => {
-    // أولاً: الحصول على بيانات الفاتورة الأصلية
+    // جلب الفاتورة الأصلية مع الأصناف القديمة
     const { data: originalSale, error: fetchOriginalError } = await supabase
       .from('sales')
       .select(`
@@ -280,33 +280,45 @@ const salesService = {
       throw new Error('فشل في جلب بيانات الفاتورة الأصلية');
     }
 
-    // معرفة نوع الدفع القديم والجديد بطريقة دقيقة
-    const originalWasCredit = originalSale.payment_method === 'check';
-    const updatedPaymentMethod = data.payment_method ?? originalSale.payment_method;
-    const newIsCredit = updatedPaymentMethod === 'credit';
+    // قراءة طرق الدفع حسب الداتا الأصلية والجديدة
+    const prevPaymentMethod = originalSale.payment_method;
+    const updatedPaymentMethod = data.payment_method ?? prevPaymentMethod;
 
-    // سنحتاج لقيمة المجموع (total) القديمة والجديدة
-    const originalTotal = originalSale.total;
-    // لو لم يأتِ total جديد في البيانات، اعتبره نفس القديم
-    const newTotal = data.total !== undefined ? data.total : originalTotal;
-    // نفس الحال مع customer_id
-    const customerId = data.customer_id ?? originalSale.customer_id;
+    // هنا نستخدم نفس منطق mapPaymentMethod للطرفين:
+    const prevIsCredit = mapPaymentMethod(prevPaymentMethod) === 'check' || mapPaymentMethod(prevPaymentMethod) === 'credit';
+    const newIsCredit = mapPaymentMethod(updatedPaymentMethod) === 'check' || mapPaymentMethod(updatedPaymentMethod) === 'credit';
 
-    // تحديث رصيد العميل حسب السيناريو المناسب
-    if (originalWasCredit && newIsCredit) {
-      // إذا بقيت آجل وتم تغيير المبلغ فقط: أزل القديمة أضف الجديدة
-      await updateCustomerBalance(originalSale.customer_id, originalTotal, false);
-      await updateCustomerBalance(customerId, newTotal, true);
-    } else if (originalWasCredit && !newIsCredit) {
-      // أصبحت الفاتورة نقدي بعد أن كانت آجل ⇒ أزل فقط قيمة القديمة
-      await updateCustomerBalance(originalSale.customer_id, originalTotal, false);
-    } else if (!originalWasCredit && newIsCredit) {
-      // أصبحت الفاتورة آجل بعد أن كانت نقدي ⇒ أضف قيمة الجديدة فقط
-      await updateCustomerBalance(customerId, newTotal, true);
+    const prevCustomerId = originalSale.customer_id;
+    const newCustomerId = data.customer_id ?? prevCustomerId;
+
+    const prevTotal = Number(originalSale.total);
+    const newTotal = data.total !== undefined ? Number(data.total) : prevTotal;
+
+    // تعديل الرصيد فقط عند الحاجة!
+    // 1. إذا كان القديمة آجل والجديدة آجل: (خصم القديم + إضافة الجديد)
+    // إذا اختلف العميل أيضا يصحح للفواتير المحولة (خصم من القديم وإضافة للجديد)
+    if (prevIsCredit && newIsCredit) {
+      if (prevCustomerId === newCustomerId) {
+        if (prevTotal !== newTotal) {
+          await updateCustomerBalance(prevCustomerId, prevTotal, false); // خصم القديم
+          await updateCustomerBalance(prevCustomerId, newTotal, true);   // إضافة الجديد
+        }
+      } else {
+        await updateCustomerBalance(prevCustomerId, prevTotal, false); // خصم من القديم
+        await updateCustomerBalance(newCustomerId, newTotal, true);    // إضافة للجديد
+      }
     }
-    // إذا كانت نقدي ⇒ نقدي: لا تفعل شيء
+    // 2. القديمة آجل والجديدة نقدي: (خصم القديم فقط)
+    else if (prevIsCredit && !newIsCredit) {
+      await updateCustomerBalance(prevCustomerId, prevTotal, false);
+    }
+    // 3. القديمة نقدي والجديدة آجل: (إضافة الجديد)
+    else if (!prevIsCredit && newIsCredit) {
+      await updateCustomerBalance(newCustomerId, newTotal, true);
+    }
+    // 4. نقدي إلى نقدي: لا شيء
 
-    // إرجاع وحدات البطاريات القديمة إلى المخزون
+    // إسترجاع كميات الأصناف القديمة إلى المخزون
     if (originalSale.sale_items) {
       const originalItems = originalSale.sale_items.map(item => ({
         battery_type_id: item.battery_type_id,
@@ -370,11 +382,11 @@ const salesService = {
     }
 
     // تحديث تاريخ آخر بيع في بطاقة العميل إذا توفر تاريخ وعميل
-    if (customerId && data.date) {
+    if (newCustomerId && data.date) {
       const { error: lastPurchaseError } = await supabase
         .from('customers')
         .update({ last_purchase: data.date })
-        .eq('id', customerId);
+        .eq('id', newCustomerId);
       if (lastPurchaseError) {
         console.error('فشل في تحديث تاريخ آخر بيع للعميل:', lastPurchaseError);
       }
