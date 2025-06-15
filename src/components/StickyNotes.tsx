@@ -7,24 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { StickyNote, Plus, Trash2, Edit3, Palette, CheckSquare, Square } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client.ts";
-
-interface ChecklistItem {
-  id: string;
-  text: string;
-  completed: boolean;
-}
-
-interface Note {
-  id: string;
-  title: string;
-  content: string;
-  completed: boolean;
-  createdAt: string;
-  color: string;
-  type: 'note' | 'checklist';
-  checklistItems?: ChecklistItem[];
-}
+import { useNotes } from "@/hooks/useNotes";
 
 interface StickyNotesProps {
   compact?: boolean;
@@ -41,7 +24,9 @@ const noteColors = [
 ];
 
 export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesProps) => {
-  const [notes, setNotes] = useState<Note[]>([]);
+  const today = new Date().toISOString().split('T')[0];
+  const { notes, createNote, updateNote, deleteNote, toggleChecklistItem, isCreating } = useNotes(today);
+  
   const [newNote, setNewNote] = useState({ title: "", content: "", color: "yellow", type: "note" as 'note' | 'checklist' });
   const [newChecklistItems, setNewChecklistItems] = useState<string[]>([""]);
   const [editingNote, setEditingNote] = useState<string | null>(null);
@@ -51,39 +36,6 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
 
   const getColorClasses = (color: string) => {
     return noteColors.find(c => c.value === color) || noteColors[0];
-  };
-
-  useEffect(() => {
-    fetchNotes();
-  }, []);
-
-  const fetchNotes = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("notes")
-        .select("*")
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error('Error fetching notes:', error);
-        return;
-      }
-      
-      setNotes(
-        (data || []).map((item: any) => ({
-          id: item.id,
-          title: item.title,
-          content: item.content || "",
-          completed: item.completed || false,
-          createdAt: item.created_at || new Date().toISOString(),
-          color: item.color || "yellow",
-          type: (item.type === 'checklist' ? 'checklist' : 'note') as 'note' | 'checklist',
-          checklistItems: []
-        }))
-      );
-    } catch (error) {
-      console.error('Error in fetchNotes:', error);
-    }
   };
 
   const addNote = async () => {
@@ -97,173 +49,56 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
       return;
     }
 
-    try {
-      const { data, error } = await supabase
-        .from("notes")
-        .insert({
-          title: newNote.title,
-          content: newNote.content,
-          color: newNote.color,
-          type: newNote.type,
-          date: new Date().toISOString().split('T')[0],
-          completed: false
-        })
-        .select()
-        .single();
+    const noteData = {
+      title: newNote.title,
+      content: newNote.content,
+      color: newNote.color,
+      type: newNote.type,
+      date: today,
+      checklist_items: newNote.type === 'checklist' 
+        ? newChecklistItems.filter(item => item.trim()).map(text => ({ text, completed: false }))
+        : undefined
+    };
 
-      if (error) {
-        console.error('Error creating note:', error);
-        toast({
-          title: language === "ar" ? "خطأ" : "Error",
-          description: language === "ar" ? "فشل في إنشاء الملاحظة" : "Failed to create note",
-          variant: "destructive",
-          duration: 2000,
-        });
-        return;
-      }
+    createNote(noteData);
 
-      const note: Note = {
-        id: data.id,
-        title: data.title,
-        content: data.content || "",
-        completed: data.completed || false,
-        createdAt: data.created_at,
-        color: data.color || "yellow",
-        type: (data.type === 'checklist' ? 'checklist' : 'note') as 'note' | 'checklist',
-        checklistItems: []
-      };
-
-      setNotes(prev => [note, ...prev]);
-      setNewNote({ title: "", content: "", color: "yellow", type: "note" });
-      setNewChecklistItems([""]);
-      
-      toast({
-        title: language === "ar" ? "تم إضافة الملاحظة" : "Note Added",
-        description: language === "ar" ? "تم إضافة الملاحظة بنجاح" : "Note added successfully",
-        duration: 2000,
-      });
-    } catch (error) {
-      console.error('Error in addNote:', error);
-    }
+    // Reset form
+    setNewNote({ title: "", content: "", color: "yellow", type: "note" });
+    setNewChecklistItems([""]);
   };
 
-  const deleteNote = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from("notes")
-        .delete()
-        .eq("id", id);
-
-      if (error) {
-        console.error('Error deleting note:', error);
-        toast({
-          title: language === "ar" ? "خطأ" : "Error",
-          description: language === "ar" ? "فشل في حذف الملاحظة" : "Failed to delete note",
-          variant: "destructive",
-          duration: 2000,
-        });
-        return;
-      }
-
-      setNotes(prev => prev.filter(note => note.id !== id));
-      toast({
-        title: language === "ar" ? "تم حذف الملاحظة" : "Note Deleted",
-        description: language === "ar" ? "تم حذف الملاحظة بنجاح" : "Note deleted successfully",
-        duration: 2000,
-      });
-    } catch (error) {
-      console.error('Error in deleteNote:', error);
+  const handleEdit = (note: any) => {
+    setNewNote({
+      title: note.title,
+      content: note.content || "",
+      color: note.color,
+      type: note.type
+    });
+    if (note.type === 'checklist' && note.checklist_items) {
+      setNewChecklistItems(note.checklist_items.map((item: any) => item.text));
     }
+    setEditingNote(note.id);
   };
 
-  const toggleCompleted = async (id: string) => {
-    const note = notes.find(n => n.id === id);
-    if (!note) return;
+  const handleUpdate = () => {
+    if (!editingNote || !newNote.title.trim()) return;
 
-    try {
-      const { error } = await supabase
-        .from("notes")
-        .update({ completed: !note.completed })
-        .eq("id", id);
+    const noteData = {
+      title: newNote.title,
+      content: newNote.content,
+      color: newNote.color,
+      type: newNote.type,
+      checklist_items: newNote.type === 'checklist' 
+        ? newChecklistItems.filter(item => item.trim()).map(text => ({ text, completed: false }))
+        : undefined
+    };
 
-      if (error) {
-        console.error('Error updating note:', error);
-        return;
-      }
-
-      setNotes(prev => prev.map(note => 
-        note.id === id ? { ...note, completed: !note.completed } : note
-      ));
-    } catch (error) {
-      console.error('Error in toggleCompleted:', error);
-    }
-  };
-
-  const updateNote = async (id: string, title: string, content: string, color: string) => {
-    try {
-      const { error } = await supabase
-        .from("notes")
-        .update({ title, content, color })
-        .eq("id", id);
-
-      if (error) {
-        console.error('Error updating note:', error);
-        toast({
-          title: language === "ar" ? "خطأ" : "Error",
-          description: language === "ar" ? "فشل في تحديث الملاحظة" : "Failed to update note",
-          variant: "destructive",
-          duration: 2000,
-        });
-        return;
-      }
-
-      setNotes(prev => prev.map(note => 
-        note.id === id ? { ...note, title, content, color } : note
-      ));
-      setEditingNote(null);
-      
-      toast({
-        title: language === "ar" ? "تم التحديث" : "Updated",
-        description: language === "ar" ? "تم تحديث الملاحظة بنجاح" : "Note updated successfully",
-        duration: 2000,
-      });
-    } catch (error) {
-      console.error('Error in updateNote:', error);
-    }
-  };
-
-  const addChecklistItem = (noteId: string, text: string) => {
-    if (!text.trim()) return;
+    updateNote({ id: editingNote, data: noteData });
     
-    setNotes(prev => prev.map(note => 
-      note.id === noteId ? {
-        ...note,
-        checklistItems: [
-          ...(note.checklistItems || []),
-          { id: Date.now().toString(), text, completed: false }
-        ]
-      } : note
-    ));
-  };
-
-  const toggleChecklistItem = (noteId: string, itemId: string) => {
-    setNotes(prev => prev.map(note => 
-      note.id === noteId ? {
-        ...note,
-        checklistItems: note.checklistItems?.map(item =>
-          item.id === itemId ? { ...item, completed: !item.completed } : item
-        )
-      } : note
-    ));
-  };
-
-  const deleteChecklistItem = (noteId: string, itemId: string) => {
-    setNotes(prev => prev.map(note => 
-      note.id === noteId ? {
-        ...note,
-        checklistItems: note.checklistItems?.filter(item => item.id !== itemId)
-      } : note
-    ));
+    // Reset form
+    setNewNote({ title: "", content: "", color: "yellow", type: "note" });
+    setNewChecklistItems([""]);
+    setEditingNote(null);
   };
 
   const addNewChecklistItemField = () => {
@@ -395,13 +230,14 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
               </div>
               
               <Button
-                onClick={addNote}
+                onClick={editingNote ? handleUpdate : addNote}
                 size="sm"
                 className={`w-full text-xs ${isRTL ? 'flex-row-reverse' : ''}`}
                 style={{ fontFamily: 'Tajawal, sans-serif' }}
+                disabled={isCreating}
               >
                 <Plus className="w-3 h-3 mr-1" />
-                {language === "ar" ? "إضافة" : "Add"}
+                {editingNote ? "تحديث" : (language === "ar" ? "إضافة" : "Add")}
               </Button>
             </div>
           </CardContent>
@@ -420,7 +256,7 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
                   </div>
                   <div className={`flex gap-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <Button
-                      onClick={() => setEditingNote(note.id)}
+                      onClick={() => handleEdit(note)}
                       variant="ghost"
                       size="sm"
                       className="h-6 w-6 p-0 text-white hover:bg-black/20"
@@ -443,8 +279,16 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
                 {editingNote === note.id ? (
                   <EditNoteForm
                     note={note}
-                    onSave={updateNote}
-                    onCancel={() => setEditingNote(null)}
+                    newNote={newNote}
+                    setNewNote={setNewNote}
+                    newChecklistItems={newChecklistItems}
+                    setNewChecklistItems={setNewChecklistItems}
+                    onSave={handleUpdate}
+                    onCancel={() => {
+                      setEditingNote(null);
+                      setNewNote({ title: "", content: "", color: "yellow", type: "note" });
+                      setNewChecklistItems([""]);
+                    }}
                     language={language}
                     compact={true}
                   />
@@ -456,13 +300,13 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
                       </p>
                     )}
                     
-                    {note.type === 'checklist' && note.checklistItems && (
+                    {note.type === 'checklist' && note.checklist_items && (
                       <div className="space-y-1">
-                        {note.checklistItems.slice(0, 3).map(item => (
+                        {note.checklist_items.slice(0, 3).map(item => (
                           <div key={item.id} className={`flex items-center gap-1 text-xs ${isRTL ? 'flex-row-reverse' : ''}`}>
                             <Checkbox
                               checked={item.completed}
-                              onCheckedChange={() => toggleChecklistItem(note.id, item.id)}
+                              onCheckedChange={() => toggleChecklistItem({ itemId: item.id, completed: !item.completed })}
                               className="h-3 w-3"
                             />
                             <span className={`${item.completed ? 'line-through text-gray-500' : ''} truncate`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
@@ -470,23 +314,13 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
                             </span>
                           </div>
                         ))}
-                        {note.checklistItems.length > 3 && (
+                        {note.checklist_items.length > 3 && (
                           <p className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                            +{note.checklistItems.length - 3} أكثر
+                            +{note.checklist_items.length - 3} أكثر
                           </p>
                         )}
                       </div>
                     )}
-                    
-                    <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                      <Checkbox
-                        checked={note.completed}
-                        onCheckedChange={() => toggleCompleted(note.id)}
-                      />
-                      <span className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                        {language === "ar" ? "مكتملة" : "Complete"}
-                      </span>
-                    </div>
                   </div>
                 )}
               </CardContent>
@@ -624,12 +458,13 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
             </div>
             
             <Button
-              onClick={addNote}
+              onClick={editingNote ? handleUpdate : addNote}
               className={`w-full flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}
               style={{ fontFamily: 'Tajawal, sans-serif' }}
+              disabled={isCreating}
             >
               <Plus className="w-4 h-4" />
-              {language === "ar" ? "إضافة ملاحظة" : "Add Note"}
+              {editingNote ? "تحديث الملاحظة" : (language === "ar" ? "إضافة ملاحظة" : "Add Note")}
             </Button>
           </div>
 
@@ -661,8 +496,16 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
                   {editingNote === note.id ? (
                     <EditNoteForm
                       note={note}
-                      onSave={updateNote}
-                      onCancel={() => setEditingNote(null)}
+                      newNote={newNote}
+                      setNewNote={setNewNote}
+                      newChecklistItems={newChecklistItems}
+                      setNewChecklistItems={setNewChecklistItems}
+                      onSave={handleUpdate}
+                      onCancel={() => {
+                        setEditingNote(null);
+                        setNewNote({ title: "", content: "", color: "yellow", type: "note" });
+                        setNewChecklistItems([""]);
+                      }}
                       language={language}
                     />
                   ) : (
@@ -677,7 +520,7 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
                         </div>
                         <div className={`flex items-center gap-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
                           <Button
-                            onClick={() => setEditingNote(note.id)}
+                            onClick={() => handleEdit(note)}
                             variant="ghost"
                             size="sm"
                             className="h-6 w-6 p-0"
@@ -702,69 +545,26 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
                         </p>
                       )}
 
-                      {note.type === 'checklist' && note.checklistItems && (
+                      {note.type === 'checklist' && note.checklist_items && (
                         <div className="mb-3 space-y-1">
-                          {note.checklistItems.map(item => (
+                          {note.checklist_items.map(item => (
                             <div key={item.id} className={`flex items-center gap-2 text-xs ${isRTL ? 'flex-row-reverse' : ''}`}>
                               <Checkbox
                                 checked={item.completed}
-                                onCheckedChange={() => toggleChecklistItem(note.id, item.id)}
+                                onCheckedChange={() => toggleChecklistItem({ itemId: item.id, completed: !item.completed })}
                                 className="h-3 w-3"
                               />
                               <span className={`${item.completed ? 'line-through text-gray-500' : ''} flex-1`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
                                 {item.text}
                               </span>
-                              <Button
-                                onClick={() => deleteChecklistItem(note.id, item.id)}
-                                variant="ghost"
-                                size="sm"
-                                className="h-4 w-4 p-0 text-red-500 hover:text-red-700"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
                             </div>
                           ))}
-                          <div className={`flex gap-1 mt-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                            <Input
-                              placeholder="إضافة مهمة..."
-                              className="flex-1 h-6 text-xs"
-                              style={{ fontFamily: 'Tajawal, sans-serif' }}
-                              onKeyPress={(e) => {
-                                if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                                  addChecklistItem(note.id, e.currentTarget.value);
-                                  e.currentTarget.value = "";
-                                }
-                              }}
-                            />
-                            <Button
-                              onClick={(e) => {
-                                const input = e.currentTarget.parentElement?.querySelector('input');
-                                if (input && input.value.trim()) {
-                                  addChecklistItem(note.id, input.value);
-                                  input.value = "";
-                                }
-                              }}
-                              size="sm"
-                              className="h-6 px-2 text-xs"
-                            >
-                              <Plus className="w-3 h-3" />
-                            </Button>
-                          </div>
                         </div>
                       )}
                       
                       <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-                        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                          <Checkbox
-                            checked={note.completed}
-                            onCheckedChange={() => toggleCompleted(note.id)}
-                          />
-                          <span className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                            {language === "ar" ? "مكتملة" : "Complete"}
-                          </span>
-                        </div>
                         <span className="text-xs text-gray-400">
-                          {new Date(note.createdAt).toLocaleDateString(language === "ar" ? 'ar-SA' : 'en-US')}
+                          {new Date(note.created_at).toLocaleDateString(language === "ar" ? 'ar-SA' : 'en-US')}
                         </span>
                       </div>
                     </div>
@@ -792,21 +592,22 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
 };
 
 interface EditNoteFormProps {
-  note: Note;
-  onSave: (id: string, title: string, content: string, color: string) => void;
+  note: any;
+  newNote: any;
+  setNewNote: any;
+  newChecklistItems: string[];
+  setNewChecklistItems: any;
+  onSave: () => void;
   onCancel: () => void;
   language?: string;
   compact?: boolean;
 }
 
-const EditNoteForm = ({ note, onSave, onCancel, language = "ar", compact = false }: EditNoteFormProps) => {
-  const [title, setTitle] = useState(note.title);
-  const [content, setContent] = useState(note.content);
-  const [color, setColor] = useState(note.color);
+const EditNoteForm = ({ note, newNote, setNewNote, newChecklistItems, setNewChecklistItems, onSave, onCancel, language = "ar", compact = false }: EditNoteFormProps) => {
   const isRTL = language === "ar";
 
   const handleSave = () => {
-    if (!title.trim()) {
+    if (!newNote.title.trim()) {
       toast({
         title: language === "ar" ? "خطأ" : "Error",
         description: language === "ar" ? "يرجى إدخال عنوان للملاحظة" : "Please enter a note title",
@@ -815,21 +616,21 @@ const EditNoteForm = ({ note, onSave, onCancel, language = "ar", compact = false
       });
       return;
     }
-    onSave(note.id, title, content, color);
+    onSave();
   };
 
   return (
     <div className="space-y-2">
       <Input
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
+        value={newNote.title}
+        onChange={(e) => setNewNote((prev: any) => ({ ...prev, title: e.target.value }))}
         className={`${compact ? 'text-xs' : ''} ${isRTL ? 'text-right' : 'text-left'}`}
         style={{ fontFamily: 'Tajawal, sans-serif' }}
       />
-      {note.type === 'note' && (
+      {newNote.type === 'note' && (
         <Textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
+          value={newNote.content}
+          onChange={(e) => setNewNote((prev: any) => ({ ...prev, content: e.target.value }))}
           rows={compact ? 2 : 3}
           className={`${compact ? 'text-xs' : ''} ${isRTL ? 'text-right' : 'text-left'}`}
           style={{ fontFamily: 'Tajawal, sans-serif' }}
@@ -841,9 +642,9 @@ const EditNoteForm = ({ note, onSave, onCancel, language = "ar", compact = false
         {noteColors.map((colorOption) => (
           <button
             key={colorOption.value}
-            onClick={() => setColor(colorOption.value)}
+            onClick={() => setNewNote((prev: any) => ({ ...prev, color: colorOption.value }))}
             className={`w-4 h-4 rounded-full ${colorOption.bg} border-2 ${
-              color === colorOption.value ? 'border-gray-800' : 'border-gray-300'
+              newNote.color === colorOption.value ? 'border-gray-800' : 'border-gray-300'
             } hover:scale-110 transition-transform`}
             title={colorOption.name}
           />
