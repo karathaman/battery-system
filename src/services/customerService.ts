@@ -1,4 +1,3 @@
-
 import { Customer, CustomerFormData, PaginatedResponse } from '@/types';
 import { toast } from '@/hooks/use-toast';
 
@@ -45,7 +44,6 @@ class CustomerService {
           last2Prices: [280, 290],
           last2BatteryTypes: ["بطاريات عادية", "بطاريات جافة"],
           isBlocked: false,
-          messageSent: false,
           balance: 1000
         }
       ];
