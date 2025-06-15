@@ -1,10 +1,10 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { BarChart3, User, Phone, Calendar, DollarSign, Package, TrendingUp } from "lucide-react";
+import { useSales } from "@/hooks/useSales";
 
 interface Sale {
   id: string;
@@ -44,9 +44,46 @@ export const CustomerStatistics = ({ language = "ar", customers }: CustomerStati
   
   const isRTL = language === "ar";
   
-  const filteredCustomers = customers.filter(customer =>
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.phone.includes(searchTerm)
+  const { sales, isLoading } = useSales();
+  
+  const mappedCustomers = customers.map((customer) => {
+    const customerSales = (sales || []).filter((sale) => sale.customerId === customer.id);
+    
+    const totalAmount = customerSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+    const averagePrice =
+      customerSales.length > 0
+        ? Math.round(
+            customerSales.reduce((sum, sale) => sum + (sale.total || 0), 0) /
+              customerSales.length
+          )
+        : 0;
+    const lastSaleObj = customerSales.length
+      ? customerSales.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
+      : undefined;
+    const lastSale = lastSaleObj ? lastSaleObj.date : "";
+    
+    return {
+      ...customer,
+      sales: customerSales.map((sale) => ({
+        id: sale.id,
+        date: sale.date,
+        batteryType: sale.items && sale.items.length > 0 ? sale.items[0].batteryType : "",
+        quantity: sale.items && sale.items.length > 0 ? sale.items[0].quantity : 0,
+        pricePerKg: sale.items && sale.items.length > 0 ? sale.items[0].price : 0,
+        total: sale.items && sale.items.length > 0 ? sale.items[0].total : sale.total || 0,
+        discount: sale.discount || 0,
+        finalTotal: sale.total || 0,
+      })),
+      totalAmount,
+      averagePrice,
+      lastSale,
+    };
+  });
+
+  const filteredCustomers = mappedCustomers.filter(
+    (customer) =>
+      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.phone.includes(searchTerm)
   );
 
   const CustomerDetailsDialog = ({ customer }: { customer: Customer }) => (
