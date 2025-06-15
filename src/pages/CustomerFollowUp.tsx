@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Users, Search, Filter, UserPlus, TrendingUp, Calendar, Edit3, Trash2, Ban, UnlockIcon, Phone, User, DollarSign, RotateCcw } from "lucide-react";
+import { Users, Search, Filter, UserPlus, TrendingUp, Calendar, Edit3, Trash2, Ban, UnlockIcon, Phone, User, DollarSign, RotateCcw, MessageCircle, Edit, X, FileText, CheckCircle } from "lucide-react";
 import { useCustomers } from "@/hooks/useCustomers";
 import { Customer, FilterOptions } from "@/types";
 import { AddCustomerDialog } from "@/components/AddCustomerDialog";
@@ -95,6 +95,20 @@ const CustomerFollowUp = () => {
   const handleShowDetails = (customer: Customer) => {
     setSelectedCustomer(customer);
     setShowDetailsDialog(true);
+  };
+
+    const getDaysSinceLastPurchase = (date: string): number => {
+    const lastPurchaseDate = new Date(date);
+    const currentDate = new Date();
+    const differenceInTime = currentDate.getTime() - lastPurchaseDate.getTime();
+    return Math.floor(differenceInTime / (1000 * 3600 * 24)); // تحويل الفرق إلى أيام
+  };
+  
+  const getDaysSinceLastMessage = (date: string): number => {
+    const lastMessageDate = new Date(date);
+    const currentDate = new Date();
+    const differenceInTime = currentDate.getTime() - lastMessageDate.getTime();
+    return Math.floor(differenceInTime / (1000 * 3600 * 24)); // تحويل الفرق إلى أيام
   };
 
   if (isLoading) {
@@ -222,143 +236,148 @@ const CustomerFollowUp = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {customers.map(customer => (
-          <Card key={customer.id} className={`shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50 ${customer.isBlocked ? 'border-red-300 bg-red-50' : 'border-blue-200'}`}>
-            <CardContent className="p-4">
-              <div className="space-y-4">
-                {/* Header with name and avatar */}
-                <div className="flex items-center gap-3 flex-row-reverse">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
-                    <User className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="text-right flex-1">
-                    <h3 className="text-lg font-bold text-gray-900 mb-1" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                      {customer.name}
+                   <Card
+            key={customer.id}
+            className={`shadow-md hover:shadow-lg transition-shadow ${customer.isBlocked ? 'border-red-200 bg-red-50' : customer.description?.includes("عميل مميز") ? 'border-green-200 bg-green-50 ' : ''}`}
+          >
+            <CardContent className="p-3 sm:p-4">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 mb-2 flex-row-reverse">
+                  <div className="flex-1">
+                    <h3
+                      className="text-sm sm:text-base font-semibold truncate"
+                      style={{ fontFamily: 'Tajawal, sans-serif' }}
+                    >
+                      {customer.name} - <Badge variant="secondary" className="text-xs">{customer.customerCode}</Badge>
                     </h3>
-                    <div className="flex items-center gap-2 flex-row-reverse text-sm text-gray-600">
-                      <Phone className="w-4 h-4" />
-                      <span>{customer.phone}</span>
-                    </div>
-                    <div className="flex justify-end gap-2 mt-2">
-                      <Badge variant="secondary" className="text-xs">
-                        {customer.customerCode}
-                      </Badge>
+          
+                    <div className="flex items-center gap-2 mt-1 flex-row-reverse flex-wrap">
                       {customer.isBlocked && (
                         <Badge variant="destructive" className="text-xs">
                           محظور
                         </Badge>
                       )}
+          
+                      {getDaysSinceLastPurchase(customer.lastPurchase) > 30 && (
+                        <Badge variant="destructive" className="text-xs">
+                          متأخر
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>
-
-                {/* Description */}
-                {customer.description && (
-                  <div className="bg-blue-50 rounded-lg p-3">
-                    <p className="text-sm text-gray-700 text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                      {customer.description}
-                    </p>
-                  </div>
-                )}
-
-                {/* Last Sale Info */}
-                <div className="bg-purple-50 rounded-lg p-3">
-                  <div className="flex items-center gap-2 flex-row-reverse mb-2">
-                    <Calendar className="w-4 h-4 text-purple-600" />
-                    <span className="text-sm font-semibold text-purple-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                      آخر بيع
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-700 text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                    {customer.lastPurchase || "لا يوجد"}
-                  </p>
-                </div>
-
-                {/* Balance Info */}
-                <div className="bg-green-50 rounded-lg p-3">
-                  <div className="flex items-center justify-between flex-row-reverse mb-2">
-                    <div className="flex items-center gap-2 flex-row-reverse">
-                      <DollarSign className="w-4 h-4 text-green-600" />
-                      <span className="text-sm font-semibold text-green-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                        الرصيد
+                <div className="space-y-2">
+                  {/* Customer Notes */}
+                  {customer.notes && (
+                    <div className="flex items-start gap-2 bg-yellow-50 rounded p-2">
+                      <MessageCircle className="w-4 h-4 text-yellow-500 mt-0.5" />
+                      <span className="text-xs font-semibold text-gray-700" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                        {customer.notes}
                       </span>
                     </div>
-                    {(customer.balance || 0) !== 0 && (
-                      <Button
-                        onClick={() => handleResetBalance(customer.id, customer.name)}
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-                        title="تصفير الرصيد"
-                      >
-                        <RotateCcw className="w-3 h-3" />
-                      </Button>
-                    )}
+                  )}
+          
+                  {/* Customer Phone & Description */}
+                  <div className="flex items-center gap-2">
+                    <User className="w-3 h-3 text-blue-400" />
+                    <span className="text-xs font-semibold text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      {customer.phone}
+                    </span>
                   </div>
-                  <p className="text-sm font-bold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                    {(customer.balance || 0).toLocaleString()} ريال
-                  </p>
-                  {(customer.balance || 0) !== 0 && (
+          
+                  {/* Last Sale */}
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-3 h-3 text-orange-400" />
+                    <span className="text-xs font-semibold text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      آخر بيع: {customer.lastPurchase || "لا يوجد"}
+                      {customer.lastPurchase && (
+                        <span className={`ml-1 ${getDaysSinceLastPurchase(customer.lastPurchase) > 30 ? 'text-red-600' : 'text-green-600'}`}>
+                          &nbsp; &nbsp; ← &nbsp; {getDaysSinceLastPurchase(customer.lastPurchase)} يوم
+                        </span>
+                      )}
+                    </span>
+                  </div>
+          
+                  {/* Balance */}
+                  <div className="flex items-center gap-2">
+                    <img src="/assets/icons/SaudiRG.svg" alt="Custom Icon" className="w-3 h-3" />
+                    <span
+                      className={`text-xs font-semibold ${customer.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                      style={{ fontFamily: 'Tajawal, sans-serif' }}
+                    >
+                      الرصيد: {customer.balance.toLocaleString()} ريال
+                    </span>
                     <Button
                       onClick={() => handleResetBalance(customer.id, customer.name)}
                       variant="outline"
                       size="sm"
-                      className="w-full mt-2 text-xs flex items-center gap-1 flex-row-reverse text-red-600 hover:bg-red-50 hover:border-red-300"
-                      style={{ fontFamily: 'Tajawal, sans-serif' }}
+                      className="ml-2 px-2 py-1 text-xs border-red-300 text-red-600 hover:text-white hover:bg-red-600 transition-all"
+                      style={{ fontFamily: 'Tajawal, sans-serif', height: '20px', lineHeight: '20px' }}
                     >
-                      <RotateCcw className="w-3 h-3" />
                       تصفير الرصيد
                     </Button>
-                  )}
-                </div>
-
-                {/* Statistics */}
-                <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-3">
-                  <div className="grid grid-cols-2 gap-3 text-center">
-                    <div>
-                      <div className="text-lg font-bold text-green-600">{customer.totalPurchases}</div>
-                      <div className="text-xs text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>الكميات</div>
-                    </div>
-                    <div>
-                      <div className="text-lg font-bold text-blue-600">{customer.totalAmount.toLocaleString()}</div>
-                      <div className="text-xs text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجمالي</div>
-                    </div>
                   </div>
                 </div>
-
-                {/* Action buttons */}
+          
+                <div className="grid grid-cols-2 gap-2 text-center">
+                  <div className="bg-gray-50 rounded p-2 border-gray-300 border">
+                    <p className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>الكميات</p>
+                    <p className="font-semibold text-xs sm:text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{customer.totalPurchases}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded p-2 border-gray-300 border">
+                    <p className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجمالي</p>
+                    <p className="font-semibold text-xs sm:text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{customer.totalAmount.toLocaleString()}</p>
+                  </div>
+                </div>
+          
                 <div className="space-y-2">
                   <Button
                     onClick={() => handleShowDetails(customer)}
-                    variant="outline"
+                    variant="default"
                     size="sm"
-                    className="w-full flex items-center gap-2 flex-row-reverse text-xs text-blue-600 hover:bg-blue-50 hover:border-blue-300"
+                    className="w-full flex items-center gap-2 flex-row-reverse text-xs"
                     style={{ fontFamily: 'Tajawal, sans-serif' }}
                   >
+                    <FileText className="w-3 h-3" />
                     عرض التفاصيل وكشف الحساب
                   </Button>
-
-                  <div className="flex gap-2">
+          
+                  <div className="grid grid-cols-3 gap-1">
+                     
+          
                     <Button
                       onClick={() => handleEditCustomer(customer)}
                       variant="outline"
                       size="sm"
-                      className="flex-1 flex items-center gap-1 text-xs hover:bg-blue-50 hover:border-blue-300"
+                      className="flex items-center gap-1 flex-row-reverse text-xs"
                       style={{ fontFamily: 'Tajawal, sans-serif' }}
-                      disabled={isUpdating}
                     >
-                      <Edit3 className="w-3 h-3" />
+                      <Edit className="w-3 h-3" />
                       تعديل
                     </Button>
-                    
+          
+                    <Button
+                      onClick={() => handleDeleteCustomer(customer.id)}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1 flex-row-reverse text-xs text-red-600"
+                      style={{ fontFamily: 'Tajawal, sans-serif' }}
+                    >
+                      <X className="w-3 h-3" />
+                      حذف
+                    </Button>
+                  </div>
+          
+                  <div className="w-full">
                     {customer.isBlocked ? (
                       <Button
                         onClick={() => handleUnblockCustomer(customer.id)}
                         variant="outline"
                         size="sm"
-                        className="flex-1 text-xs text-green-600 hover:bg-green-50 hover:border-green-300"
+                        className="w-full flex items-center gap-1 flex-row-reverse text-xs text-green-600"
                         style={{ fontFamily: 'Tajawal, sans-serif' }}
                       >
-                        <UnlockIcon className="w-3 h-3" />
+                        <CheckCircle className="w-3 h-3" />
                         إلغاء الحظر
                       </Button>
                     ) : (
@@ -366,26 +385,14 @@ const CustomerFollowUp = () => {
                         onClick={() => handleBlockCustomer(customer.id)}
                         variant="outline"
                         size="sm"
-                        className="flex-1 text-xs text-orange-600 hover:bg-orange-50 hover:border-orange-300"
+                        className="w-full flex items-center gap-1 flex-row-reverse text-xs text-white bg-red-600"
                         style={{ fontFamily: 'Tajawal, sans-serif' }}
                       >
                         <Ban className="w-3 h-3" />
-                        حظر
+                        حظر العميل
                       </Button>
                     )}
                   </div>
-
-                  <Button
-                    onClick={() => handleDeleteCustomer(customer.id)}
-                    variant="destructive"
-                    size="sm"
-                    className="w-full flex items-center gap-2 text-xs hover:bg-red-600"
-                    style={{ fontFamily: 'Tajawal, sans-serif' }}
-                    disabled={isDeleting}
-                  >
-                    <Trash2 className="w-3 h-3" />
-                    حذف العميل
-                  </Button>
                 </div>
               </div>
             </CardContent>

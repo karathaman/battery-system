@@ -444,9 +444,11 @@ const SalesPage = () => {
                           <p className="text-xs text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                             {sale.customerName}
                           </p>
-                          <Badge variant={sale.paymentMethod === 'credit' ? 'destructive' : 'default'} className="text-xs mt-1">
-                            {paymentMethods.find(m => m.value === sale.paymentMethod)?.label}
-                          </Badge>
+                            {sale.paymentMethod && (
+                            <Badge variant={sale.paymentMethod === 'credit' ? 'destructive' : 'default'} className="text-xs mt-1">
+                              {paymentMethods.find(m => m.value === sale.paymentMethod)?.label || sale.paymentMethod}
+                            </Badge>
+                            )}
                         </div>
                         <div className="text-left">
                           <p className="font-bold text-green-600">{sale.total.toLocaleString()} ريال</p>

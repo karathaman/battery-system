@@ -10,6 +10,8 @@ import { useDailyPurchases, DailyPurchase } from "@/hooks/useDailyPurchases";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchBatteryTypes } from "@/services/batteryTypeService";
 import { fetchSuppliers } from "@/services/supplierService";
+import { AddSupplierDialog } from "@/components/AddSupplierDialog"; // استيراد Dialog إضافة المورد
+import { SupplierFormData } from "@/types";
 
 
 interface DailyPurchasesProps {
@@ -34,6 +36,11 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
   const [localPurchases, setLocalPurchases] = useState<DailyPurchase[]>([]);
   const [focusedCell, setFocusedCell] = useState<{ row: number, col: string } | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
+
+  const [showAddSupplierDialog, setShowAddSupplierDialog] = useState(false); // حالة التحكم في ظهور Dialog
+  const [newSupplierName, setNewSupplierName] = useState(""); // اسم المورد الجديد
+  const [nextSupplierCode, setNextSupplierCode] = useState(""); // كود المورد التالي
+
 
   const [suppliers, setSuppliers] = useState([]);
   const [batteryTypes, setBatteryTypes] = useState<{ id: string; name: string }[]>([]);
@@ -167,7 +174,7 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
   const updateBatteryTypeQuantity = async (batteryTypeId: string, quantityChange: number) => {
     try {
       console.log('Updating battery type quantity:', { batteryTypeId, quantityChange });
-      
+
       const { data, error } = await supabase
         .from("battery_types")
         .select("currentQty")
@@ -189,11 +196,11 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
       if (updateError) {
         console.error("Error updating battery type quantity:", updateError);
       } else {
-        console.log("Battery type quantity updated successfully:", { 
-          batteryTypeId, 
-          previousQty: data?.currentQty || 0, 
-          change: quantityChange, 
-          newQty: updatedQty 
+        console.log("Battery type quantity updated successfully:", {
+          batteryTypeId,
+          previousQty: data?.currentQty || 0,
+          change: quantityChange,
+          newQty: updatedQty
         });
       }
     } catch (err) {
@@ -204,7 +211,7 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
   const updateSupplierStats = async (supplierCode: string, purchase: DailyPurchase) => {
     try {
       console.log('Updating supplier stats for:', supplierCode, purchase);
-      
+
       // Get supplier by code
       const { data: supplier, error: supplierError } = await supabase
         .from("suppliers")
@@ -221,7 +228,7 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
       const newTotalPurchases = (supplier.total_purchases || 0) + purchase.quantity;
       const newTotalAmount = (supplier.total_amount || 0) + purchase.finalTotal;
       const newAveragePrice = newTotalPurchases > 0 ? newTotalAmount / newTotalPurchases : 0;
-      
+
       // Update balance for credit purchases
       const newBalance = (supplier.balance || 0) + purchase.finalTotal;
 
@@ -257,7 +264,7 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
   const revertSupplierStats = async (supplierCode: string, purchase: DailyPurchase) => {
     try {
       console.log('Reverting supplier stats for:', supplierCode, purchase);
-      
+
       // Get supplier by code
       const { data: supplier, error: supplierError } = await supabase
         .from("suppliers")
@@ -354,12 +361,12 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
         }
 
         console.log("Purchase deleted successfully from database.");
-        
+
         // Revert battery type quantity
         if (purchase.batteryTypeId) {
           await updateBatteryTypeQuantity(purchase.batteryTypeId, -purchase.quantity);
         }
-        
+
         // Revert supplier stats
         if (purchase.supplierCode) {
           await revertSupplierStats(purchase.supplierCode, purchase);
@@ -471,7 +478,7 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
       if (purchase.batteryTypeId) {
         await updateBatteryTypeQuantity(purchase.batteryTypeId, purchase.quantity);
       }
-      
+
       // Update supplier stats
       if (purchase.supplierCode) {
         await updateSupplierStats(purchase.supplierCode, purchase);
@@ -550,34 +557,142 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
     }
   };
 
-  const handleSupplierInput = (value: string, rowIndex: number) => {
-    console.log("Input value:", value);
-    const foundSupplier = findSupplierBySearch(value);
+const handleSupplierInput = async (value: string, rowIndex: number) => {
+  console.log("Input value:", value);
+  const foundSupplier = findSupplierBySearch(value);
 
-    if (foundSupplier) {
-      console.log("Found supplier:", foundSupplier); // طباعة الكائن بالكامل
-      console.log("Supplier code is:", foundSupplier.supplier_code); // طباعة كود المورد بالاسم الصحيح
+  if (foundSupplier) {
+    console.log("Found supplier:", foundSupplier);
+    updateLocalPurchase(rowIndex, "supplierName", foundSupplier.name);
+    updateLocalPurchase(rowIndex, "supplierCode", foundSupplier.supplier_code);
+    updateLocalPurchase(rowIndex, "supplierPhone", foundSupplier.phone);
 
-      updateLocalPurchase(rowIndex, 'supplierName', foundSupplier.name);
-      updateLocalPurchase(rowIndex, 'supplierCode', foundSupplier.supplier_code); // التأكد من الحقل الصحيح
-      updateLocalPurchase(rowIndex, 'supplierPhone', foundSupplier.phone);
+    toast({
+      title: language === "ar" ? "تم العثور على المورد" : "Supplier Found",
+      description: language === "ar" ? `تم اختيار ${foundSupplier.name}` : `Selected ${foundSupplier.name}`,
+      duration: 2000,
+    });
 
+    setTimeout(() => {
+      setFocusedCell({ row: rowIndex, col: "batteryType" });
+    }, 100);
+  } else {
+    console.log("Supplier not found");
+    setNewSupplierName(value); // تخزين اسم المورد الجديد
+    const nextCode = await fetchNextSupplierCode(); // حساب الكود التالي للمورد
+    setNextSupplierCode(nextCode); // تحديث حالة الكود التالي
+    setShowAddSupplierDialog(true); // فتح Dialog إضافة المورد
+  }
+};
+
+  const handleAddSupplier = async (supplier: SupplierFormData) => {
+    try {
+      console.log("Adding new supplier:", supplier);
+  
+      // التحقق من وجود المورد مسبقًا
+      const { data: existingSupplier, error: checkError } = await supabase
+        .from("suppliers")
+        .select("id, name, supplier_code")
+        .eq("supplier_code", nextSupplierCode)
+        .single();
+  
+      if (checkError && checkError.code !== "PGRST116") {
+        console.error("Error checking supplier existence:", checkError);
+        toast({
+          title: language === "ar" ? "خطأ" : "Error",
+          description: language === "ar" ? "حدث خطأ أثناء التحقق من المورد" : "An error occurred while checking the supplier",
+          variant: "destructive",
+        });
+        return;
+      }
+  
+      if (existingSupplier) {
+        console.error("Supplier already exists:", existingSupplier);
+        toast({
+          title: language === "ar" ? "خطأ" : "Error",
+          description: language === "ar" ? `المورد موجود بالفعل: ${existingSupplier.name}` : `Supplier already exists: ${existingSupplier.name}`,
+          variant: "destructive",
+        });
+        return;
+      }
+  
+      // إضافة المورد الجديد
+      const { data, error } = await supabase
+        .from("suppliers")
+        .insert([
+          {
+            name: supplier.name,
+            phone: supplier.phone,
+            description: supplier.description,
+            notes: supplier.notes,
+            supplier_code: nextSupplierCode, // استخدام كود المورد التالي
+          },
+        ])
+        .select();
+  
+      if (error) {
+        console.error("Error adding supplier:", error);
+        toast({
+          title: language === "ar" ? "خطأ" : "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+  
+      console.log("Supplier added successfully:", data);
+  
+      // تحديث حالة الموردين بإضافة المورد الجديد
+      const addedSupplier = data[0];
+      setSuppliers((prevSuppliers) => [...prevSuppliers, addedSupplier]);
+  
+      // تحديث حالة المورد المحلي
+      const rowIndex = localPurchases.findIndex((p) => p.supplierName === newSupplierName);
+      if (rowIndex !== -1) {
+        updateLocalPurchase(rowIndex, "supplierName", addedSupplier.name);
+        updateLocalPurchase(rowIndex, "supplierCode", addedSupplier.supplier_code);
+        updateLocalPurchase(rowIndex, "supplierPhone", addedSupplier.phone);
+      }
+  
       toast({
-        title: language === "ar" ? "تم العثور على المورد" : "Supplier Found",
-        description: language === "ar" ? `تم اختيار ${foundSupplier.name}` : `Selected ${foundSupplier.name}`,
+        title: language === "ar" ? "تم الإضافة" : "Added",
+        description: language === "ar" ? `تم إضافة المورد ${addedSupplier.name}` : `Supplier ${addedSupplier.name} added successfully`,
         duration: 2000,
       });
-
-      setTimeout(() => {
-        setFocusedCell({ row: rowIndex, col: 'batteryType' });
-      }, 100);
-    } else {
-      console.log("Supplier not found");
-      updateLocalPurchase(rowIndex, 'supplierName', value);
-      updateLocalPurchase(rowIndex, 'supplierCode', ""); // تعيين كود المورد كقيمة فارغة
-      updateLocalPurchase(rowIndex, 'supplierPhone', "");
+  
+      setShowAddSupplierDialog(false); // إغلاق Dialog
+    } catch (err) {
+      console.error("Unexpected error adding supplier:", err);
+      toast({
+        title: language === "ar" ? "خطأ" : "Error",
+        description: language === "ar" ? "حدث خطأ أثناء إضافة المورد" : "An error occurred while adding the supplier",
+        variant: "destructive",
+      });
     }
   };
+ const fetchNextSupplierCode = async () => {
+  try {
+    const { data, error } = await supabase
+      .from("suppliers")
+      .select("supplier_code")
+      .order("supplier_code", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error) {
+      console.error("Error fetching last supplier code:", error);
+      return "S001"; // الكود الافتراضي إذا لم يكن هناك موردين
+    }
+
+    const lastCode = data?.supplier_code || "S001";
+    const numericPart = parseInt(lastCode.replace(/\D/g, ""), 10);
+    const nextCode = `S${String(numericPart + 1).padStart(3, "0")}`;
+    return nextCode;
+  } catch (err) {
+    console.error("Unexpected error fetching next supplier code:", err);
+    return "S001"; // الكود الافتراضي إذا حدث خطأ
+  }
+};
 
   const totalDailyAmount = localPurchases.reduce((sum, purchase) => sum + purchase.finalTotal, 0);
 
@@ -800,7 +915,7 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
                           ? `آخر توريد (${batteryType}): `
                           : `Last Supply (${batteryType}): `}
                         <span className="font-bold">{purchase.date || "-"}</span>
-                        {" | "} 
+                        {" | "}
                         {language === "ar" ? "كمية:" : "Qty:"}{" "}
                         <span className="font-bold">{purchase.quantity ?? "-"}</span>
                         {" | "}
@@ -825,98 +940,98 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
         <CardContent className="p-0">
           <div className="overflow-x-auto" ref={tableRef}>
             <table className="w-full">
-                <thead className="bg-gray-50 border-b">
+              <thead className="bg-gray-50 border-b">
                 <tr>
                   <th
-                  className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}
-                  style={{
-                    fontFamily: 'Tajawal, sans-serif',
-                    width: 180, // المورد
-                    minWidth: 120,
-                    maxWidth: 220,
-                  }}
+                    className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}
+                    style={{
+                      fontFamily: 'Tajawal, sans-serif',
+                      width: 180, // المورد
+                      minWidth: 120,
+                      maxWidth: 220,
+                    }}
                   >
-                  {language === "ar" ? "المورد" : "Supplier"}
+                    {language === "ar" ? "المورد" : "Supplier"}
                   </th>
                   <th
-                  className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}
-                  style={{
-                    fontFamily: 'Tajawal, sans-serif',
-                    width: 140, // نوع البطارية
-                    minWidth: 100,
-                    maxWidth: 180,
-                  }}
+                    className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}
+                    style={{
+                      fontFamily: 'Tajawal, sans-serif',
+                      width: 140, // نوع البطارية
+                      minWidth: 100,
+                      maxWidth: 180,
+                    }}
                   >
-                  {language === "ar" ? "نوع البطارية" : "Battery Type"}
+                    {language === "ar" ? "نوع البطارية" : "Battery Type"}
                   </th>
                   <th
-                  className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}
-                  style={{
-                    fontFamily: 'Tajawal, sans-serif',
-                    width: 90, // الكمية
-                    minWidth: 70,
-                    maxWidth: 110,
-                  }}
+                    className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}
+                    style={{
+                      fontFamily: 'Tajawal, sans-serif',
+                      width: 90, // الكمية
+                      minWidth: 70,
+                      maxWidth: 110,
+                    }}
                   >
-                  {language === "ar" ? "الكمية" : "Quantity"}
+                    {language === "ar" ? "الكمية" : "Quantity"}
                   </th>
                   <th
-                  className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}
-                  style={{
-                    fontFamily: 'Tajawal, sans-serif',
-                    width: 90, // السعر
-                    minWidth: 70,
-                    maxWidth: 110,
-                  }}
+                    className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}
+                    style={{
+                      fontFamily: 'Tajawal, sans-serif',
+                      width: 90, // السعر
+                      minWidth: 70,
+                      maxWidth: 110,
+                    }}
                   >
-                  {language === "ar" ? "السعر" : "Price"}
+                    {language === "ar" ? "السعر" : "Price"}
                   </th>
                   <th
-                  className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}
-                  style={{
-                    fontFamily: 'Tajawal, sans-serif',
-                    width: 110, // الإجمالي
-                    minWidth: 90,
-                    maxWidth: 130,
-                  }}
+                    className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}
+                    style={{
+                      fontFamily: 'Tajawal, sans-serif',
+                      width: 110, // الإجمالي
+                      minWidth: 90,
+                      maxWidth: 130,
+                    }}
                   >
-                  {language === "ar" ? "الإجمالي" : "Total"}
+                    {language === "ar" ? "الإجمالي" : "Total"}
                   </th>
                   <th
-                  className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}
-                  style={{
-                    fontFamily: 'Tajawal, sans-serif',
-                    width: 90, // الخصم
-                    minWidth: 70,
-                    maxWidth: 110,
-                  }}
+                    className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}
+                    style={{
+                      fontFamily: 'Tajawal, sans-serif',
+                      width: 90, // الخصم
+                      minWidth: 70,
+                      maxWidth: 110,
+                    }}
                   >
-                  {language === "ar" ? "الخصم" : "Discount"}
+                    {language === "ar" ? "الخصم" : "Discount"}
                   </th>
                   <th
-                  className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}
-                  style={{
-                    fontFamily: 'Tajawal, sans-serif',
-                    width: 120, // الإجمالي النهائي
-                    minWidth: 100,
-                    maxWidth: 150,
-                  }}
+                    className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}
+                    style={{
+                      fontFamily: 'Tajawal, sans-serif',
+                      width: 120, // الإجمالي النهائي
+                      minWidth: 100,
+                      maxWidth: 150,
+                    }}
                   >
-                  {language === "ar" ? "الإجمالي النهائي" : "Final Total"}
+                    {language === "ar" ? "الإجمالي النهائي" : "Final Total"}
                   </th>
                   <th
-                  className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}
-                  style={{
-                    fontFamily: 'Tajawal, sans-serif',
-                    width: 120, // إجراءات
-                    minWidth: 90,
-                    maxWidth: 150,
-                  }}
+                    className={`p-3 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}
+                    style={{
+                      fontFamily: 'Tajawal, sans-serif',
+                      width: 120, // إجراءات
+                      minWidth: 90,
+                      maxWidth: 150,
+                    }}
                   >
-                  {language === "ar" ? "إجراءات" : "Actions"}
+                    {language === "ar" ? "إجراءات" : "Actions"}
                   </th>
                 </tr>
-                </thead>
+              </thead>
 
               <tbody>
                 {localPurchases.map((purchase, index) => (
@@ -1056,7 +1171,7 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
-                       
+
                       </div>
                     </td>
                   </tr>
@@ -1064,7 +1179,13 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
               </tbody>
             </table>
           </div>
-
+                  <AddSupplierDialog
+            open={showAddSupplierDialog}
+            onClose={() => setShowAddSupplierDialog(false)}
+            onSupplierAdded={handleAddSupplier}
+            nextSupplierCode={nextSupplierCode} // تمرير الكود التالي
+            language={language}
+          />
           <div className="p-4 bg-gray-50 border-t">
             <Button
               onClick={addRow}
