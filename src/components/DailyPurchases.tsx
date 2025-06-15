@@ -12,7 +12,7 @@ import { fetchBatteryTypes } from "@/services/batteryTypeService";
 import { fetchSuppliers } from "@/services/supplierService";
 import { AddSupplierDialog } from "@/components/AddSupplierDialog"; // استيراد Dialog إضافة المورد
 import { SupplierFormData } from "@/types";
-
+import { SupplierSearchDialog } from "@/components/SupplierSearchDialog";
 
 interface DailyPurchasesProps {
   id: string;
@@ -41,11 +41,14 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
   const [newSupplierName, setNewSupplierName] = useState(""); // اسم المورد الجديد
   const [nextSupplierCode, setNextSupplierCode] = useState(""); // كود المورد التالي
 
-
   const [suppliers, setSuppliers] = useState([]);
   const [batteryTypes, setBatteryTypes] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // حالتان جديدتان للتحكم في المورد وحالة الدايلاوج
+  const [showSupplierDialog, setShowSupplierDialog] = useState(false);
+  const [activeRow, setActiveRow] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -67,7 +70,6 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
     fetchData();
   }, []);
 
-
   const findSupplierBySearch = (searchTerm: string) => {
     const term = searchTerm.toLowerCase().trim();
     console.log("Searching for:", term);
@@ -82,8 +84,6 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
       );
     });
   };
-
-  // Removed useEffect that referenced undefined 'value' variable
 
   const isRTL = language === "ar";
 
@@ -135,26 +135,6 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
 
     fetchData();
   }, [currentDate]);
-
-  // Initialize local purchases when db data loads
-  /*   useEffect(() => {
-      const initialPurchases = dbPurchases.length > 0 ? dbPurchases : [{
-        id: "temp-1",
-        date: currentDate,
-        supplierName: "",
-        supplierCode: "",
-        supplierPhone: "",
-        batteryType: "بطاريات عادية",
-        quantity: 0,
-        pricePerKg: 0,
-        total: 0,
-        discount: 0,
-        finalTotal: 0,
-        isSaved: false
-      }];
-      setLocalPurchases(initialPurchases);
-    }, [dbPurchases, currentDate]);
-     */
 
   const calculateTotals = (purchase: DailyPurchase): DailyPurchase => {
     const total = Math.round(purchase.quantity * purchase.pricePerKg);
@@ -557,33 +537,33 @@ export const DailyPurchases = ({ language, id, date, supplierName, supplierCode,
     }
   };
 
-const handleSupplierInput = async (value: string, rowIndex: number) => {
-  console.log("Input value:", value);
-  const foundSupplier = findSupplierBySearch(value);
+  const handleSupplierInput = async (value: string, rowIndex: number) => {
+    console.log("Input value:", value);
+    const foundSupplier = findSupplierBySearch(value);
 
-  if (foundSupplier) {
-    console.log("Found supplier:", foundSupplier);
-    updateLocalPurchase(rowIndex, "supplierName", foundSupplier.name);
-    updateLocalPurchase(rowIndex, "supplierCode", foundSupplier.supplier_code);
-    updateLocalPurchase(rowIndex, "supplierPhone", foundSupplier.phone);
+    if (foundSupplier) {
+      console.log("Found supplier:", foundSupplier);
+      updateLocalPurchase(rowIndex, "supplierName", foundSupplier.name);
+      updateLocalPurchase(rowIndex, "supplierCode", foundSupplier.supplier_code);
+      updateLocalPurchase(rowIndex, "supplierPhone", foundSupplier.phone);
 
-    toast({
-      title: language === "ar" ? "تم العثور على المورد" : "Supplier Found",
-      description: language === "ar" ? `تم اختيار ${foundSupplier.name}` : `Selected ${foundSupplier.name}`,
-      duration: 2000,
-    });
+      toast({
+        title: language === "ar" ? "تم العثور على المورد" : "Supplier Found",
+        description: language === "ar" ? `تم اختيار ${foundSupplier.name}` : `Selected ${foundSupplier.name}`,
+        duration: 2000,
+      });
 
-    setTimeout(() => {
-      setFocusedCell({ row: rowIndex, col: "batteryType" });
-    }, 100);
-  } else {
-    console.log("Supplier not found");
-    setNewSupplierName(value); // تخزين اسم المورد الجديد
-    const nextCode = await fetchNextSupplierCode(); // حساب الكود التالي للمورد
-    setNextSupplierCode(nextCode); // تحديث حالة الكود التالي
-    setShowAddSupplierDialog(true); // فتح Dialog إضافة المورد
-  }
-};
+      setTimeout(() => {
+        setFocusedCell({ row: rowIndex, col: "batteryType" });
+      }, 100);
+    } else {
+      console.log("Supplier not found");
+      setNewSupplierName(value); // تخزين اسم المورد الجديد
+      const nextCode = await fetchNextSupplierCode(); // حساب الكود التالي للمورد
+      setNextSupplierCode(nextCode); // تحديث حالة الكود التالي
+      setShowAddSupplierDialog(true); // فتح Dialog إضافة المورد
+    }
+  };
 
   const handleAddSupplier = async (supplier: SupplierFormData) => {
     try {
@@ -670,29 +650,29 @@ const handleSupplierInput = async (value: string, rowIndex: number) => {
       });
     }
   };
- const fetchNextSupplierCode = async () => {
-  try {
-    const { data, error } = await supabase
-      .from("suppliers")
-      .select("supplier_code")
-      .order("supplier_code", { ascending: false })
-      .limit(1)
-      .single();
+  const fetchNextSupplierCode = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("suppliers")
+        .select("supplier_code")
+        .order("supplier_code", { ascending: false })
+        .limit(1)
+        .single();
 
-    if (error) {
-      console.error("Error fetching last supplier code:", error);
-      return "S001"; // الكود الافتراضي إذا لم يكن هناك موردين
+      if (error) {
+        console.error("Error fetching last supplier code:", error);
+        return "S001"; // الكود الافتراضي إذا لم يكن هناك موردين
+      }
+
+      const lastCode = data?.supplier_code || "S001";
+      const numericPart = parseInt(lastCode.replace(/\D/g, ""), 10);
+      const nextCode = `S${String(numericPart + 1).padStart(3, "0")}`;
+      return nextCode;
+    } catch (err) {
+      console.error("Unexpected error fetching next supplier code:", err);
+      return "S001"; // الكود الافتراضي إذا حدث خطأ
     }
-
-    const lastCode = data?.supplier_code || "S001";
-    const numericPart = parseInt(lastCode.replace(/\D/g, ""), 10);
-    const nextCode = `S${String(numericPart + 1).padStart(3, "0")}`;
-    return nextCode;
-  } catch (err) {
-    console.error("Unexpected error fetching next supplier code:", err);
-    return "S001"; // الكود الافتراضي إذا حدث خطأ
-  }
-};
+  };
 
   const totalDailyAmount = localPurchases.reduce((sum, purchase) => sum + purchase.finalTotal, 0);
 
@@ -836,6 +816,17 @@ const handleSupplierInput = async (value: string, rowIndex: number) => {
     } catch (err) {
       console.error("Unexpected error updating supplier balance:", err);
     }
+  };
+
+  // تحديث دالة التعامل مع اختيار المورد من الدايلاوج
+  const handleSupplierSelectedFromDialog = (supplier: any) => {
+    if (activeRow !== null) {
+      updateLocalPurchase(activeRow, "supplierName", supplier.name);
+      updateLocalPurchase(activeRow, "supplierCode", supplier.supplierCode ?? "");
+      updateLocalPurchase(activeRow, "supplierPhone", supplier.phone ?? "");
+    }
+    setShowSupplierDialog(false);
+    setActiveRow(null);
   };
 
   if (isLoading) {
@@ -1041,35 +1032,23 @@ const handleSupplierInput = async (value: string, rowIndex: number) => {
                     onClick={() => handleRowClick(purchase)} // تحديث الصف المحدد عند الضغط
                   >
                     <td className="p-2">
-                      <Input
-                        id={`${index}-supplierName`}
-                        value={purchase.supplierName}
-                        onChange={(e) => {
-                          if (e.target.value === "") {
-                            updateLocalPurchase(index, 'supplierName', "");
-                            updateLocalPurchase(index, 'supplierCode', "");
-                            updateLocalPurchase(index, 'supplierPhone', "");
-                          } else {
-                            updateLocalPurchase(index, 'supplierName', e.target.value);
-                          }
+                      <button
+                        id={`${index}-supplierName-btn`}
+                        type="button"
+                        onClick={() => {
+                          setActiveRow(index);
+                          setShowSupplierDialog(true);
                         }}
-                        onBlur={(e) => {
-                          if (e.target.value !== "") {
-                            handleSupplierInput(e.target.value, index);
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            handleSupplierInput((e.target as HTMLInputElement).value, index);
-                          }
-                        }}
-                        placeholder={language === "ar" ? "ابحث: اسم/جوال/رمز..." : "Search: name/phone/code..."}
-                        className={isRTL ? 'text-right' : 'text-left'}
+                        className="w-full bg-white border rounded px-2 py-1 text-right hover:bg-blue-50 transition duration-150"
                         style={{ fontFamily: 'Tajawal, sans-serif' }}
-                        readOnly={purchase.isSaved}
-                        tabIndex={purchase.isSaved ? -1 : 0}
-                      />
+                        disabled={purchase.isSaved}
+                      >
+                        {purchase.supplierName
+                          ? purchase.supplierName
+                          : language === "ar"
+                            ? "اختر مورد..."
+                            : "Select supplier..."}
+                      </button>
                     </td>
 
                     <td className="p-2">
@@ -1179,7 +1158,20 @@ const handleSupplierInput = async (value: string, rowIndex: number) => {
               </tbody>
             </table>
           </div>
-                  <AddSupplierDialog
+          {/* Dialog لاختيار المورد */}
+          <SupplierSearchDialog
+            open={showSupplierDialog}
+            onClose={() => {
+              setShowSupplierDialog(false);
+              setActiveRow(null);
+            }}
+            onSupplierSelect={handleSupplierSelectedFromDialog}
+            searchTerm={activeRow !== null ? localPurchases[activeRow]?.supplierName || "" : ""}
+            language={language}
+            onAddSupplier={() => {}} // يمكن مستقبلا إضافة من هنا
+          />
+          {/* Dialog إضافة مورد */}
+          <AddSupplierDialog
             open={showAddSupplierDialog}
             onClose={() => setShowAddSupplierDialog(false)}
             onSupplierAdded={handleAddSupplier}
