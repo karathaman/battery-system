@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, Phone, Calendar, Package, DollarSign, TrendingUp, ShoppingCart, MessageCircle, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 interface Purchase {
   id: string;
@@ -68,6 +68,16 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
     totalQuantity: 0,
     totalAmount: 0,
     averagePrice: 0
+  });
+
+  // BATTERY TYPES FILTER STATE
+  const [batteryTypesFromDB, setBatteryTypesFromDB] = useState<string[]>([]); // All battery types from DB
+  const [batteryTypeFilter, setBatteryTypeFilter] = useState<string>("all");
+
+  // DATE RANGE FILTER
+  const [dateRange, setDateRange] = useState<{ startDate: string | null; endDate: string | null }>({
+    startDate: null,
+    endDate: null,
   });
 
   useEffect(() => {
@@ -342,13 +352,22 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
     return diffDays;
   };
 
-  const [dateRange, setDateRange] = useState<{ startDate: string | null; endDate: string | null }>({
-    startDate: null,
-    endDate: null,
-  });
+  // جلب أنواع البطاريات من جدول battery_types عند فتح الديالوج فقط أول مرة
+  useEffect(() => {
+    if (!open) return;
+    const fetchBatteryTypes = async () => {
+      const { data, error } = await supabase.from("battery_types").select("name");
+      if (!error && data) {
+        setBatteryTypesFromDB(data.map(bt => bt.name));
+      }
+    };
+    fetchBatteryTypes();
+  }, [open]);
 
-  const filterDataByDate = (data: any[]) => {
+  // عند تغيير الفلاتر يتم تصفية السجل
+  const filterDataByDateAndBattery = (data: any[]) => {
     return data.filter((entry) => {
+      // date
       const entryDate = new Date(entry.date);
       const startDate = dateRange.startDate ? new Date(dateRange.startDate) : null;
       const endDate = dateRange.endDate ? new Date(dateRange.endDate) : null;
@@ -356,9 +375,37 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
       if (startDate && entryDate < startDate) return false;
       if (endDate && entryDate > endDate) return false;
 
+      // battery type
+      if (batteryTypeFilter !== "all" && entry.battery_type !== batteryTypeFilter) return false;
+
       return true;
     });
   };
+
+  // بيانات التوريدات بعد تطبيق الفلاتر
+  const filteredHistory = useMemo(
+    () => filterDataByDateAndBattery(supplierHistory),
+    [supplierHistory, dateRange, batteryTypeFilter]
+  );
+
+  // إحصائيات مشتقة فقط من البيانات المفلترة بالوقت و/أو النوع
+  const filteredStats = useMemo(() => {
+    let totalQuantity = 0;
+    let totalAmount = 0;
+    let totalWeightedSum = 0;
+
+    filteredHistory.forEach((entry) => {
+      totalQuantity += Number(entry.quantity) || 0;
+      totalAmount += Number(entry.final_total) || 0;
+      totalWeightedSum += (Number(entry.price_per_kg) || 0) * (Number(entry.quantity) || 0);
+    });
+    const averagePrice = totalQuantity > 0 ? (totalWeightedSum / totalQuantity).toFixed(2) : "0";
+    return {
+      totalQuantity,
+      totalAmount,
+      averagePrice: parseFloat(averagePrice),
+    };
+  }, [filteredHistory]);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -471,18 +518,18 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-blue-50 rounded-lg p-4 text-center">
                   <Package className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-                  <p className="text-2xl font-bold text-blue-600">{stats.totalQuantity.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-blue-600">{filteredStats.totalQuantity.toLocaleString()}</p>
                   <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>إجمالي الكمية</p>
                 </div>
                 <div className="bg-green-50 rounded-lg p-4 text-center">
                   <img src="/assets/icons/SaudiRG.svg" alt="Custom Icon" className="w-8 h-8 mx-auto mb-2" />
 
-                  <p className="text-2xl font-bold text-green-600">{stats.totalAmount.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-green-600">{filteredStats.totalAmount.toLocaleString()}</p>
                   <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>إجمالي المبلغ </p>
                 </div>
                 <div className="bg-purple-50 rounded-lg p-4 text-center">
                   <TrendingUp className="w-8 h-8 mx-auto mb-2 text-purple-600" />
-                  <p className="text-2xl font-bold text-purple-600">{stats.averagePrice}</p>
+                  <p className="text-2xl font-bold text-purple-600">{filteredStats.averagePrice}</p>
                   <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>متوسط السعر </p>
                 </div>
                 <div className={`${supplier.balance >= 0 ? 'bg-green-50' : 'bg-red-50'} rounded-lg p-4 text-center`}>
@@ -500,10 +547,10 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
           {/* Tabs for Purchase History and Account Statement */}
           <Card>
             <CardHeader>
+              {/* --- Tabs & Filters --- */}
               <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-                {/* Tabs */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 w-full">
                     <TabsList className="bg-blue-50" dir="rtl">
                       <TabsTrigger value="deliveries" className="flex items-center gap-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                         <ShoppingCart className="w-4 h-4" />
@@ -514,9 +561,9 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
                         كشف الحساب
                       </TabsTrigger>
                     </TabsList>
-
-                    {/* Date Filters */}
-                    <div className="flex flex-wrap items-center gap-2">
+                    {/* ----- FILTERS DESIGN */}
+                    <div className="flex flex-wrap items-center gap-4 bg-blue-50 rounded-lg p-2">
+                      {/* فلتر التاريخ */}
                       <span className="text-sm text-gray-500">من</span>
                       <input
                         type="date"
@@ -524,7 +571,7 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
                         onChange={(e) =>
                           setDateRange((prev) => ({ ...prev, startDate: e.target.value }))
                         }
-                        className="border rounded-md p-2 text-sm text-gray-600"
+                        className="border rounded-md p-2 text-sm text-gray-600 bg-white"
                       />
                       <span className="text-sm text-gray-500">إلى</span>
                       <input
@@ -533,7 +580,7 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
                         onChange={(e) =>
                           setDateRange((prev) => ({ ...prev, endDate: e.target.value }))
                         }
-                        className="border rounded-md p-2 text-sm text-gray-600"
+                        className="border rounded-md p-2 text-sm text-gray-600 bg-white"
                       />
                       <button
                         onClick={() => {
@@ -564,12 +611,24 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
                       >
                         آخر شهر
                       </button>
+                      {/* ----- بطارية ----- */}
+                      <select
+                        value={batteryTypeFilter}
+                        onChange={(e) => setBatteryTypeFilter(e.target.value)}
+                        className="border rounded-md p-2 text-sm bg-white text-gray-800 ml-2"
+                        style={{ minWidth: 120, fontFamily: 'Tajawal, sans-serif' }}>
+                        <option value="all">كل الأصناف</option>
+                        {batteryTypesFromDB.map((type, idx) => (
+                          <option value={type} key={idx}>{type}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
+                  {/* --- END FILTERS --- */}
 
                   <TabsContent value="deliveries" className="mt-4">
                     {/* Delivery History Table */}
-                    {supplierHistory.length > 0 ? (
+                    {filteredHistory.length > 0 ? (
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                           <thead className="bg-gray-50">
@@ -585,15 +644,15 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
                             </tr>
                           </thead>
                           <tbody>
-                            {filterDataByDate(supplierHistory).map((entry, index) => (
+                            {filteredHistory.map((entry, index) => (
                               <tr key={index} className="border-b hover:bg-gray-50">
                                 <td className="p-3 text-sm">{entry.date}</td>
                                 <td className="p-3 text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{entry.battery_type}</td>
                                 <td className="p-3 text-sm">{entry.quantity}</td>
                                 <td className="p-3 text-sm">{entry.price_per_kg}</td>
-                                <td className="p-3 text-sm">{entry.total.toLocaleString()}</td>
-                                <td className="p-3 text-sm">{entry.discount?.toLocaleString() || 0}</td>
-                                <td className="p-3 text-sm font-bold text-green-600">{entry.final_total.toLocaleString()}</td>
+                                <td className="p-3 text-sm">{entry.total.toLocaleString && entry.total.toLocaleString()}</td>
+                                <td className="p-3 text-sm">{entry.discount?.toLocaleString ? entry.discount.toLocaleString() : 0}</td>
+                                <td className="p-3 text-sm font-bold text-green-600">{entry.final_total.toLocaleString && entry.final_total.toLocaleString()}</td>
                                 <td className="p-3 text-sm">
                                   <Badge variant={entry.source === 'daily' ? 'default' : 'secondary'}>
                                     {entry.source === 'daily' ? 'يومية' : 'فاتورة'}
