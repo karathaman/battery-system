@@ -539,7 +539,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
                   </TabsContent>
 
                   <TabsContent value="statement">
-                    {/* --- أزرار التصدير الجديدة لمشاركة كشف الحساب --- */}
+                    {/* --- زر التصدير كـ Excel فقط --- */}
                     {accountStatement.length > 0 && (
                       <div className="mb-3 flex gap-2 justify-end">
                         <button
@@ -568,34 +568,6 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
                           }}
                         >
                           <File className="w-4 h-4" /> مشاركة كـ Excel
-                        </button>
-                        <button
-                          className="flex items-center gap-2 bg-blue-600 text-white py-1 px-3 rounded shadow hover:bg-blue-700 text-sm transition-all"
-                          onClick={() => {
-                            const cols: { title: string; key: string; format?: (v: any) => any }[] = [
-                              { title: "التاريخ", key: "date" },
-                              { title: "البيان", key: "description" },
-                              { title: "مدين", key: "debit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
-                              { title: "دائن", key: "credit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
-                              { title: "الرصيد", key: "balance", format: (v: any) => v.toLocaleString() }
-                            ];
-                            const filtered = accountStatement.filter((entry) => {
-                              const entryDate = new Date(entry.date);
-                              const startDate = dateRange.startDate ? new Date(dateRange.startDate) : null;
-                              const endDate = dateRange.endDate ? new Date(dateRange.endDate) : null;
-                              if (startDate && entryDate < startDate) return false;
-                              if (endDate && entryDate > endDate) return false;
-                              return true;
-                            });
-                            exportAccountStatementToPDF({
-                              data: filtered,
-                              columns: cols,
-                              filename: `كشف حساب عميل ${customer.name}.pdf`,
-                              title: `كشف حساب العميل: ${customer.name} (${customer.customerCode})`
-                            });
-                          }}
-                        >
-                          <File className="w-4 h-4" /> مشاركة كـ PDF
                         </button>
                       </div>
                     )}

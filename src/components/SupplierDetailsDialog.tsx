@@ -690,7 +690,7 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
 
                 {/* --- جدول كشف الحساب الجديد --- */}
                 <TabsContent value="statement">
-                  {/* --- أزرار التصدير الجديدة لمشاركة كشف الحساب للمورد --- */}
+                  {/* --- زر التصدير كـ Excel فقط --- */}
                   {accountStatement.length > 0 && (
                     <div className="mb-3 flex gap-2 justify-end">
                       <button
@@ -698,13 +698,19 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
                         onClick={() => {
                           const cols: { title: string; key: string; format?: (v: any) => any }[] = [
                             { title: "التاريخ", key: "date" },
-                            { title: "الوصف", key: "description" },
+                            { title: "البيان", key: "description" },
                             { title: "مدين", key: "debit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
                             { title: "دائن", key: "credit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
-                            { title: "الرصيد", key: "balance", format: (v: any) => v.toLocaleString() },
-                            { title: "رقم المرجع", key: "reference" }
+                            { title: "الرصيد", key: "balance", format: (v: any) => v.toLocaleString() }
                           ];
-                          const filtered = filterDataByDate(accountStatement);
+                          const filtered = accountStatement.filter((entry) => {
+                            const entryDate = new Date(entry.date);
+                            const startDate = dateRange.startDate ? new Date(dateRange.startDate) : null;
+                            const endDate = dateRange.endDate ? new Date(dateRange.endDate) : null;
+                            if (startDate && entryDate < startDate) return false;
+                            if (endDate && entryDate > endDate) return false;
+                            return true;
+                          });
                           exportAccountStatementToExcel({
                             data: filtered,
                             columns: cols,
@@ -714,28 +720,6 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
                       >
                         <File className="w-4 h-4" /> مشاركة كـ Excel
                       </button>
-                      <button
-                        className="flex items-center gap-2 bg-blue-600 text-white py-1 px-3 rounded shadow hover:bg-blue-700 text-sm transition-all"
-                        onClick={() => {
-                          const cols: { title: string; key: string; format?: (v: any) => any }[] = [
-                            { title: "التاريخ", key: "date" },
-                            { title: "الوصف", key: "description" },
-                            { title: "مدين", key: "debit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
-                            { title: "دائن", key: "credit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
-                            { title: "الرصيد", key: "balance", format: (v: any) => v.toLocaleString() },
-                            { title: "رقم المرجع", key: "reference" }
-                          ];
-                          const filtered = filterDataByDate(accountStatement);
-                          exportAccountStatementToPDF({
-                            data: filtered,
-                            columns: cols,
-                            filename: `كشف حساب مورد ${supplier.name}.pdf`,
-                            title: `كشف حساب المورد: ${supplier.name} (${supplier.supplierCode})`
-                          });
-                        }}
-                      >
-                        <File className="w-4 h-4" /> مشاركة كـ PDF
-                      </button>
                     </div>
                   )}
                   {/* جدول كشف الحساب */}
@@ -744,7 +728,7 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
                       <thead>
                         <tr className="bg-green-100 text-green-800">
                           <th className="px-3 py-2 border text-center font-semibold">التاريخ</th>
-                          <th className="px-3 py-2 border text-center font-semibold">الوصف</th>
+                          <th className="px-3 py-2 border text-center font-semibold">البيان</th>
                           <th className="px-3 py-2 border text-center font-semibold">مدين</th>
                           <th className="px-3 py-2 border text-center font-semibold">دائن</th>
                           <th className="px-3 py-2 border text-center font-semibold">الرصيد</th>
