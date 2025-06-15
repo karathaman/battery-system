@@ -108,6 +108,47 @@ const updateBatteryTypeQuantities = async (items: Array<{battery_type_id: string
   }
 };
 
+// ===== إضافة دوال مساعدة =====
+
+// تحديث بيانات العميل عند البيع (الإجمالي ومجموع الكمية)
+async function updateCustomerSalesStats(customerId: string) {
+  // اجلب جميع الفواتير المكتملة لهذا العميل
+  const { data: sales, error } = await supabase
+    .from('sales')
+    .select('id, total, sale_items(quantity)')
+    .eq('customer_id', customerId);
+
+  if (error) {
+    console.error('Error fetching sales for stats:', error);
+    return;
+  }
+
+  // احسب المجموع الجديد للكميات والإجمالي
+  let totalAmount = 0;
+  let totalSoldQuantity = 0;
+  (sales || []).forEach((sale: any) => {
+    totalAmount += Number(sale.total) || 0;
+    if (sale.sale_items) {
+      sale.sale_items.forEach((item: any) => {
+        totalSoldQuantity += Number(item.quantity) || 0;
+      });
+    }
+  });
+
+  // حدث العميل
+  const { error: updateErr } = await supabase
+    .from('customers')
+    .update({
+      total_sold_quantity: totalSoldQuantity,
+      total_amount: totalAmount
+    })
+    .eq('id', customerId);
+
+  if (updateErr) {
+    console.error('Error updating customer stats:', updateErr);
+  }
+}
+
 const salesService = {
   getSales: async (): Promise<ExtendedSale[]> => {
     const { data, error } = await supabase
@@ -239,6 +280,9 @@ const salesService = {
       console.error('Error fetching created sale:', fetchError);
       throw new Error(fetchError.message);
     }
+
+    // تحديث بيانات العميل عند البيع (الإجمالي ومجموع الكمية)
+    await updateCustomerSalesStats(data.customer_id);
 
     return {
       id: completeSale.id,
@@ -415,6 +459,9 @@ const salesService = {
       throw new Error(fetchError.message);
     }
 
+    // تحديث بيانات العميل عند البيع (الإجمالي ومجموع الكمية)
+    await updateCustomerSalesStats(newCustomerId);
+
     return {
       id: saleData.id,
       invoiceNumber: saleData.invoice_number || `INV-${saleData.id?.substring(0, 8)}`,
@@ -489,6 +536,11 @@ const salesService = {
     if (saleError) {
       console.error('Error deleting sale:', saleError);
       throw new Error(saleError.message);
+    }
+
+    // تحديث بيانات العميل عند البيع (الإجمالي ومجموع الكمية)
+    if (saleToDelete.customer_id) {
+      await updateCustomerSalesStats(saleToDelete.customer_id);
     }
   }
 };
