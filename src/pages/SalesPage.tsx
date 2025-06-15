@@ -22,6 +22,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Save, FileDown, FileText } from "lucide-react";
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
+import { useCustomerLastSales } from "@/hooks/useCustomerLastSales";
 
 interface ExtendedSaleItem extends SaleItem {
   batteryTypeId: string;
@@ -52,6 +53,9 @@ const SalesPage = () => {
 
   const { sales, createSale, updateSale, deleteSale, isCreating, isUpdating, isDeleting, isLoading } = useSales();
   const { batteryTypes, isLoading: batteryTypesLoading } = useBatteryTypes();
+
+  // جلب آخر عمليات البيع للعميل المحدد
+  const { data: lastSales = [], isLoading: lastSalesLoading } = useCustomerLastSales(selectedCustomer?.id);
 
   const addSaleItem = () => {
     const newItem: ExtendedSaleItem = {
@@ -278,8 +282,9 @@ const SalesPage = () => {
                   <Search className="w-4 h-4" />
                   {selectedCustomer ? selectedCustomer.name : "اختر العميل"}
                 </Button>
+
                 {selectedCustomer && (
-                  <div className="mt-2 p-3 bg-blue-50 rounded border">
+                  <div className="mt-2 p-3 bg-blue-50 rounded border space-y-2">
                     <div className="flex justify-between items-center">
                       <div>
                         <p className="font-semibold" style={{ fontFamily: 'Tajawal, sans-serif' }}>
@@ -295,7 +300,44 @@ const SalesPage = () => {
                           {selectedCustomer.totalAmount.toLocaleString()} ريال
                         </p>
                         <p className="text-xs text-gray-500">إجمالي المشتريات</p>
+                        <p className="font-bold text-yellow-600 mt-1">
+                          {selectedCustomer.balance?.toLocaleString() ?? '0'} ريال
+                        </p>
+                        <p className="text-xs text-gray-500">الرصيد</p>
                       </div>
+                    </div>
+                    {/* عرض معلومات آخر عملية بيع */}
+                    <div className="border-t pt-2 mt-1">
+                      <div className="text-sm text-gray-700 font-bold mb-2 flex items-center gap-2">
+                        <span className="flex items-center gap-1">🕒 آخر عملية بيع:</span>
+                        <span className="text-gray-800">
+                          {selectedCustomer.lastSale ? new Date(selectedCustomer.lastSale).toLocaleDateString('ar-SA') : "لا يوجد"}
+                        </span>
+                      </div>
+                      {lastSalesLoading ? (
+                        <div className="text-xs text-gray-500">جاري تحميل تفاصيل آخر بيع...</div>
+                      ) : lastSales.length === 0 ? (
+                        <div className="text-xs text-gray-500">لا توجد بيانات أصناف لآخر بيع متوفر.</div>
+                      ) : (
+                        <div className="rounded bg-gray-100 p-2 mt-1">
+                          <div className="grid grid-cols-5 gap-2 font-semibold text-xs py-1">
+                            <div>الصنف</div>
+                            <div>الكمية</div>
+                            <div>السعر</div>
+                            <div>المبلغ</div>
+                            <div>التاريخ</div>
+                          </div>
+                          {lastSales.map((row, idx) => (
+                            <div key={idx} className="grid grid-cols-5 gap-2 text-xs py-1 border-b last:border-b-0">
+                              <div>{row.batteryTypeName}</div>
+                              <div>{row.quantity}</div>
+                              <div>{row.price?.toLocaleString()}</div>
+                              <div>{row.total?.toLocaleString()}</div>
+                              <div>{row.date ? new Date(row.date).toLocaleDateString('ar-SA') : ""}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
