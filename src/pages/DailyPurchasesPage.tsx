@@ -104,7 +104,7 @@ const DailyPurchasesPage = () => {
         description: "اسم المورد غير موجود في قاعدة البيانات! يرجى التأكد من اختيار مورد صحيح.",
         variant: "destructive"
       });
-      return;
+      return; // أوقف عملية الحفظ نهائيا إذا لم يوجد المورد
     }
 
     const { total, finalTotal } = calculateTotals();
