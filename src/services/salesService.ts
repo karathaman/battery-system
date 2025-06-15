@@ -284,9 +284,9 @@ const salesService = {
     const prevPaymentMethod = originalSale.payment_method;
     const updatedPaymentMethod = data.payment_method ?? prevPaymentMethod;
 
-    // هنا نستخدم نفس منطق mapPaymentMethod للطرفين:
-    const prevIsCredit = mapPaymentMethod(prevPaymentMethod) === 'check' || mapPaymentMethod(prevPaymentMethod) === 'credit';
-    const newIsCredit = mapPaymentMethod(updatedPaymentMethod) === 'check' || mapPaymentMethod(updatedPaymentMethod) === 'credit';
+    // فقط قارن مع 'check' لأن الآجل هو check في قاعدة البيانات
+    const prevIsCredit = mapPaymentMethod(prevPaymentMethod) === 'check';
+    const newIsCredit = mapPaymentMethod(updatedPaymentMethod) === 'check';
 
     const prevCustomerId = originalSale.customer_id;
     const newCustomerId = data.customer_id ?? prevCustomerId;
