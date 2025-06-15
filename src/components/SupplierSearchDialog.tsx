@@ -22,7 +22,7 @@ export const SupplierSearchDialog = ({
   onSupplierSelect,
   searchTerm,
   language = "ar",
-  onAddSupplier
+  onAddSupplier,
 }: SupplierSearchDialogProps) => {
   const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
 
@@ -147,6 +147,19 @@ export const SupplierSearchDialog = ({
               </div>
             ) : null}
           </div>
+
+          {/* زر إضافة مورد جديد أسفل القائمة عند وجود نتائج بحث */}
+          {!isLoading && suppliers.length > 0 && (
+            <Button
+              onClick={() => onAddSupplier(localSearchTerm)}
+              variant="outline"
+              className="w-full flex items-center gap-2"
+              style={{ fontFamily: 'Tajawal, sans-serif' }}
+            >
+              <UserPlus className="w-4 h-4" />
+              {language === "ar" ? "إضافة مورد جديد" : "Add New Supplier"}
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
