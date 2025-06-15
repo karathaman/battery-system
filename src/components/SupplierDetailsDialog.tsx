@@ -407,6 +407,20 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
     };
   }, [filteredHistory]);
 
+  // --- Add this helper for filtering by date ---
+  const filterDataByDate = (data: any[]) => {
+    return data.filter((entry) => {
+      const entryDate = new Date(entry.date);
+      const startDate = dateRange.startDate ? new Date(dateRange.startDate) : null;
+      const endDate = dateRange.endDate ? new Date(dateRange.endDate) : null;
+
+      if (startDate && entryDate < startDate) return false;
+      if (endDate && entryDate > endDate) return false;
+
+      return true;
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" dir="rtl">
