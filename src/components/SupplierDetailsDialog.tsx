@@ -623,107 +623,109 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
           </Card>
 
           {/* Tabs for Purchase History and Account Statement */}
-          <Card>
-            <CardHeader>
-              {/* --- Tabs & Filters --- */}
-              <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 w-full">
-                    <TabsList className="bg-blue-50" dir="rtl">
-                      <TabsTrigger value="deliveries" className="flex items-center gap-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                        <ShoppingCart className="w-4 h-4" />
-                        تاريخ التوريدات
-                      </TabsTrigger>
-                      <TabsTrigger value="statement" className="flex items-center gap-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                        <FileText className="w-4 h-4" />
-                        كشف الحساب
-                      </TabsTrigger>
-                    </TabsList>
+          <div className="bg-white rounded-lg shadow p-0 md:p-2">
+            <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 w-full">
+                  <TabsList className="bg-blue-50" dir="rtl">
+                    <TabsTrigger value="deliveries" className="flex items-center gap-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      تاريخ التوريدات
+                    </TabsTrigger>
+                    <TabsTrigger value="statement" className="flex items-center gap-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      كشف الحساب
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+
+                {/* --- جدول التوريدات الجديد --- */}
+                <TabsContent value="deliveries">
+                  <div className="overflow-x-auto mt-4">
+                    <table className="min-w-full bg-white text-sm">
+                      <thead>
+                        <tr className="bg-blue-100 text-blue-700">
+                          <th className="px-3 py-2 border text-center font-semibold">التاريخ</th>
+                          <th className="px-3 py-2 border text-center font-semibold">الصنف</th>
+                          <th className="px-3 py-2 border text-center font-semibold">الكمية</th>
+                          <th className="px-3 py-2 border text-center font-semibold">سعر الكيلو</th>
+                          <th className="px-3 py-2 border text-center font-semibold">الإجمالي</th>
+                          <th className="px-3 py-2 border text-center font-semibold">الخصم</th>
+                          <th className="px-3 py-2 border text-center font-semibold">الإجمالي النهائي</th>
+                          <th className="px-3 py-2 border text-center font-semibold">المصدر</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredHistory.length === 0 ? (
+                          <tr>
+                            <td colSpan={8} className="text-center text-gray-400 py-4">
+                              لا توجد توريدات مطابقة للفلاتر
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredHistory.map((entry, idx) => (
+                            <tr key={entry.id + idx}
+                              className="hover:bg-blue-50 transition-all"
+                              style={{ fontFamily: 'Tajawal, sans-serif' }}
+                            >
+                              <td className="border px-3 py-2 text-center">{entry.date}</td>
+                              <td className="border px-3 py-2 text-center">{entry.battery_type}</td>
+                              <td className="border px-3 py-2 text-center">{entry.quantity}</td>
+                              <td className="border px-3 py-2 text-center">{entry.price_per_kg}</td>
+                              <td className="border px-3 py-2 text-center">{entry.total}</td>
+                              <td className="border px-3 py-2 text-center">{entry.discount}</td>
+                              <td className="border px-3 py-2 text-center">{entry.final_total}</td>
+                              <td className="border px-3 py-2 text-center">{entry.source === 'daily' ? 'يومية' : 'فاتورة'}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
                   </div>
-                  {/* محتوى التابات الجديد */}
-                  <TabsContent value="deliveries">
-                    {/* جدول التوريدات */}
-                    <div className="overflow-x-auto mt-4">
-                      <table className="min-w-full bg-white text-sm">
-                        <thead className="bg-blue-100 text-blue-700">
+                </TabsContent>
+
+                {/* --- جدول كشف الحساب الجديد --- */}
+                <TabsContent value="statement">
+                  <div className="overflow-x-auto mt-4">
+                    <table className="min-w-full bg-white text-sm">
+                      <thead>
+                        <tr className="bg-green-100 text-green-800">
+                          <th className="px-3 py-2 border text-center font-semibold">التاريخ</th>
+                          <th className="px-3 py-2 border text-center font-semibold">الوصف</th>
+                          <th className="px-3 py-2 border text-center font-semibold">مدين</th>
+                          <th className="px-3 py-2 border text-center font-semibold">دائن</th>
+                          <th className="px-3 py-2 border text-center font-semibold">الرصيد</th>
+                          <th className="px-3 py-2 border text-center font-semibold">رقم المرجع</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {accountStatement.length === 0 ? (
                           <tr>
-                            <th className="px-2 py-2 border">التاريخ</th>
-                            <th className="px-2 py-2 border">الصنف</th>
-                            <th className="px-2 py-2 border">الكمية</th>
-                            <th className="px-2 py-2 border">سعر الكيلو</th>
-                            <th className="px-2 py-2 border">الإجمالي</th>
-                            <th className="px-2 py-2 border">الخصم</th>
-                            <th className="px-2 py-2 border">الإجمالي النهائي</th>
-                            <th className="px-2 py-2 border">المصدر</th>
+                            <td colSpan={6} className="text-center text-gray-400 py-4">
+                              لا توجد حركات مطابقة للفلاتر
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          {filteredHistory.length === 0 ? (
-                            <tr>
-                              <td colSpan={8} className="text-center text-gray-400 py-3">
-                                لا توجد توريدات مطابقة للفلاتر
-                              </td>
+                        ) : (
+                          filterDataByDate(accountStatement).map((entry, idx) => (
+                            <tr 
+                              key={entry.id + idx}
+                              className="hover:bg-green-50 transition-all"
+                              style={{ fontFamily: 'Tajawal, sans-serif' }}
+                            >
+                              <td className="border px-3 py-2 text-center">{entry.date}</td>
+                              <td className="border px-3 py-2 text-center">{entry.description}</td>
+                              <td className="border px-3 py-2 text-center">{entry.debit > 0 ? entry.debit : ""}</td>
+                              <td className="border px-3 py-2 text-center">{entry.credit > 0 ? entry.credit : ""}</td>
+                              <td className="border px-3 py-2 text-center">{entry.balance}</td>
+                              <td className="border px-3 py-2 text-center">{entry.reference || "-"}</td>
                             </tr>
-                          ) : (
-                            filteredHistory.map((entry, idx) => (
-                              <tr key={entry.id + idx}>
-                                <td className="border px-2 py-1">{entry.date}</td>
-                                <td className="border px-2 py-1">{entry.battery_type}</td>
-                                <td className="border px-2 py-1">{entry.quantity}</td>
-                                <td className="border px-2 py-1">{entry.price_per_kg}</td>
-                                <td className="border px-2 py-1">{entry.total}</td>
-                                <td className="border px-2 py-1">{entry.discount}</td>
-                                <td className="border px-2 py-1">{entry.final_total}</td>
-                                <td className="border px-2 py-1">{entry.source === 'daily' ? 'يومية' : 'فاتورة'}</td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="statement">
-                    {/* جدول كشف الحساب */}
-                    <div className="overflow-x-auto mt-4">
-                      <table className="min-w-full bg-white text-sm">
-                        <thead className="bg-green-100 text-green-800">
-                          <tr>
-                            <th className="px-2 py-2 border">التاريخ</th>
-                            <th className="px-2 py-2 border">الوصف</th>
-                            <th className="px-2 py-2 border">مدين</th>
-                            <th className="px-2 py-2 border">دائن</th>
-                            <th className="px-2 py-2 border">الرصيد</th>
-                            <th className="px-2 py-2 border">رقم المرجع</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {accountStatement.length === 0 ? (
-                            <tr>
-                              <td colSpan={6} className="text-center text-gray-400 py-3">
-                                لا توجد حركات مطابقة للفلاتر
-                              </td>
-                            </tr>
-                          ) : (
-                            filterDataByDate(accountStatement).map((entry, idx) => (
-                              <tr key={entry.id + idx}>
-                                <td className="border px-2 py-1">{entry.date}</td>
-                                <td className="border px-2 py-1">{entry.description}</td>
-                                <td className="border px-2 py-1">{entry.debit > 0 ? entry.debit : ""}</td>
-                                <td className="border px-2 py-1">{entry.credit > 0 ? entry.credit : ""}</td>
-                                <td className="border px-2 py-1">{entry.balance}</td>
-                                <td className="border px-2 py-1">{entry.reference || "-"}</td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </TabsContent>
-                  {/* --- END محتوى التابات --- */}
-                </Tabs>
-              </div>
-            </CardHeader>
-          </Card>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
