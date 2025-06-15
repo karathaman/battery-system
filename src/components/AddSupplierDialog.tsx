@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,7 @@ interface AddSupplierDialogProps {
   onSupplierAdded: (supplier: SupplierFormData) => void;
   nextSupplierCode?: string;
   language?: string;
+  initialName?: string; // اسم المورد المبدئي من البحث
 }
 
 export const AddSupplierDialog = ({ 
@@ -21,14 +21,28 @@ export const AddSupplierDialog = ({
   onClose, 
   onSupplierAdded,
   nextSupplierCode,
-  language = "ar"
+  language = "ar",
+  initialName = ""
 }: AddSupplierDialogProps) => {
+  // نوفر قيم ابتدائية للاسم إذا وُجدت
   const [formData, setFormData] = useState<SupplierFormData>({
-    name: "",
+    name: initialName || "",
     phone: "",
     description: "",
     notes: ""
   });
+
+  // عند فتح الدايلاوج من جديد، إذا كان هناك اسم، نعيد قيمته
+  useEffect(() => {
+    if (open) {
+      setFormData({
+        name: initialName || "",
+        phone: "",
+        description: "",
+        notes: ""
+      });
+    }
+  }, [open, initialName]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

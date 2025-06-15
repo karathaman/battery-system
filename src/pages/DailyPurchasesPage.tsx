@@ -37,7 +37,7 @@ const DailyPurchasesPage = () => {
 
   const [showSupplierSearch, setShowSupplierSearch] = useState(false);
   const [showAddSupplier, setShowAddSupplier] = useState(false);
-  const [pendingSupplierName, setPendingSupplierName] = useState("");
+  const [pendingSupplierName, setPendingSupplierName] = useState(""); // سيحمل اسم المورد المقترح
 
   const [topSuppliers, setTopSuppliers] = useState<any[]>([]);
 
@@ -162,9 +162,9 @@ const DailyPurchasesPage = () => {
   const handleOpenSupplierSearch = () => setShowSupplierSearch(true);
 
   const handleAddSupplier = (initialName: string) => {
-    setShowSupplierSearch(false);
-    setPendingSupplierName(initialName);
-    setShowAddSupplier(true);
+    setShowSupplierSearch(false); // إغلاق Dialog البحث عن المورد
+    setPendingSupplierName(initialName); // تخزين الاسم المقترح
+    setShowAddSupplier(true); // إظهار Dialog الإضافة
   };
 
   const handleSupplierAdded = (supplier: any) => {
@@ -173,7 +173,7 @@ const DailyPurchasesPage = () => {
       ...prev,
       supplierName: supplier.name,
       supplierPhone: supplier.phone || "",
-      supplierCode: "", // إذا كان لكود لا يتوفر مباشرة عند الإضافة
+      supplierCode: "", // إذا كان الكود لا يتوفر مباشرة عند الإضافة
     }));
     setShowAddSupplier(false);
     setShowSupplierSearch(false);
@@ -380,9 +380,25 @@ const DailyPurchasesPage = () => {
 
       <AddSupplierDialog
         open={showAddSupplier}
-        onClose={() => setShowAddSupplier(false)}
-        onSupplierAdded={handleSupplierAdded}
+        onClose={() => {
+          setShowAddSupplier(false);
+          setPendingSupplierName(""); // تصفير الاسم بعد الإغلاق
+        }}
+        onSupplierAdded={supplier => {
+          // عند إضافة المورد يتم تعبئة اسمه في حقل اسم المورد مباشرة
+          setNewPurchase(prev => ({
+            ...prev,
+            supplierName: supplier.name,
+            supplierPhone: supplier.phone || "",
+            supplierCode: "", // إذا كان الكود لا يتوفر مباشرة عند الإضافة
+          }));
+          setShowAddSupplier(false);
+          setShowSupplierSearch(false);
+        }}
         language="ar"
+        nextSupplierCode={undefined}
+        // تمرير اسم المورد المقترح ليظهر كقيمة مبدئية
+        initialName={pendingSupplierName}
       />
 
       {/* Daily Purchases List */}
