@@ -670,9 +670,9 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
                               <td className="border px-3 py-2 text-center">{entry.battery_type}</td>
                               <td className="border px-3 py-2 text-center">{entry.quantity}</td>
                               <td className="border px-3 py-2 text-center">{entry.price_per_kg}</td>
-                              <td className="border px-3 py-2 text-center">{entry.total}</td>
-                              <td className="border px-3 py-2 text-center">{entry.discount}</td>
-                              <td className="border px-3 py-2 text-center">{entry.final_total}</td>
+                              <td className="border px-3 py-2 text-center text-blue-700">{entry.total?.toLocaleString?.() ?? entry.total || 0}</td>
+                              <td className="border px-3 py-2 text-center text-red-500">{entry.discount?.toLocaleString?.() ?? entry.discount || 0}</td>
+                              <td className="border px-3 py-2 text-center font-bold text-green-600">{entry.final_total?.toLocaleString?.() ?? entry.final_total || 0}</td>
                               <td className="border px-3 py-2 text-center">{entry.source === 'daily' ? 'يومية' : 'فاتورة'}</td>
                             </tr>
                           ))
@@ -712,9 +712,15 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
                             >
                               <td className="border px-3 py-2 text-center">{entry.date}</td>
                               <td className="border px-3 py-2 text-center">{entry.description}</td>
-                              <td className="border px-3 py-2 text-center">{entry.debit > 0 ? entry.debit : ""}</td>
-                              <td className="border px-3 py-2 text-center">{entry.credit > 0 ? entry.credit : ""}</td>
-                              <td className="border px-3 py-2 text-center">{entry.balance}</td>
+                              <td className="border px-3 py-2 text-center text-red-600 font-semibold">
+                                {entry.debit > 0 ? entry.debit.toLocaleString() : ''}
+                              </td>
+                              <td className="border px-3 py-2 text-center text-green-700 font-semibold">
+                                {entry.credit > 0 ? entry.credit.toLocaleString() : ''}
+                              </td>
+                              <td className={`border px-3 py-2 text-center font-bold ${entry.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {entry.balance.toLocaleString()}
+                              </td>
                               <td className="border px-3 py-2 text-center">{entry.reference || "-"}</td>
                             </tr>
                           ))

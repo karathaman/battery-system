@@ -495,11 +495,11 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
                   </TabsList>
 
                   <TabsContent value="sales">
-                    {/* Sales History */}
+                    {/* جدول المبيعات */}
                     {filteredHistory.length > 0 ? (
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
-                          <thead className="bg-gray-50">
+                          <thead className="bg-blue-50">
                             <tr>
                               <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>التاريخ</th>
                               <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الصنف</th>
@@ -512,14 +512,14 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
                           </thead>
                           <tbody>
                             {filteredHistory.map((entry: any, index: number) => (
-                              <tr key={index} className="border-b hover:bg-gray-50">
+                              <tr key={index} className="border-b hover:bg-blue-50 transition-colors">
                                 <td className="p-3 text-sm">{entry.date}</td>
                                 <td className="p-3 text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{entry.battery_type}</td>
                                 <td className="p-3 text-sm">{entry.quantity}</td>
                                 <td className="p-3 text-sm">{entry.price_per_kg}</td>
-                                <td className="p-3 text-sm">{(entry.total?.toLocaleString?.() ?? entry.total) || 0}</td>
-                                <td className="p-3 text-sm">{(entry.discount?.toLocaleString?.() ?? entry.discount) || 0}</td>
-                                <td className="p-3 text-sm font-bold text-green-600">{(entry.final_total?.toLocaleString?.() ?? entry.final_total) || 0}</td>
+                                <td className="p-3 text-sm text-blue-700">{entry.total?.toLocaleString?.() ?? entry.total || 0}</td>
+                                <td className="p-3 text-sm text-red-500">{entry.discount?.toLocaleString?.() ?? entry.discount || 0}</td>
+                                <td className="p-3 text-sm font-bold text-green-600">{entry.final_total?.toLocaleString?.() ?? entry.final_total || 0}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -589,11 +589,11 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
                         >تصدير PDF</button>
                       </div>
                     )}
-                    {/* Account Statement Table */}
+                    {/* جدول كشف الحساب */}
                     {accountStatement.length > 0 ? (
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
-                          <thead className="bg-gray-50">
+                          <thead className="bg-green-50">
                             <tr>
                               <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>التاريخ</th>
                               <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>البيان</th>
@@ -615,11 +615,15 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
                                 return true;
                               })
                               .map((entry, index) => (
-                                <tr key={index} className="border-b hover:bg-gray-50">
+                                <tr key={index} className="border-b hover:bg-green-50 transition-colors">
                                   <td className="p-3 text-sm">{entry.date}</td>
                                   <td className="p-3 text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{entry.description}</td>
-                                  <td className="p-3 text-sm text-red-600">{entry.debit > 0 ? entry.debit.toLocaleString() : '-'}</td>
-                                  <td className="p-3 text-sm text-green-600">{entry.credit > 0 ? entry.credit.toLocaleString() : '-'}</td>
+                                  <td className={`p-3 text-sm text-red-600 font-semibold`}>
+                                    {entry.debit > 0 ? entry.debit.toLocaleString() : '-'}
+                                  </td>
+                                  <td className={`p-3 text-sm text-green-700 font-semibold`}>
+                                    {entry.credit > 0 ? entry.credit.toLocaleString() : '-'}
+                                  </td>
                                   <td className={`p-3 text-sm font-bold ${entry.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                     {entry.balance.toLocaleString()}
                                   </td>
