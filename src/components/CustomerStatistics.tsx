@@ -1,9 +1,24 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { BarChart3, User, Phone, Calendar, DollarSign, Package, TrendingUp } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  BarChart3,
+  User,
+  Phone,
+  Calendar,
+  DollarSign,
+  Package,
+  TrendingUp,
+} from "lucide-react";
 import { useSales } from "@/hooks/useSales";
 
 interface Sale {
@@ -39,49 +54,52 @@ interface CustomerStatisticsProps {
   customers: Customer[];
 }
 
-export const CustomerStatistics = ({ language = "ar", customers }: CustomerStatisticsProps) => {
+export const CustomerStatistics = ({
+  language = "ar",
+  customers,
+}: CustomerStatisticsProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const isRTL = language === "ar";
   const { sales, isLoading } = useSales();
 
-  // حساب بيانات كل عميل بشكل صحيح للإحصائيات
+  // New: Calculate real statistics from sales for each customer
   const mappedCustomers = customers.map((customer) => {
-    const customerSales = (sales || []).filter((sale) => sale.customerId === customer.id);
+    // Get related sales from full sales (from supabase)
+    const customerSales = (sales || []).filter(
+      (sale) => sale.customerId === customer.id
+    );
 
-    // حساب إجمالي المبلغ
-    const totalAmount = customerSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+    // Number of sales
+    const totalSales = customerSales.length;
 
-    // حساب إجمالي الكمية
-    const totalQuantity = customerSales.reduce((sum, sale) => {
-      // جمع كميات جميع الأصناف في كل فاتورة
-      if (Array.isArray(sale.items)) {
-        return sum + sale.items.reduce((s, si) => s + (si.quantity || 0), 0);
-      }
-      return sum;
-    }, 0);
-
-    // حساب متوسط السعر (لكل وحدة) = مجموع (سعر الكيلو × الكمية) ÷ مجموع الكمية
+    // Gather all items from all sales for this customer
+    let totalQuantity = 0;
+    let totalAmount = 0;
     let totalWeightedPrice = 0;
-    customerSales.forEach(sale => {
+
+    customerSales.forEach((sale) => {
       if (Array.isArray(sale.items)) {
-        sale.items.forEach(item => {
+        sale.items.forEach((item) => {
+          totalQuantity += item.quantity || 0;
           totalWeightedPrice += (item.price || 0) * (item.quantity || 0);
         });
       }
+      totalAmount += sale.total || 0;
     });
-    const averagePricePerKg = totalQuantity > 0 ? Math.round(totalWeightedPrice / totalQuantity) : 0;
 
-    // متوسط البيع (متوسط مبلغ الفاتورة)
+    const averagePricePerKg =
+      totalQuantity > 0 ? Math.round(totalWeightedPrice / totalQuantity) : 0;
+
     const averageInvoiceAmount =
-      customerSales.length > 0
-        ? Math.round(
-            customerSales.reduce((sum, sale) => sum + (sale.total || 0), 0) /
-              customerSales.length
-          )
-        : 0;
+      totalSales > 0 ? Math.round(totalAmount / totalSales) : 0;
 
+    // آخر تاريخ عملية بيع
     const lastSaleObj = customerSales.length
-      ? customerSales.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
+      ? [...customerSales]
+          .sort(
+            (a, b) =>
+              new Date(b.date).getTime() - new Date(a.date).getTime()
+          )[0]
       : undefined;
     const lastSale = lastSaleObj ? lastSaleObj.date : "";
 
@@ -90,15 +108,28 @@ export const CustomerStatistics = ({ language = "ar", customers }: CustomerStati
       sales: customerSales.map((sale) => ({
         id: sale.id,
         date: sale.date,
-        batteryType: sale.items && sale.items.length > 0 ? sale.items[0].batteryType : "",
-        quantity: sale.items && sale.items.length > 0 ? sale.items[0].quantity : 0,
-        pricePerKg: sale.items && sale.items.length > 0 ? sale.items[0].price : 0,
-        total: sale.items && sale.items.length > 0 ? sale.items[0].total : sale.total || 0,
+        batteryType:
+          sale.items && sale.items.length > 0
+            ? sale.items[0].batteryType
+            : "",
+        quantity:
+          sale.items && sale.items.length > 0
+            ? sale.items[0].quantity
+            : 0,
+        pricePerKg:
+          sale.items && sale.items.length > 0
+            ? sale.items[0].price
+            : 0,
+        total:
+          sale.items && sale.items.length > 0
+            ? sale.items[0].total
+            : sale.total || 0,
         discount: sale.discount || 0,
         finalTotal: sale.total || 0,
       })),
-      totalAmount,
+      totalSales,
       totalQuantity,
+      totalAmount,
       averagePricePerKg,
       averageInvoiceAmount,
       lastSale,
