@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, Phone, Calendar, Package, DollarSign, TrendingUp, ShoppingCart, MessageCircle, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
+import { exportAccountStatementToExcel, exportAccountStatementToPDF } from "@/utils/accountExportUtils";
 
 interface Purchase {
   id: string;
@@ -538,7 +539,63 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
                   </TabsContent>
 
                   <TabsContent value="statement">
-                    {/* Account Statement */}
+                    {/* أزرار التصدير */}
+                    {accountStatement.length > 0 && (
+                      <div className="mb-3 flex gap-2 justify-end">
+                        <button
+                          className="bg-green-600 text-white py-1 px-3 rounded shadow hover:bg-green-700 text-sm"
+                          onClick={() => {
+                            const cols = [
+                              { title: "التاريخ", key: "date" },
+                              { title: "البيان", key: "description" },
+                              { title: "مدين", key: "debit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
+                              { title: "دائن", key: "credit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
+                              { title: "الرصيد", key: "balance", format: (v: any) => v.toLocaleString() }
+                            ];
+                            const filtered = accountStatement.filter((entry) => {
+                              const entryDate = new Date(entry.date);
+                              const startDate = dateRange.startDate ? new Date(dateRange.startDate) : null;
+                              const endDate = dateRange.endDate ? new Date(dateRange.endDate) : null;
+                              if (startDate && entryDate < startDate) return false;
+                              if (endDate && entryDate > endDate) return false;
+                              return true;
+                            });
+                            exportAccountStatementToExcel({
+                              data: filtered,
+                              columns: cols,
+                              filename: `كشف حساب عميل ${customer.name}.xlsx`
+                            });
+                          }}
+                        >تصدير Excel</button>
+                        <button
+                          className="bg-blue-600 text-white py-1 px-3 rounded shadow hover:bg-blue-700 text-sm"
+                          onClick={() => {
+                            const cols = [
+                              { title: "التاريخ", key: "date" },
+                              { title: "البيان", key: "description" },
+                              { title: "مدين", key: "debit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
+                              { title: "دائن", key: "credit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
+                              { title: "الرصيد", key: "balance", format: (v: any) => v.toLocaleString() }
+                            ];
+                            const filtered = accountStatement.filter((entry) => {
+                              const entryDate = new Date(entry.date);
+                              const startDate = dateRange.startDate ? new Date(dateRange.startDate) : null;
+                              const endDate = dateRange.endDate ? new Date(dateRange.endDate) : null;
+                              if (startDate && entryDate < startDate) return false;
+                              if (endDate && entryDate > endDate) return false;
+                              return true;
+                            });
+                            exportAccountStatementToPDF({
+                              data: filtered,
+                              columns: cols,
+                              filename: `كشف حساب عميل ${customer.name}.pdf`,
+                              title: `كشف حساب العميل: ${customer.name} (${customer.customerCode})`
+                            });
+                          }}
+                        >تصدير PDF</button>
+                      </div>
+                    )}
+                    {/* Account Statement Table */}
                     {accountStatement.length > 0 ? (
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">

@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, Phone, Calendar, Package, DollarSign, TrendingUp, ShoppingCart, MessageCircle, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState, useMemo } from "react";
+import { exportAccountStatementToExcel, exportAccountStatementToPDF } from "@/utils/accountExportUtils";
 
 interface Purchase {
   id: string;
@@ -685,6 +686,52 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
                   </TabsContent>
 
                   <TabsContent value="statement" className="mt-4">
+                    {/* أزرار التصدير */}
+                    {accountStatement.length > 0 && (
+                      <div className="mb-3 flex gap-2 justify-end">
+                        <button
+                          className="bg-green-600 text-white py-1 px-3 rounded shadow hover:bg-green-700 text-sm"
+                          onClick={() => {
+                            const cols = [
+                              { title: "التاريخ", key: "date" },
+                              { title: "نوع الحركة", key: "type" },
+                              { title: "البيان", key: "description" },
+                              { title: "مدين", key: "debit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
+                              { title: "دائن", key: "credit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
+                              { title: "المرجع", key: "reference" },
+                              { title: "الرصيد", key: "balance", format: (v: any) => v.toLocaleString() }
+                            ];
+                            const filtered = filterDataByDate(accountStatement);
+                            exportAccountStatementToExcel({
+                              data: filtered,
+                              columns: cols,
+                              filename: `كشف حساب مورد ${supplier.name}.xlsx`
+                            });
+                          }}
+                        >تصدير Excel</button>
+                        <button
+                          className="bg-blue-600 text-white py-1 px-3 rounded shadow hover:bg-blue-700 text-sm"
+                          onClick={() => {
+                            const cols = [
+                              { title: "التاريخ", key: "date" },
+                              { title: "نوع الحركة", key: "type" },
+                              { title: "البيان", key: "description" },
+                              { title: "مدين", key: "debit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
+                              { title: "دائن", key: "credit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
+                              { title: "المرجع", key: "reference" },
+                              { title: "الرصيد", key: "balance", format: (v: any) => v.toLocaleString() }
+                            ];
+                            const filtered = filterDataByDate(accountStatement);
+                            exportAccountStatementToPDF({
+                              data: filtered,
+                              columns: cols,
+                              filename: `كشف حساب مورد ${supplier.name}.pdf`,
+                              title: `كشف حساب المورد: ${supplier.name} (${supplier.supplierCode})`
+                            });
+                          }}
+                        >تصدير PDF</button>
+                      </div>
+                    )}
                     {/* جدول كشف الحساب مُعاد التصميم */}
                     {accountStatement.length > 0 ? (
                       <div className="overflow-x-auto">
