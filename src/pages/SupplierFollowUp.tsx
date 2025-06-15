@@ -523,235 +523,219 @@ const SupplierFollowUp = () => {
               }`}
           >
             <CardContent className="p-3 sm:p-4">
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 mb-2 flex-row-reverse">
-                  <div className="flex-1">
-                    <h3
-                      className="text-sm sm:text-base font-semibold truncate"
-                      style={{ fontFamily: 'Tajawal, sans-serif' }}
-                    >
-                      {supplier.name} - <Badge variant="secondary" className="text-xs">{supplier.supplierCode}</Badge>
-                    </h3>
-
-                    <div className="flex items-center gap-2 mt-1 flex-row-reverse flex-wrap">
-                      {supplier.isBlocked && (
-                        <Badge variant="destructive" className="text-xs">
-                          محظور
-                        </Badge>
-                      )}
-                      
-                      {getDaysSinceLastPurchase(supplier.lastPurchase) > 30 && (
-                        <Badge variant="destructive" className="text-xs">
-                          متأخر
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  {/* Supplier Notes */}
-                  {supplier.notes && (
-                    <div className="flex items-start gap-2 bg-yellow-50 rounded p-2">
-                      <MessageCircle className="w-4 h-4 text-yellow-500 mt-0.5" />
-                      <span className="text-xs font-semibold text-gray-700" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                        {supplier.notes}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Supplier Phone & Description */}
-                  <div className="flex items-center gap-2">
-                    <User className="w-3 h-3 text-blue-400" />
-                    <span className="text-xs  font-semibold text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                      {supplier.phone}
+              <div className="space-y-2">
+                {/* Supplier Notes */}
+                {supplier.notes && (
+                  <div className="flex items-start gap-2 bg-yellow-50 rounded p-2">
+                    <MessageCircle className="w-4 h-4 text-yellow-500 mt-0.5" />
+                    <span className="text-xs font-semibold text-gray-700" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      {supplier.notes}
                     </span>
                   </div>
-                  {/* Last Purchase */}
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-3 h-3 text-orange-400" />
-                    <span className="text-xs font-semibold text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                      آخر توريد: {supplier.lastPurchase || "لا يوجد"}
-                      {supplier.lastPurchase && (
-                        <span className={`ml-1 ${getDaysSinceLastPurchase(supplier.lastPurchase) > 30 ? 'text-red-600' : 'text-green-600'}`}>
-                           &nbsp; &nbsp; ← &nbsp; {getDaysSinceLastPurchase(supplier.lastPurchase)} يوم 
-                        </span>
-                      )}
-                    </span>
-                  </div>
+                )}
 
-                  {/* Last Message */}
-                                    <div className="flex items-center gap-2">
-                    <MessageCircle className="w-3 h-3 text-green-400" />
-                    <span className="text-xs font-semibold text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                      آخر رسالة: {supplier.lastMessageSent ? new Date(supplier.lastMessageSent).toLocaleDateString("en-CA") : "لم ترسل"}
-                      {supplier.lastMessageSent && (
-                       <span className="ml-1 text-blue-600 ">
-                       &nbsp; ← &nbsp; {getDaysSinceLastMessage(supplier.lastMessageSent)} يوم  
-                     </span>
-                      )}
-                    </span>
-                  </div>
-
-                  {/* Balance */}
-                  <div className="flex items-center gap-2">
-                  <img src="/assets/icons/SaudiRG.svg" alt="Custom Icon" className="w-3 h-3" />
-                  <span
-                    className={`text-xs font-semibold ${supplier.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}
-                    style={{ fontFamily: 'Tajawal, sans-serif' }}
-                  >
-                    الرصيد: {supplier.balance.toLocaleString()} ريال
+                {/* Supplier Phone & Description */}
+                <div className="flex items-center gap-2">
+                  <User className="w-3 h-3 text-blue-400" />
+                  <span className="text-xs  font-semibold text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                    {supplier.phone}
                   </span>
+                </div>
+
+                {/* Last Purchase */}
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-3 h-3 text-orange-400" />
+                  <span className="text-xs font-semibold text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                    آخر توريد: {supplier.lastPurchase || "لا يوجد"}
+                    {supplier.lastPurchase && (
+                      <span className={`ml-1 ${getDaysSinceLastPurchase(supplier.lastPurchase) > 30 ? 'text-red-600' : 'text-green-600'}`}>
+                         &nbsp; &nbsp; ← &nbsp; {getDaysSinceLastPurchase(supplier.lastPurchase)} يوم 
+                      </span>
+                    )}
+                  </span>
+                </div>
+
+                {/* Last 2 Purchases */}
+                <div className="bg-blue-50 rounded p-2 mb-1">
+                  <span className="block text-xs font-bold text-blue-800 mb-1" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                    آخر عمليتين شراء
+                  </span>
+                  {(supplier.last2BatteryTypes && supplier.last2BatteryTypes.length > 0 && supplier.last2Quantities && supplier.last2Prices) ? (
+                    <div className="flex flex-col gap-0.5" style={{fontFamily: 'Tajawal, sans-serif', direction:'rtl'}}>
+                      {supplier.last2BatteryTypes.map((battery, idx) => (
+                        battery && (supplier.last2Quantities[idx] || supplier.last2Prices[idx]) ? (
+                          <div className="flex gap-2 text-xs" key={idx}>
+                            <span className="font-semibold">{battery}</span>
+                            <span className="text-blue-700">سعر: {supplier.last2Prices[idx]}</span>
+                            <span className="text-green-700">كمية: {supplier.last2Quantities[idx]}</span>
+                          </div>
+                        ) : null
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-500">لا يوجد بيانات</span>
+                  )}
+                </div>
+
+                {/* Balance */}
+                <div className="flex items-center gap-2">
+                <img src="/assets/icons/SaudiRG.svg" alt="Custom Icon" className="w-3 h-3" />
+                <span
+                  className={`text-xs font-semibold ${supplier.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                  style={{ fontFamily: 'Tajawal, sans-serif' }}
+                >
+                  الرصيد: {supplier.balance.toLocaleString()} ريال
+                </span>
+                <Button
+                  onClick={() => resetBalance(supplier.id)}
+                  variant="outline"
+                  size="sm"
+                  className="ml-2 px-2 py-1 text-xs border-red-300 text-red-600 hover:text-white hover:bg-red-600 transition-all"
+                  style={{ fontFamily: 'Tajawal, sans-serif', height: '20px', lineHeight: '20px' }}
+                >
+                  تصفير الرصيد
+                </Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-center">
+                <div className="bg-gray-50 rounded p-2 border-gray-300 border">
+                  <p className="text-xs text-gray-500  " style={{ fontFamily: 'Tajawal, sans-serif' }}>الكميات</p>
+                  <p className="font-semibold text-xs sm:text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{supplier.totalPurchases}</p>
+                </div>
+                <div className="bg-gray-50 rounded p-2 border-gray-300 border">
+                  <p className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجمالي</p>
+                  <p className="font-semibold text-xs sm:text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{supplier.totalAmount.toLocaleString()}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Button
+                  onClick={() => generateSupplierStatement(supplier.id)}
+                  variant="default"
+                  size="sm"
+                  className="w-full flex items-center gap-2 flex-row-reverse text-xs"
+                  style={{ fontFamily: 'Tajawal, sans-serif' }}
+                >
+                  <FileText className="w-3 h-3" />
+                  عرض التفاصيل وكشف الحساب
+                </Button>
+
+                <div className="grid grid-cols-3 gap-1">
                   <Button
-                    onClick={() => resetBalance(supplier.id)}
+                    onClick={() => sendWhatsAppMessage(supplier)}
                     variant="outline"
                     size="sm"
-                    className="ml-2 px-2 py-1 text-xs border-red-300 text-red-600 hover:text-white hover:bg-red-600 transition-all"
-                    style={{ fontFamily: 'Tajawal, sans-serif', height: '20px', lineHeight: '20px' }}
+                    className="flex items-center gap-1 flex-row-reverse text-xs bg-green-50 hover:bg-green-100"
+                    style={{ fontFamily: 'Tajawal, sans-serif' }} 
                   >
-                    تصفير الرصيد
+                    <MessageCircle className="w-3 h-3" />
+                    واتساب
                   </Button>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-2 text-center">
-                  <div className="bg-gray-50 rounded p-2 border-gray-300 border">
-                    <p className="text-xs text-gray-500  " style={{ fontFamily: 'Tajawal, sans-serif' }}>الكميات</p>
-                    <p className="font-semibold text-xs sm:text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{supplier.totalPurchases}</p>
-                  </div>
-                  <div className="bg-gray-50 rounded p-2 border-gray-300 border">
-                    <p className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجمالي</p>
-                    <p className="font-semibold text-xs sm:text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{supplier.totalAmount.toLocaleString()}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
                   <Button
-                    onClick={() => generateSupplierStatement(supplier.id)}
-                    variant="default"
+                    onClick={() => handleEditSupplier(supplier)}
+                    variant="outline"
                     size="sm"
-                    className="w-full flex items-center gap-2 flex-row-reverse text-xs"
+                    className="flex items-center gap-1 flex-row-reverse text-xs"
                     style={{ fontFamily: 'Tajawal, sans-serif' }}
                   >
-                    <FileText className="w-3 h-3" />
-                    عرض التفاصيل وكشف الحساب
+                    <Edit className="w-3 h-3" />
+                    تعديل
                   </Button>
 
-                  <div className="grid grid-cols-3 gap-1">
-                    <Button
-                      onClick={() => sendWhatsAppMessage(supplier)}
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-1 flex-row-reverse text-xs bg-green-50 hover:bg-green-100"
-                      style={{ fontFamily: 'Tajawal, sans-serif' }} 
-                    >
-                      <MessageCircle className="w-3 h-3" />
-                      واتساب
-                    </Button>
+                  <Button
+                    onClick={() => handleDeleteSupplier(supplier.id)}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-1 flex-row-reverse text-xs text-red-600"
+                    style={{ fontFamily: 'Tajawal, sans-serif' }}
+                  >
+                    <X className="w-3 h-3" />
+                    حذف
+                  </Button>
+                </div>
 
+                {/* Block/Unblock Button */}
+                <div className="w-full">
+                  {supplier.isBlocked ? (
                     <Button
-                      onClick={() => handleEditSupplier(supplier)}
+                      onClick={() => handleUnblockSupplier(supplier.id)}
                       variant="outline"
                       size="sm"
-                      className="flex items-center gap-1 flex-row-reverse text-xs"
+                      className="w-full flex items-center gap-1 flex-row-reverse text-xs text-green-600"
                       style={{ fontFamily: 'Tajawal, sans-serif' }}
                     >
-                      <Edit className="w-3 h-3" />
-                      تعديل
+                      <CheckCircle className="w-3 h-3" />
+                      إلغاء الحظر
                     </Button>
-
+                  ) : (
                     <Button
-                      onClick={() => handleDeleteSupplier(supplier.id)}
+                      onClick={() => handleBlockSupplier(supplier.id)}
                       variant="outline"
                       size="sm"
-                      className="flex items-center gap-1 flex-row-reverse text-xs text-red-600"
+                      className="w-full flex items-center gap-1 flex-row-reverse text-xs text-white bg-red-600"
                       style={{ fontFamily: 'Tajawal, sans-serif' }}
                     >
-                      <X className="w-3 h-3" />
-                      حذف
+                      <Ban className="w-3 h-3" />
+                      حظر المورد
                     </Button>
-                  </div>
+                  )}
+                </div>
 
-                  {/* Block/Unblock Button */}
-                  <div className="w-full">
-                    {supplier.isBlocked ? (
-                      <Button
-                        onClick={() => handleUnblockSupplier(supplier.id)}
-                        variant="outline"
-                        size="sm"
-                        className="w-full flex items-center gap-1 flex-row-reverse text-xs text-green-600"
+                {/* Notes Section */}
+                <div className="mt-2">
+                  {editingSupplier === supplier.id ? (
+                    <div className="space-y-2">
+                      <Textarea
+                        value={supplierNotes}
+                        onChange={(e) => setSupplierNotes(e.target.value)}
+                        placeholder="أضف ملاحظات..."
+                        className="text-xs"
                         style={{ fontFamily: 'Tajawal, sans-serif' }}
-                      >
-                        <CheckCircle className="w-3 h-3" />
-                        إلغاء الحظر
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={() => handleBlockSupplier(supplier.id)}
-                        variant="outline"
-                        size="sm"
-                        className="w-full flex items-center gap-1 flex-row-reverse text-xs text-white bg-red-600"
-                        style={{ fontFamily: 'Tajawal, sans-serif' }}
-                      >
-                        <Ban className="w-3 h-3" />
-                        حظر المورد
-                      </Button>
-                    )}
-                  </div>
-
-                  {/* Notes Section */}
-                  <div className="mt-2">
-                    {editingSupplier === supplier.id ? (
-                      <div className="space-y-2">
-                        <Textarea
-                          value={supplierNotes}
-                          onChange={(e) => setSupplierNotes(e.target.value)}
-                          placeholder="أضف ملاحظات..."
-                          className="text-xs"
-                          style={{ fontFamily: 'Tajawal, sans-serif' }}
-                          rows={2}
-                        />
-                        <div className="flex gap-1">
-                          <Button
-                            onClick={() => saveNotes(supplier.id)}
-                            size="sm"
-                            className="flex-1 text-xs"
-                            style={{ fontFamily: 'Tajawal, sans-serif' }}
-                          >
-                            <Save className="w-3 h-3 mr-1" />
-                            حفظ
-                          </Button>
-                          <Button
-                            onClick={() => {
-                              setEditingSupplier(null);
-                              setSupplierNotes("");
-                            }}
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 text-xs"
-                          >
-                            <X className="w-3 h-3 mr-1" />
-                            إلغاء
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div>
+                        rows={2}
+                      />
+                      <div className="flex gap-1">
                         <Button
-                          onClick={() => {
-                            setEditingSupplier(supplier.id);
-                            setSupplierNotes(supplier.notes || "");
-                          }}
-                          variant="ghost"
+                          onClick={() => saveNotes(supplier.id)}
                           size="sm"
-                          className="w-full text-xs flex items-center gap-1"
+                          className="flex-1 text-xs"
                           style={{ fontFamily: 'Tajawal, sans-serif' }}
                         >
-                          <Edit3 className="w-3 h-3" />
-                          {supplier.notes ? "تعديل الملاحظات" : "إضافة ملاحظات"}
+                          <Save className="w-3 h-3 mr-1" />
+                          حفظ
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setEditingSupplier(null);
+                            setSupplierNotes("");
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 text-xs"
+                        >
+                          <X className="w-3 h-3 mr-1" />
+                          إلغاء
                         </Button>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <Button
+                        onClick={() => {
+                          setEditingSupplier(supplier.id);
+                          setSupplierNotes(supplier.notes || "");
+                        }}
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs flex items-center gap-1"
+                        style={{ fontFamily: 'Tajawal, sans-serif' }}
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        {supplier.notes ? "تعديل الملاحظات" : "إضافة ملاحظات"}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>

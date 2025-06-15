@@ -345,6 +345,28 @@ const CustomerFollowUp = () => {
                       )}
                     </span>
                   </div>
+
+                  {/* Last 2 Sales */}
+                  <div className="bg-green-50 rounded p-2 mb-1">
+                    <span className="block text-xs font-bold text-green-800 mb-1" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      آخر عمليتين بيع
+                    </span>
+                    {(customer.last2BatteryTypes && customer.last2BatteryTypes.length > 0 && customer.last2Quantities && customer.last2Prices) ? (
+                      <div className="flex flex-col gap-0.5" style={{fontFamily: 'Tajawal, sans-serif', direction:'rtl'}}>
+                        {customer.last2BatteryTypes.map((battery, idx) => (
+                          battery && (customer.last2Quantities[idx] || customer.last2Prices[idx]) ? (
+                            <div className="flex gap-2 text-xs" key={idx}>
+                              <span className="font-semibold">{battery}</span>
+                              <span className="text-blue-700">سعر: {customer.last2Prices[idx]}</span>
+                              <span className="text-green-700">كمية: {customer.last2Quantities[idx]}</span>
+                            </div>
+                          ) : null
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-500">لا يوجد بيانات</span>
+                    )}
+                  </div>
           
                   {/* Balance */}
                   <div className="flex items-center gap-2">
