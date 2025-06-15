@@ -50,7 +50,7 @@ const SalesPage = () => {
   const [salesSearch, setSalesSearch] = useState("");
   const [salesFilterDate, setSalesFilterDate] = useState("");
 
-  const { sales, createSale, updateSale, deleteSale, isCreating, isUpdating, isDeleting } = useSales();
+  const { sales, createSale, updateSale, deleteSale, isCreating, isUpdating, isDeleting, isLoading } = useSales();
   const { batteryTypes, isLoading: batteryTypesLoading } = useBatteryTypes();
 
   const addSaleItem = () => {
