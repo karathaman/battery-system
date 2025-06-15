@@ -250,6 +250,44 @@ export const StatisticsPage = ({ language, onTabChange }: StatisticsPageProps) =
     }
   }
 
+  // --- الشيفرة الجديدة: تجميع البطاريات المباعة والمشتراة ---
+  // 1- تجميع المنتجات للمبيعات
+  const salesProductStats: Record<string, { name: string, quantity: number, total: number }> = {};
+  (sales || []).forEach(sale => {
+    const items = sale.sale_items || sale.items || [];
+    items.forEach((item: any) => {
+      // احصل على اسم المنتج من البطارية المرتبطة إذا توفرت
+      const btName = (item.battery_types?.name || item.batteryType || item.battery_type || "-");
+      if (!salesProductStats[btName]) {
+        salesProductStats[btName] = { name: btName, quantity: 0, total: 0 };
+      }
+      salesProductStats[btName].quantity += Number(item.quantity) || 0;
+      salesProductStats[btName].total += Number(item.total) || 0;
+    });
+  });
+  // ترتيب بحسب الكمية المباعة
+  const topSoldProducts = Object.values(salesProductStats)
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 5);
+
+  // 2- تجميع المنتجات للمشتريات
+  const purchasesProductStats: Record<string, { name: string, quantity: number, total: number }> = {};
+  (purchases || []).forEach(purchase => {
+    const items = purchase.purchase_items || purchase.items || [];
+    items.forEach((item: any) => {
+      const btName = (item.battery_types?.name || item.batteryType || item.battery_type || "-");
+      if (!purchasesProductStats[btName]) {
+        purchasesProductStats[btName] = { name: btName, quantity: 0, total: 0 };
+      }
+      purchasesProductStats[btName].quantity += Number(item.quantity) || 0;
+      purchasesProductStats[btName].total += Number(item.total) || 0;
+    });
+  });
+  // ترتيب بحسب الكمية المشتراة
+  const topPurchasedProducts = Object.values(purchasesProductStats)
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 5);
+
   return (
     <div className="min-h-screen bg-gray-50 p-6" dir={isRTL ? "rtl" : "ltr"}>
       {/* Motivational Quote */}
@@ -533,6 +571,85 @@ export const StatisticsPage = ({ language, onTabChange }: StatisticsPageProps) =
             </ResponsiveContainer>
           </div>
         )}
+      </div>
+
+      {/* --- جدول المنتجات الأكثر مبيعًا وشراء --- */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+        {/* المنتجات الأكثر مبيعًا */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+              {language === "ar" ? "أفضل المنتجات مبيعًا" : "Top Sold Products"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-blue-50">
+                  <tr>
+                    <th className="p-2">{language === "ar" ? "الصنف" : "Product"}</th>
+                    <th className="p-2">{language === "ar" ? "الكمية المباعة" : "Sold Quantity"}</th>
+                    <th className="p-2">{language === "ar" ? "إجمالي المبيعات" : "Total Sales"}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topSoldProducts.map((prod, i) => (
+                    <tr key={prod.name + i} className="border-b">
+                      <td className="p-2 font-medium">{prod.name}</td>
+                      <td className="p-2">{prod.quantity.toLocaleString()}</td>
+                      <td className="p-2">{prod.total.toLocaleString()} {language === "ar" ? "ريال" : "SAR"}</td>
+                    </tr>
+                  ))}
+                  {topSoldProducts.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="p-2 text-center text-gray-400">
+                        {language === "ar" ? "لا توجد بيانات مبيعات" : "No sales data available"}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* المنتجات الأكثر شراء */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+              {language === "ar" ? "أفضل المنتجات شراءً" : "Top Purchased Products"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-green-50">
+                  <tr>
+                    <th className="p-2">{language === "ar" ? "الصنف" : "Product"}</th>
+                    <th className="p-2">{language === "ar" ? "الكمية المشتراة" : "Purchased Quantity"}</th>
+                    <th className="p-2">{language === "ar" ? "إجمالي المشتريات" : "Total Purchases"}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topPurchasedProducts.map((prod, i) => (
+                    <tr key={prod.name + i} className="border-b">
+                      <td className="p-2 font-medium">{prod.name}</td>
+                      <td className="p-2">{prod.quantity.toLocaleString()}</td>
+                      <td className="p-2">{prod.total.toLocaleString()} {language === "ar" ? "ريال" : "SAR"}</td>
+                    </tr>
+                  ))}
+                  {topPurchasedProducts.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="p-2 text-center text-gray-400">
+                        {language === "ar" ? "لا توجد بيانات مشتريات" : "No purchase data available"}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Add Data Filter Dialog */}
