@@ -75,7 +75,7 @@ export const CustomerStatistics = ({
     }
   }
 
-  // احصائيات العميل حصريا من جدول المبيعات وأصناف البيع الفرعية
+  // احصائيات العميل فقط من جدول المبيعات وسلة الأصناف sale_items
   const mappedCustomers = customers.map((customer) => {
     // جميع مبيعات العميل من جدول المبيعات فقط (sales)
     const customerSales = (sales || []).filter(
@@ -87,21 +87,25 @@ export const CustomerStatistics = ({
     let totalWeightedPrice = 0;
     let totalSaleCount = customerSales.length;
 
-    // Flag: Was any item data found for this client?
     let foundItems = false;
 
     customerSales.forEach((sale) => {
-      // أولاً نحاول القراءة من sale.items وإذا غير موجودة نستخدم sale.sale_items
+      // استخدم sale.sale_items إذا موجودة (لأن supabase يرجعها هكذا)
       let items = [];
 
-      if (Array.isArray(sale.items) && sale.items.length) {
-        items = sale.items;
-      } else if (Array.isArray(sale.sale_items) && sale.sale_items.length) {
-        // حقل sale_items يأتي من ربط الجداول مباشرة في Supabase
+      if (Array.isArray(sale.sale_items) && sale.sale_items.length > 0) {
         items = sale.sale_items.map((item: any) => ({
           batteryType: item.battery_types?.name || "-",
           quantity: Number(item.quantity) || 0,
           price: Number(item.price_per_kg) || 0,
+          total: Number(item.total) || 0,
+        }));
+      } else if (Array.isArray(sale.items) && sale.items.length > 0) {
+        // احتياطي خلفي لو كان يوجد .items (توافق قديم)
+        items = sale.items.map((item: any) => ({
+          batteryType: item.batteryType || "-",
+          quantity: Number(item.quantity) || 0,
+          price: Number(item.price) || 0,
           total: Number(item.total) || 0,
         }));
       }
@@ -114,16 +118,17 @@ export const CustomerStatistics = ({
         });
       }
 
-      // نضيف مبلغ الفاتورة مباشرة
+      // مبالغ الفاتورة تحسب من sale.total وليس من اصنافها (للدقة)
       totalAmount += Number(sale.total) || 0;
     });
 
+    // متوسط السعر بناءً على الوزن/الكمية
     const averagePricePerKg =
       totalQuantity > 0 ? Math.round(totalWeightedPrice / totalQuantity) : 0;
     const averageInvoiceAmount =
       totalSaleCount > 0 ? Math.round(totalAmount / totalSaleCount) : 0;
 
-    // آخر تاريخ بيع (الأحدث)
+    // آخر عملية بيع حسب الاحدث
     const lastSaleObj = customerSales.length
       ? [...customerSales].sort(
           (a, b) =>
@@ -132,19 +137,25 @@ export const CustomerStatistics = ({
       : undefined;
     const lastSale = lastSaleObj ? lastSaleObj.date : "";
 
-    // for Dialog sales table: لنفس مشكلة العناصر، نظهر أصناف كل فاتورة اعتمادًا على items أو sale_items
+    // تجهيز البيانات للجدول التفصيلي في الديالوج
     const uiSales = customerSales.map((sale) => {
       let items = [];
-      if (Array.isArray(sale.items) && sale.items.length) {
-        items = sale.items;
-      } else if (Array.isArray(sale.sale_items) && sale.sale_items.length) {
+      if (Array.isArray(sale.sale_items) && sale.sale_items.length > 0) {
         items = sale.sale_items.map((item: any) => ({
           batteryType: item.battery_types?.name || "-",
           quantity: Number(item.quantity) || 0,
           price: Number(item.price_per_kg) || 0,
           total: Number(item.total) || 0,
         }));
+      } else if (Array.isArray(sale.items) && sale.items.length > 0) {
+        items = sale.items.map((item: any) => ({
+          batteryType: item.batteryType || "-",
+          quantity: Number(item.quantity) || 0,
+          price: Number(item.price) || 0,
+          total: Number(item.total) || 0,
+        }));
       }
+      // Show only first item as preview (لو يوجد عدة اصناف بالفاتورة)
       const firstItem = items[0] || {};
       return {
         id: sale.id,
@@ -167,7 +178,7 @@ export const CustomerStatistics = ({
       averagePricePerKg,
       averageInvoiceAmount,
       lastSale,
-      __foundItems: foundItems, // مساعد Debug إن أردت
+      __foundItems: foundItems, // debug useful
     };
   });
 
