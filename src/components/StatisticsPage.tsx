@@ -25,7 +25,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { addDays } from 'date-fns';
 import { DataFilterDialog } from "./DataFilterDialog";
 
-export const StatisticsPage = () => {
+interface StatisticsPageProps {
+  language: string;
+}
+
+export const StatisticsPage = ({ language }: StatisticsPageProps) => {
   const navigate = useNavigate();
   const [date, setDate] = React.useState<DateRange>({
     from: addDays(new Date(), -7),
@@ -38,6 +42,8 @@ export const StatisticsPage = () => {
   const [salesThisMonth, setSalesThisMonth] = useState(0);
   const [purchasesThisMonth, setPurchasesThisMonth] = useState(0);
   const [showDataFilterDialog, setShowDataFilterDialog] = useState(false);
+
+  const isRTL = language === "ar";
 
   const { customers } = useCustomers();
   const { sales } = useSales();
@@ -85,15 +91,40 @@ export const StatisticsPage = () => {
     calculateMonthlyData();
   }, [sales, purchases]);
 
+  const getTranslatedText = (key: string) => {
+    const translations = {
+      dashboard: { ar: "لوحة التحكم", en: "Dashboard" },
+      overview: { ar: "نظرة عامة على إحصائيات النظام", en: "System statistics overview" },
+      manageCustomers: { ar: "إدارة العملاء", en: "Manage Customers" },
+      manageSuppliers: { ar: "إدارة الموردين", en: "Manage Suppliers" },
+      manageSales: { ar: "إدارة المبيعات", en: "Manage Sales" },
+      managePurchases: { ar: "إدارة المشتريات", en: "Manage Purchases" },
+      filterData: { ar: "تصفية البيانات", en: "Filter Data" },
+      totalCustomers: { ar: "إجمالي العملاء", en: "Total Customers" },
+      totalSales: { ar: "إجمالي المبيعات", en: "Total Sales" },
+      totalSuppliers: { ar: "إجمالي الموردين", en: "Total Suppliers" },
+      totalPurchases: { ar: "إجمالي المشتريات", en: "Total Purchases" },
+      salesThisMonth: { ar: "مبيعات هذا الشهر", en: "Sales This Month" },
+      purchasesThisMonth: { ar: "مشتريات هذا الشهر", en: "Purchases This Month" },
+      registeredCustomers: { ar: "عدد العملاء المسجلين", en: "Number of registered customers" },
+      salesInvoices: { ar: "عدد فواتير المبيعات", en: "Number of sales invoices" },
+      registeredSuppliers: { ar: "عدد الموردين المسجلين", en: "Number of registered suppliers" },
+      purchaseInvoices: { ar: "عدد فواتير المشتريات", en: "Number of purchase invoices" },
+      monthlySalesInvoices: { ar: "عدد فواتير المبيعات هذا الشهر", en: "Number of sales invoices this month" },
+      monthlyPurchaseInvoices: { ar: "عدد فواتير المشتريات هذا الشهر", en: "Number of purchase invoices this month" }
+    };
+    return translations[key as keyof typeof translations][language as keyof typeof translations.dashboard];
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6" dir="rtl">
+    <div className="min-h-screen bg-gray-50 p-6" dir={isRTL ? "rtl" : "ltr"}>
       {/* Header Section */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-2 text-gray-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-          لوحة التحكم
+          {getTranslatedText("dashboard")}
         </h1>
         <p className="text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-          نظرة عامة على إحصائيات النظام
+          {getTranslatedText("overview")}
         </p>
       </div>
 
@@ -101,19 +132,19 @@ export const StatisticsPage = () => {
       <div className="mb-6 flex flex-wrap gap-4 justify-center">
         <Button onClick={() => navigate('/customers')} className="flex items-center gap-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
           <Users className="w-4 h-4" />
-          إدارة العملاء
+          {getTranslatedText("manageCustomers")}
         </Button>
         <Button onClick={() => navigate('/suppliers')} className="flex items-center gap-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
           <Truck className="w-4 h-4" />
-          إدارة الموردين
+          {getTranslatedText("manageSuppliers")}
         </Button>
         <Button onClick={() => navigate('/sales')} className="flex items-center gap-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
           <ShoppingCart className="w-4 h-4" />
-          إدارة المبيعات
+          {getTranslatedText("manageSales")}
         </Button>
         <Button onClick={() => navigate('/purchases')} className="flex items-center gap-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
           <Package className="w-4 h-4" />
-          إدارة المشتريات
+          {getTranslatedText("managePurchases")}
         </Button>
         
         <Button 
@@ -123,7 +154,7 @@ export const StatisticsPage = () => {
           style={{ fontFamily: 'Tajawal, sans-serif' }}
         >
           <Filter className="w-4 h-4" />
-          تصفية البيانات
+          {getTranslatedText("filterData")}
         </Button>
       </div>
 
@@ -131,79 +162,79 @@ export const StatisticsPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 flex-row-reverse justify-end" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+            <CardTitle className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse justify-end' : ''}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
               <Users className="w-4 h-4" />
-              إجمالي العملاء
+              {getTranslatedText("totalCustomers")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-gray-900">{totalCustomers}</div>
-            <p className="text-sm text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>عدد العملاء المسجلين</p>
+            <p className="text-sm text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>{getTranslatedText("registeredCustomers")}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 flex-row-reverse justify-end" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+            <CardTitle className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse justify-end' : ''}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
               <ShoppingCart className="w-4 h-4" />
-              إجمالي المبيعات
+              {getTranslatedText("totalSales")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-gray-900">{totalSales}</div>
-            <p className="text-sm text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>عدد فواتير المبيعات</p>
+            <p className="text-sm text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>{getTranslatedText("salesInvoices")}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 flex-row-reverse justify-end" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+            <CardTitle className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse justify-end' : ''}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
               <Truck className="w-4 h-4" />
-              إجمالي الموردين
+              {getTranslatedText("totalSuppliers")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-gray-900">{totalSuppliers}</div>
-            <p className="text-sm text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>عدد الموردين المسجلين</p>
+            <p className="text-sm text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>{getTranslatedText("registeredSuppliers")}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 flex-row-reverse justify-end" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+            <CardTitle className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse justify-end' : ''}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
               <Package className="w-4 h-4" />
-              إجمالي المشتريات
+              {getTranslatedText("totalPurchases")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-gray-900">{totalPurchases}</div>
-            <p className="text-sm text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>عدد فواتير المشتريات</p>
+            <p className="text-sm text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>{getTranslatedText("purchaseInvoices")}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 flex-row-reverse justify-end" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+            <CardTitle className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse justify-end' : ''}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
               <TrendingUp className="w-4 h-4" />
-              مبيعات هذا الشهر
+              {getTranslatedText("salesThisMonth")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-green-600">{salesThisMonth}</div>
-            <p className="text-sm text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>عدد فواتير المبيعات هذا الشهر</p>
+            <p className="text-sm text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>{getTranslatedText("monthlySalesInvoices")}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 flex-row-reverse justify-end" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+            <CardTitle className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse justify-end' : ''}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
               <FileText className="w-4 h-4" />
-              مشتريات هذا الشهر
+              {getTranslatedText("purchasesThisMonth")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-blue-600">{purchasesThisMonth}</div>
-            <p className="text-sm text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>عدد فواتير المشتريات هذا الشهر</p>
+            <p className="text-sm text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>{getTranslatedText("monthlyPurchaseInvoices")}</p>
           </CardContent>
         </Card>
       </div>
