@@ -440,59 +440,64 @@ const SalesPage = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {sales.slice(0, 5).map(sale => (
-                    <div key={sale.id} className="p-3 border rounded">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="font-semibold text-sm">{sale.invoiceNumber}</p>
-                          <p className="text-xs text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                            {sale.customerName}
-                          </p>
-                            {/* Always show "نقداً" or "آجل" based on only allowed methods */}
-                            {sale.paymentMethod && (
+                  {sales.slice(0, 5).map(sale => {
+                    // helper to show payment method as فقط "آجل" أو "نقداً"
+                    let paymentMethodLabel = "نقداً";
+                    let badgeVariant: "default" | "destructive" = "default";
+                    // حتى لو القاعدة ترجع "check" للأجل نعكسها لآجل
+                    if (sale.paymentMethod === "credit" || sale.paymentMethod === "check") {
+                      paymentMethodLabel = "آجل";
+                      badgeVariant = "destructive";
+                    }
+                    return (
+                      <div key={sale.id} className="p-3 border rounded">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-semibold text-sm">{sale.invoiceNumber}</p>
+                            <p className="text-xs text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                              {sale.customerName}
+                            </p>
                             <Badge
-                              variant={sale.paymentMethod === 'credit' ? 'destructive' : 'default'}
+                              variant={badgeVariant}
                               className="text-xs mt-1"
                             >
-                              {sale.paymentMethod === 'credit'
-                                ? "آجل"
-                                : "نقداً"}
+                              {paymentMethodLabel}
                             </Badge>
-                            )}
-                        </div>
-                        <div className="text-left">
-                          <p className="font-bold text-green-600">{sale.total.toLocaleString()} ريال</p>
-                          <div className="flex gap-1 mt-1">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => handlePrintInvoice(sale)}
-                              title="طباعة"
-                            >
-                              <Printer className="w-3 h-3" />
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => editSale(sale)}
-                              title="تعديل"
-                            >
-                              <Edit className="w-3 h-3" />
-                            </Button>
-                            <Button 
-                              variant="destructive" 
-                              size="sm" 
-                              onClick={() => handleDeleteSale(sale)}
-                              title="حذف"
-                              disabled={isDeleting}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
+                          </div>
+                          <div className="text-left">
+                            <p className="font-bold text-green-600">{sale.total.toLocaleString()} ريال</p>
+                            <div className="flex gap-1 mt-1">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handlePrintInvoice(sale)}
+                                title="طباعة"
+                              >
+                                <Printer className="w-3 h-3" />
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => editSale(sale)}
+                                title="تعديل"
+                              >
+                                <Edit className="w-3 h-3" />
+                              </Button>
+                              <Button 
+                                variant="destructive" 
+                                size="sm" 
+                                onClick={() => handleDeleteSale(sale)}
+                                title="حذف"
+                                disabled={isDeleting}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
