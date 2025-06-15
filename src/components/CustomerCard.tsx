@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -64,20 +65,31 @@ export function CustomerCard({
             <div className="flex items-center gap-2">
               <User className="w-3 h-3 text-blue-400" />
               <span className="text-xs font-semibold text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                {customer.phone || 'غير متوفر'}
+                {customer.phone}
               </span>
             </div>
 
-            {/* الرصيد بشكل واضح */}
+            {/* Last Sale */}
+            <div className="flex items-center gap-2">
+              <Calendar className="w-3 h-3 text-orange-400" />
+              <span className="text-xs font-semibold text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                آخر بيع: {customer.lastSale || "لا يوجد"}
+                {customer.lastSale && (
+                  <span className={`ml-1 ${getDaysSinceLastPurchase(customer.lastSale) > 30 ? 'text-red-600' : 'text-green-600'}`}>
+                    &nbsp; &nbsp; ← &nbsp; {getDaysSinceLastPurchase(customer.lastSale)} يوم
+                  </span>
+                )}
+              </span>
+            </div>
+
+            {/* Balance */}
             <div className="flex items-center gap-2">
               <img src="/assets/icons/SaudiRG.svg" alt="Custom Icon" className="w-3 h-3" />
               <span
                 className={`text-xs font-semibold ${customer.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}
                 style={{ fontFamily: 'Tajawal, sans-serif' }}
               >
-                الرصيد: {customer.balance !== undefined && customer.balance !== null
-                  ? Number(customer.balance).toLocaleString()
-                  : "غير متوفر"} ريال
+                الرصيد: {customer.balance.toLocaleString()} ريال
               </span>
               <Button
                 onClick={() => onResetBalance(customer.id, customer.name)}
@@ -90,50 +102,35 @@ export function CustomerCard({
               </Button>
             </div>
           </div>
-          {/* ==== معلومات آخر عملية بيع من جدول lastSales بشكل مفصل ==== */}
           <div className="mt-2">
             <div className="bg-blue-50 rounded-lg p-2 mb-2">
-              <div className="font-semibold text-xs text-blue-800 mb-1 flex items-center gap-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                🕒 آخر عمليات بيع لصنفين مختلفين
-                <span className="text-gray-800 font-normal">
-                  {customer.lastSale
-                    ? new Date(customer.lastSale).toLocaleDateString('ar-SA')
-                    : "لا يوجد"}
-                </span>
+              <div className="font-semibold text-xs text-blue-800 mb-1" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                آخر عمليتي بيع لصنفين مختلفين
               </div>
               {isLastSalesLoading ? (
-                <div className="text-xs text-gray-500">جاري تحميل تفاصيل آخر بيع...</div>
-              ) : lastSales && lastSales.length > 0 ? (
-                <div className="rounded bg-gray-100 p-2 mt-1">
-                  <div className="grid grid-cols-5 gap-2 font-semibold text-xs py-1">
-                    <div>الصنف</div>
-                    <div>الكمية</div>
-                    <div>السعر</div>
-                    <div>المبلغ</div>
-                    <div>التاريخ</div>
+                <div className="text-xs text-gray-500">جاري التحميل ...</div>
+              ) : (lastSales && lastSales.length > 0 ? (
+                <>
+                  <div className="flex justify-between text-gray-800 font-bold text-xs mb-1 px-1" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                    <span>الصنف</span>
+                    <span>الكمية</span>
+                    <span>السعر</span>
+                    <span>المبلغ</span>
                   </div>
-                  {lastSales.map((row, idx) => (
-                    <div key={idx} className="grid grid-cols-5 gap-2 text-xs py-1 border-b last:border-b-0">
-                      <div>{row.batteryTypeName || 'غير معروف'}</div>
-                      <div>{row.quantity ?? '-'}</div>
-                      <div>{row.price !== undefined && row.price !== null
-                        ? Number(row.price).toLocaleString()
-                        : '-'}</div>
-                      <div>{row.total !== undefined && row.total !== null
-                        ? Number(row.total).toLocaleString()
-                        : '-'}</div>
-                      <div>{row.date
-                        ? new Date(row.date).toLocaleDateString('ar-SA')
-                        : '-'}</div>
+                  {lastSales.map((item, idx) => (
+                    <div key={idx} className="flex justify-between text-xs text-gray-700 my-1 px-1" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      <span>{item.batteryTypeName}</span>
+                      <span>{item.quantity}</span>
+                      <span>{item.price}</span>
+                      <span>{item.total}</span>
                     </div>
                   ))}
-                </div>
+                </>
               ) : (
                 <div className="text-xs text-gray-400">لا توجد بيانات مبيعات متاحة</div>
-              )}
+              ))}
             </div>
           </div>
-          {/* ==== END معلومات آخر عملية بيع ==== */}
           <div className="grid grid-cols-2 gap-2 text-center">
             <div className="bg-gray-50 rounded p-2 border-gray-300 border">
               <p className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>مجموع الكميات المباعة</p>
