@@ -692,7 +692,7 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
                         <button
                           className="bg-green-600 text-white py-1 px-3 rounded shadow hover:bg-green-700 text-sm"
                           onClick={() => {
-                            const cols = [
+                            const cols: { title: string; key: string; format?: (v: any) => any }[] = [
                               { title: "التاريخ", key: "date" },
                               { title: "نوع الحركة", key: "type" },
                               { title: "البيان", key: "description" },
@@ -712,7 +712,7 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
                         <button
                           className="bg-blue-600 text-white py-1 px-3 rounded shadow hover:bg-blue-700 text-sm"
                           onClick={() => {
-                            const cols = [
+                            const cols: { title: string; key: string; format?: (v: any) => any }[] = [
                               { title: "التاريخ", key: "date" },
                               { title: "نوع الحركة", key: "type" },
                               { title: "البيان", key: "description" },

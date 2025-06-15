@@ -545,7 +545,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
                         <button
                           className="bg-green-600 text-white py-1 px-3 rounded shadow hover:bg-green-700 text-sm"
                           onClick={() => {
-                            const cols = [
+                            const cols: { title: string; key: string; format?: (v: any) => any }[] = [
                               { title: "التاريخ", key: "date" },
                               { title: "البيان", key: "description" },
                               { title: "مدين", key: "debit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
@@ -570,7 +570,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
                         <button
                           className="bg-blue-600 text-white py-1 px-3 rounded shadow hover:bg-blue-700 text-sm"
                           onClick={() => {
-                            const cols = [
+                            const cols: { title: string; key: string; format?: (v: any) => any }[] = [
                               { title: "التاريخ", key: "date" },
                               { title: "البيان", key: "description" },
                               { title: "مدين", key: "debit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
