@@ -59,7 +59,6 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
       const { data, error } = await supabase
         .from("notes")
         .select("*")
-        .eq('type', 'note')
         .order('created_at', { ascending: false });
       
       if (error) {
@@ -75,7 +74,7 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
           completed: item.completed || false,
           createdAt: item.created_at || new Date().toISOString(),
           color: item.color || "yellow",
-          type: item.type || "note",
+          type: (item.type === 'checklist' ? 'checklist' : 'note') as 'note' | 'checklist',
           checklistItems: []
         }))
       );
@@ -125,7 +124,7 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
       completed: data.completed || false,
       createdAt: data.created_at,
       color: data.color || "yellow",
-      type: data.type || "note",
+      type: (data.type === 'checklist' ? 'checklist' : 'note') as 'note' | 'checklist',
       checklistItems: []
     };
 
