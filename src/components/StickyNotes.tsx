@@ -72,7 +72,7 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
       title: note.title,
       content: note.content || "",
       color: note.color,
-      type: note.type
+      type: note.type as 'note' | 'checklist'
     });
     if (note.type === 'checklist' && note.checklist_items) {
       setNewChecklistItems(note.checklist_items.map((item: any) => item.text));
@@ -243,7 +243,7 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
           </CardContent>
         </Card>
 
-        {/* Only show active notes in compact view */}
+        {/* Display Notes from Database */}
         {activeNotes.slice(0, 5).map(note => {
           const colorClasses = getColorClasses(note.color);
           return (
@@ -276,53 +276,35 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
               </CardHeader>
               
               <CardContent className="p-3">
-                {editingNote === note.id ? (
-                  <EditNoteForm
-                    note={note}
-                    newNote={newNote}
-                    setNewNote={setNewNote}
-                    newChecklistItems={newChecklistItems}
-                    setNewChecklistItems={setNewChecklistItems}
-                    onSave={handleUpdate}
-                    onCancel={() => {
-                      setEditingNote(null);
-                      setNewNote({ title: "", content: "", color: "yellow", type: "note" });
-                      setNewChecklistItems([""]);
-                    }}
-                    language={language}
-                    compact={true}
-                  />
-                ) : (
-                  <div className="space-y-2">
-                    {note.type === 'note' && note.content && (
-                      <p className={`text-xs text-gray-600 ${isRTL ? 'text-right' : 'text-left'}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                        {note.content.length > 60 ? note.content.substring(0, 60) + "..." : note.content}
-                      </p>
-                    )}
-                    
-                    {note.type === 'checklist' && note.checklist_items && (
-                      <div className="space-y-1">
-                        {note.checklist_items.slice(0, 3).map(item => (
-                          <div key={item.id} className={`flex items-center gap-1 text-xs ${isRTL ? 'flex-row-reverse' : ''}`}>
-                            <Checkbox
-                              checked={item.completed}
-                              onCheckedChange={() => toggleChecklistItem({ itemId: item.id, completed: !item.completed })}
-                              className="h-3 w-3"
-                            />
-                            <span className={`${item.completed ? 'line-through text-gray-500' : ''} truncate`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                              {item.text}
-                            </span>
-                          </div>
-                        ))}
-                        {note.checklist_items.length > 3 && (
-                          <p className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                            +{note.checklist_items.length - 3} أكثر
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
+                <div className="space-y-2">
+                  {note.type === 'note' && note.content && (
+                    <p className={`text-xs text-gray-600 ${isRTL ? 'text-right' : 'text-left'}`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      {note.content.length > 60 ? note.content.substring(0, 60) + "..." : note.content}
+                    </p>
+                  )}
+                  
+                  {note.type === 'checklist' && note.checklist_items && (
+                    <div className="space-y-1">
+                      {note.checklist_items.slice(0, 3).map(item => (
+                        <div key={item.id} className={`flex items-center gap-1 text-xs ${isRTL ? 'flex-row-reverse' : ''}`}>
+                          <Checkbox
+                            checked={item.completed}
+                            onCheckedChange={() => toggleChecklistItem({ itemId: item.id, completed: !item.completed })}
+                            className="h-3 w-3"
+                          />
+                          <span className={`${item.completed ? 'line-through text-gray-500' : ''} truncate`} style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                            {item.text}
+                          </span>
+                        </div>
+                      ))}
+                      {note.checklist_items.length > 3 && (
+                        <p className="text-xs text-gray-500" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                          +{note.checklist_items.length - 3} أكثر
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           );
@@ -483,7 +465,7 @@ export const StickyNotes = ({ compact = false, language = "ar" }: StickyNotesPro
             </Button>
           </div>
 
-          {/* Notes Grid */}
+          {/* Notes Grid - Display notes from database */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
             {displayNotes.map(note => {
               const colorClasses = getColorClasses(note.color);
