@@ -81,11 +81,27 @@ const DailyPurchasesPage = () => {
     return { total, discountAmount, finalTotal };
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!newPurchase.supplierName.trim() || !newPurchase.batteryType || newPurchase.quantity <= 0 || newPurchase.pricePerKg <= 0) {
       toast({
         title: "خطأ",
         description: "يرجى ملء جميع الحقول المطلوبة",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // تحقق من وجود المورد في قاعدة البيانات قبل الحفظ
+    const { data: supplier, error } = await supabase
+      .from("suppliers")
+      .select("id")
+      .eq("name", newPurchase.supplierName.trim())
+      .maybeSingle();
+
+    if (!supplier) {
+      toast({
+        title: "خطأ",
+        description: "اسم المورد غير موجود في قاعدة البيانات! يرجى التأكد من اختيار مورد صحيح.",
         variant: "destructive"
       });
       return;
