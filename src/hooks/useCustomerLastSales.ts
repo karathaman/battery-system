@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -20,6 +19,7 @@ type SaleRow = {
 
 export type LastSaleForCustomer = {
   batteryTypeName: string;
+  quantity: number;
   price: number;
   total: number;
   date: string;
@@ -68,6 +68,7 @@ export function useCustomerLastSales(customerId: string | undefined) {
             seenTypes.add(batteryTypeName);
             batteryRows.push({
               batteryTypeName,
+              quantity: item.quantity,
               price: item.price_per_kg,
               total: item.total,
               date: sale.date,

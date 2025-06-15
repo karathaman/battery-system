@@ -110,13 +110,22 @@ export function CustomerCard({
               {isLastSalesLoading ? (
                 <div className="text-xs text-gray-500">جاري التحميل ...</div>
               ) : (lastSales && lastSales.length > 0 ? (
-                lastSales.map((item, idx) => (
-                  <div key={idx} className="flex justify-between text-xs text-gray-700 my-1" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                    <span>{item.batteryTypeName}</span>
-                    <span>السعر: {item.price}</span>
-                    <span>المبلغ: {item.total}</span>
+                <>
+                  <div className="flex justify-between text-gray-800 font-bold text-xs mb-1 px-1" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                    <span>الصنف</span>
+                    <span>الكمية</span>
+                    <span>السعر</span>
+                    <span>المبلغ</span>
                   </div>
-                ))
+                  {lastSales.map((item, idx) => (
+                    <div key={idx} className="flex justify-between text-xs text-gray-700 my-1 px-1" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      <span>{item.batteryTypeName}</span>
+                      <span>{item.quantity}</span>
+                      <span>{item.price}</span>
+                      <span>{item.total}</span>
+                    </div>
+                  ))}
+                </>
               ) : (
                 <div className="text-xs text-gray-400">لا توجد بيانات مبيعات متاحة</div>
               ))}
