@@ -287,33 +287,43 @@ const SalesPage = () => {
                   <div className="mt-2 p-3 bg-blue-50 rounded border space-y-2">
                     <div className="flex justify-between items-center">
                       <div>
+                        {/* اسم العميل ورقم التواصل */}
                         <p className="font-semibold" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                           {selectedCustomer.name}
                         </p>
-                        <p className="text-sm text-gray-600">{selectedCustomer.phone}</p>
+                        <p className="text-sm text-gray-600">{selectedCustomer.phone || 'غير متوفر'}</p>
                         <Badge variant="secondary" className="mt-1">
-                          {selectedCustomer.customerCode}
+                          {selectedCustomer.customerCode ?? ''}
                         </Badge>
                       </div>
+                      {/* رصيد العميل وإجمالي مشترياته */}
                       <div className="text-left">
                         <p className="font-bold text-green-600">
-                          {selectedCustomer.totalAmount.toLocaleString()} ريال
+                          {selectedCustomer.totalAmount !== undefined
+                            ? selectedCustomer.totalAmount.toLocaleString()
+                            : '0'} ريال
                         </p>
                         <p className="text-xs text-gray-500">إجمالي المشتريات</p>
                         <p className="font-bold text-yellow-600 mt-1">
-                          {selectedCustomer.balance?.toLocaleString() ?? '0'} ريال
+                          {/* رصيد العميل أو رسالة توضيح */}
+                          {selectedCustomer.balance !== undefined && selectedCustomer.balance !== null
+                            ? Number(selectedCustomer.balance).toLocaleString()
+                            : 'غير متوفر'} ريال
                         </p>
                         <p className="text-xs text-gray-500">الرصيد</p>
                       </div>
                     </div>
-                    {/* عرض معلومات آخر عملية بيع */}
+                    {/* عرض معلومات آخر عملية بيع بشكل واضح */}
                     <div className="border-t pt-2 mt-1">
                       <div className="text-sm text-gray-700 font-bold mb-2 flex items-center gap-2">
                         <span className="flex items-center gap-1">🕒 آخر عملية بيع:</span>
                         <span className="text-gray-800">
-                          {selectedCustomer.lastSale ? new Date(selectedCustomer.lastSale).toLocaleDateString('ar-SA') : "لا يوجد"}
+                          {selectedCustomer.lastSale
+                            ? new Date(selectedCustomer.lastSale).toLocaleDateString('ar-SA')
+                            : "لا يوجد"}
                         </span>
                       </div>
+                      {/* جدول آخر بيع لصنف/كميات ... */}
                       {lastSalesLoading ? (
                         <div className="text-xs text-gray-500">جاري تحميل تفاصيل آخر بيع...</div>
                       ) : lastSales.length === 0 ? (
@@ -329,11 +339,17 @@ const SalesPage = () => {
                           </div>
                           {lastSales.map((row, idx) => (
                             <div key={idx} className="grid grid-cols-5 gap-2 text-xs py-1 border-b last:border-b-0">
-                              <div>{row.batteryTypeName}</div>
-                              <div>{row.quantity}</div>
-                              <div>{row.price?.toLocaleString()}</div>
-                              <div>{row.total?.toLocaleString()}</div>
-                              <div>{row.date ? new Date(row.date).toLocaleDateString('ar-SA') : ""}</div>
+                              <div>{row.batteryTypeName || 'غير معروف'}</div>
+                              <div>{row.quantity ?? '-'}</div>
+                              <div>{row.price !== undefined && row.price !== null
+                                ? Number(row.price).toLocaleString()
+                                : '-'}</div>
+                              <div>{row.total !== undefined && row.total !== null
+                                ? Number(row.total).toLocaleString()
+                                : '-'}</div>
+                              <div>{row.date
+                                ? new Date(row.date).toLocaleDateString('ar-SA')
+                                : '-'}</div>
                             </div>
                           ))}
                         </div>
