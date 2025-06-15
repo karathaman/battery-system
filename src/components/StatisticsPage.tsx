@@ -26,6 +26,10 @@ import { addDays } from 'date-fns';
 import { DataFilterDialog } from "./DataFilterDialog";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ChevronDown } from "lucide-react"; // لاستخدام ايقونة السهم مع الدروبداون
+
 interface StatisticsPageProps {
   language: string;
   onTabChange?: (tab: string) => void;
@@ -172,6 +176,79 @@ export const StatisticsPage = ({ language, onTabChange }: StatisticsPageProps) =
       : val === 0
       ? "bg-gray-100 border-gray-200"
       : "bg-yellow-50 border-yellow-200";
+
+  
+  // --- State للفلترة والفرز ---
+  const [topType, setTopType] = useState<'customers'|'suppliers'>('customers');
+  const [sortBy, setSortBy] = useState<string>("quantity");
+  const [sortDirection, setSortDirection] = useState<'asc'|'desc'>('desc');
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(null);
+
+  // -- جلب وتصفية بيانات العملاء والموردين --
+  const allCustomers = customers ?? [];
+  const allSuppliers = suppliers ?? [];
+
+  // Helper: ترتيب البيانات بناءً على نوع الفلترة
+  const getSorted = (arr: any[], entity: 'customers'|'suppliers') => {
+    let key = sortBy;
+    let data = [...arr];
+    
+    // تحويل مفاتيح العرض المناسبة
+    if (entity === 'customers') {
+      if (key === "quantity") key = "totalSoldQuantity";
+      if (key === "amount") key = "totalAmount";
+      if (key === "balance") key = "balance";
+      if (key === "lastOp") key = "lastSale";
+    } else if (entity === 'suppliers') {
+      if (key === "quantity") key = "totalPurchases";
+      if (key === "amount") key = "totalAmount";
+      if (key === "balance") key = "balance";
+      if (key === "lastOp") key = "lastPurchase";
+    }
+    data.sort((a, b) => {
+      if (key === "lastOp") {
+        const aVal = a[key] ? new Date(a[key]).getTime() : 0;
+        const bVal = b[key] ? new Date(b[key]).getTime() : 0;
+        return sortDirection === "asc" ? aVal-bVal : bVal-aVal;
+      } else {
+        const aVal = (a[key] ?? 0);
+        const bVal = (b[key] ?? 0);
+        return sortDirection === "asc" ? aVal-bVal : bVal-aVal;
+      }
+    });
+    return data.slice(0, 5);
+  };
+
+  const topCustomers = getSorted(allCustomers, "customers");
+  const topSuppliers = getSorted(allSuppliers, "suppliers");
+
+  // --- أنواع الفلاتر للعرض ---
+  const sortOptions = [
+    { key: "quantity", label: language === "ar" ? "الكميات" : "Quantity" },
+    { key: "amount", label: language === "ar" ? "المبالغ" : "Amounts" },
+    { key: "balance", label: language === "ar" ? "الرصيد" : "Balance" },
+    { key: "lastOp", label: language === "ar" ? (topType==="customers" ? "آخر بيع" : "آخر شراء") : (topType==="customers" ? "Last Sale" : "Last Purchase") },
+  ];
+
+  // --- بيانات شارت المورد المختار ---
+  let selectedSupplier = allSuppliers.find(s => s.id === selectedSupplierId);
+  // بيانات الكميات آخر 6 أشهر للمورد
+  let supplierChartData: { month: string, qty: number }[] = [];
+  if (selectedSupplierId && purchases) {
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(new Date().getFullYear(), new Date().getMonth() - i, 1);
+      const monthName = date.toLocaleString(language === "ar" ? "ar-EG" : "en-US", { month: "short" });
+      const start = new Date(date.getFullYear(), date.getMonth(), 1);
+      const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+      const purchasesOfMonth = purchases.filter(p => p.supplier_id === selectedSupplierId && (new Date(p.date) >= start && new Date(p.date) <= end));
+      const totalQty = purchasesOfMonth.reduce((acc, record) => {
+        const items = record.items || record.purchase_items || [];
+        const recordTotal = items.filter(it => true).reduce((sum, it) => sum + (it.quantity || 0), 0);
+        return acc + recordTotal;
+      }, 0);
+      supplierChartData.push({ month: monthName, qty: totalQty });
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6" dir={isRTL ? "rtl" : "ltr"}>
@@ -360,6 +437,104 @@ export const StatisticsPage = ({ language, onTabChange }: StatisticsPageProps) =
           </CardContent>
         </Card>
       </div>
+      {/* --- التوب 5 العملاء/الموردين --- */}
+      <div className="mb-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
+          <div className="flex gap-2">
+            <Button variant={topType==='customers'?'default':'outline'} onClick={()=>setTopType('customers')}>
+              {language === "ar" ? "أعلى العملاء" : "Top Customers"}
+            </Button>
+            <Button variant={topType==='suppliers'?'default':'outline'} onClick={()=>setTopType('suppliers')}>
+              {language === "ar" ? "أعلى الموردين" : "Top Suppliers"}
+            </Button>
+          </div>
+          <div className="flex gap-2 items-center">
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center gap-1 border px-2 py-1 rounded bg-white shadow-sm text-sm">
+                {sortOptions.find(opt=>opt.key===sortBy)?.label} <ChevronDown className="w-4 h-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {sortOptions.map(opt => (
+                  <DropdownMenuItem key={opt.key} onClick={()=>setSortBy(opt.key)}>
+                    {opt.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button size="sm" variant="ghost" onClick={()=>setSortDirection(sortDirection==="asc"?"desc":"asc")}>
+              {sortDirection==="asc" 
+                ? (language==="ar" ? "تصاعدي" : "Ascending")
+                : (language==="ar" ? "تنازلي" : "Descending")}
+            </Button>
+          </div>
+        </div>
+        {/* جدول توب 5 */}
+        <div className="overflow-x-auto mb-4 rounded border border-gray-200 shadow bg-white">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>#</TableHead>
+                <TableHead>{language === "ar" ? "الاسم" : "Name"}</TableHead>
+                <TableHead>{sortBy==="quantity" ? (language==="ar"? (topType==="customers"?"الكميات المباعة":"الكميات الموردة") : (topType==="customers"?"Sold QTY":"Supplied QTY"))
+                  : sortBy==="amount" ? (language==="ar"?"المبلغ":"Amount")
+                  : sortBy==="balance" ? (language==="ar"?"الرصيد":"Balance")
+                  : (language==="ar"?(topType==="customers"?"آخر بيع":"آخر شراء"):"Last Operation")
+                }</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(topType === "customers" ? topCustomers : topSuppliers).map((item, i) => (
+                <TableRow key={item.id || i}>
+                  <TableCell>{i+1}</TableCell>
+                  <TableCell>{item.name}</TableCell>
+                  <TableCell>
+                    {sortBy==="quantity"? (topType==="customers"? item.totalSoldQuantity : item.totalPurchases)
+                    : sortBy==="amount"? item.totalAmount
+                    : sortBy==="balance"? item.balance
+                    : (topType==="customers"? (item.lastSale? format(new Date(item.lastSale), "yyyy-MM-dd"):"-") : (item.lastPurchase? format(new Date(item.lastPurchase), "yyyy-MM-dd"):"-"))
+                    }
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      {/* --- تتبع كميات مورد بشارت --- */}
+      <div className="mb-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
+          <div className="text-lg font-semibold" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+            {language === "ar" ? "تتبع كميات مورد مختار" : "Supplier Quantity Trend"}
+          </div>
+          <div>
+            <select
+              className="border rounded px-2 py-1"
+              value={selectedSupplierId || ""}
+              onChange={e => setSelectedSupplierId(e.target.value || null)}
+            >
+              <option value="">{language === "ar" ? "اختر مورّد" : "Select Supplier"}</option>
+              {allSuppliers.map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        {selectedSupplierId && (
+          <div style={{ width: "100%", height: 240 }} className="bg-white border rounded p-2 mb-4">
+            <ResponsiveContainer width="100%" height={200}>
+              <RechartsBarChart data={supplierChartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="qty" name={language === "ar" ? "الكمية" : "Quantity"} fill="#4e844d" />
+              </RechartsBarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+
       {/* Add Data Filter Dialog */}
       <DataFilterDialog 
         open={showDataFilterDialog}
