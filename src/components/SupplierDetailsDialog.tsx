@@ -670,9 +670,15 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
                               <td className="border px-3 py-2 text-center">{entry.battery_type}</td>
                               <td className="border px-3 py-2 text-center">{entry.quantity}</td>
                               <td className="border px-3 py-2 text-center">{entry.price_per_kg}</td>
-                              <td className="border px-3 py-2 text-center text-blue-700">{entry.total?.toLocaleString?.() ?? entry.total || 0}</td>
-                              <td className="border px-3 py-2 text-center text-red-500">{entry.discount?.toLocaleString?.() ?? entry.discount || 0}</td>
-                              <td className="border px-3 py-2 text-center font-bold text-green-600">{entry.final_total?.toLocaleString?.() ?? entry.final_total || 0}</td>
+                              <td className="border px-3 py-2 text-center text-blue-700">
+                                {(entry.total?.toLocaleString?.() ?? entry.total) || 0}
+                              </td>
+                              <td className="border px-3 py-2 text-center text-red-500">
+                                {(entry.discount?.toLocaleString?.() ?? entry.discount) || 0}
+                              </td>
+                              <td className="border px-3 py-2 text-center font-bold text-green-600">
+                                {(entry.final_total?.toLocaleString?.() ?? entry.final_total) || 0}
+                              </td>
                               <td className="border px-3 py-2 text-center">{entry.source === 'daily' ? 'يومية' : 'فاتورة'}</td>
                             </tr>
                           ))

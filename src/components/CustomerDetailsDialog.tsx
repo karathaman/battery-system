@@ -517,9 +517,15 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
                                 <td className="p-3 text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{entry.battery_type}</td>
                                 <td className="p-3 text-sm">{entry.quantity}</td>
                                 <td className="p-3 text-sm">{entry.price_per_kg}</td>
-                                <td className="p-3 text-sm text-blue-700">{entry.total?.toLocaleString?.() ?? entry.total || 0}</td>
-                                <td className="p-3 text-sm text-red-500">{entry.discount?.toLocaleString?.() ?? entry.discount || 0}</td>
-                                <td className="p-3 text-sm font-bold text-green-600">{entry.final_total?.toLocaleString?.() ?? entry.final_total || 0}</td>
+                                <td className="p-3 text-sm text-blue-700">
+                                  {(entry.total?.toLocaleString?.() ?? entry.total) || 0}
+                                </td>
+                                <td className="p-3 text-sm text-red-500">
+                                  {(entry.discount?.toLocaleString?.() ?? entry.discount) || 0}
+                                </td>
+                                <td className="p-3 text-sm font-bold text-green-600">
+                                  {(entry.final_total?.toLocaleString?.() ?? entry.final_total) || 0}
+                                </td>
                               </tr>
                             ))}
                           </tbody>
