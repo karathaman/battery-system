@@ -84,7 +84,11 @@ export const SupplierSearchDialog = ({
               </p>
               <Button
                 onClick={() => {
-                  onAddSupplier(localSearchTerm);
+                  if (localSearchTerm && localSearchTerm.trim().length > 0) {
+                    onAddSupplier(localSearchTerm);
+                  } else {
+                    onAddSupplier("");
+                  }
                 }}
                 className="flex items-center gap-2"
                 style={{ fontFamily: 'Tajawal, sans-serif' }}
@@ -122,7 +126,13 @@ export const SupplierSearchDialog = ({
           {/* زر إضافة مورد جديد أسفل القائمة عند وجود نتائج بحث */}
           {!isLoading && suppliers.length > 0 && (
             <Button
-              onClick={() => onAddSupplier(localSearchTerm)}
+              onClick={() => {
+                if (localSearchTerm && localSearchTerm.trim().length > 0) {
+                  onAddSupplier(localSearchTerm);
+                } else {
+                  onAddSupplier("");
+                }
+              }}
               variant="outline"
               className="w-full flex items-center gap-2"
               style={{ fontFamily: 'Tajawal, sans-serif' }}
