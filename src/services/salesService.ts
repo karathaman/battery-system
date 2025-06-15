@@ -280,11 +280,9 @@ const salesService = {
       throw new Error('فشل في جلب بيانات الفاتورة الأصلية');
     }
 
-    console.log('Original sale payment method:', originalSale.payment_method);
-
-    // Revert the original sale effects
-    if (originalSale.payment_method === 'check') { // credit sales are stored as 'check' in DB
-      console.log('Reverting customer balance for credit sale:', originalSale.total);
+    // Revert the original sale effects only if it was credit
+    const originalWasCredit = originalSale.payment_method === 'check';
+    if (originalWasCredit) {
       await updateCustomerBalance(originalSale.customer_id, originalSale.total, false);
     }
 
@@ -348,15 +346,26 @@ const salesService = {
         throw new Error(itemsError.message);
       }
 
-      // Apply new sale effects
-      console.log('New payment method:', data.payment_method);
-      if (data.payment_method === 'credit' && data.customer_id && data.total) {
-        console.log('Adding customer balance for credit sale:', data.total);
+      // تحديد ما إذا كانت الفاتورة الجديدة "آجل"
+      const isNewCredit = data.payment_method === 'credit';
+      if (isNewCredit && data.customer_id && data.total !== undefined) {
         await updateCustomerBalance(data.customer_id, data.total, true);
       }
+      // لا داعي لأي إضافة/خصم إذا لم تعد آجل (لأنها عولجت أعلاه)، أو إذا لم تتغير طريقة الدفع
 
       // Update battery quantities for new items
       await updateBatteryTypeQuantities(data.items, true);
+    }
+
+    // تحديث تاريخ آخر بيع للعميل
+    if (data.customer_id && data.date) {
+      const { error: lastPurchaseError } = await supabase
+        .from('customers')
+        .update({ last_purchase: data.date })
+        .eq('id', data.customer_id);
+      if (lastPurchaseError) {
+        console.error('فشل في تحديث تاريخ آخر بيع للعميل:', lastPurchaseError);
+      }
     }
 
     // Fetch the updated sale with all details
