@@ -66,11 +66,25 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
   // --- NEW STATE FOR BATTERY TYPE FILTER ---
   const [batteryTypeFilter, setBatteryTypeFilter] = useState<string>("all");
 
+  // --- BATTERY TYPES FROM DB ---
+  const [batteryTypesFromDB, setBatteryTypesFromDB] = useState<string[]>([]);
+  useEffect(() => {
+    if (!open) return;
+    const fetchBatteryTypes = async () => {
+      const { data, error } = await supabase.from("battery_types").select("name");
+      if (!error && data) {
+        setBatteryTypesFromDB(data.map(bt => bt.name));
+      }
+    };
+    fetchBatteryTypes();
+  }, [open]);
+
   // --- CREATE A BATTERY TYPE LIST BASED ON HISTORY ---
   // نستخرج الأنواع الموجودة في السجل نفسه فقط
-  const batteryTypesList = Array.from(
-    new Set(customerHistory.map((e: any) => e.battery_type))
-  ).filter(Boolean);
+  const batteryTypesList =
+    batteryTypesFromDB && batteryTypesFromDB.length > 0
+      ? batteryTypesFromDB
+      : [];
 
   // فلترة التاريخ حسب التواريخ ونوع البطارية
   const filteredHistory = customerHistory
@@ -470,7 +484,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }: CustomerDetai
                       >
                         آخر شهر
                       </button>
-                      {/* قائمة أنواع البطاريات */}
+                      {/* قائمة أنواع البطاريات من قاعدة البيانات */}
                       <select
                         value={batteryTypeFilter}
                         onChange={(e) => setBatteryTypeFilter(e.target.value)}
