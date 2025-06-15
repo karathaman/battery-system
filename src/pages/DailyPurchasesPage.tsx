@@ -108,6 +108,7 @@ const DailyPurchasesPage = () => {
   // Display supplier info box if selectedSupplier exists
   const SupplierInfo = () => {
     if (!selectedSupplier) return null;
+    // تأكد من أن الرصيد ظاهر ومطبوع دومًا
     return (
       <div className="bg-blue-50 rounded-md p-3 mb-2 flex flex-col md:flex-row md:items-center md:gap-6" dir="rtl">
         <span className="font-bold text-blue-900 flex items-center" style={{ fontFamily: 'Tajawal, sans-serif' }}>
@@ -156,8 +157,11 @@ const DailyPurchasesPage = () => {
       }
     }
 
+    // rصيد المورد بشكل آمن
+    console.log("Fetched supplier balance:", sData?.balance ?? 0);
+
     return {
-      balance: sData?.balance ?? 0,
+      balance: (typeof sData?.balance === 'number' && !isNaN(sData.balance)) ? sData.balance : 0,
       lastPurchase
     };
   };
