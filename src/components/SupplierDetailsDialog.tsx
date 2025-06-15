@@ -559,229 +559,228 @@ export const SupplierDetailsDialog = ({ open, onClose, supplier }: SupplierDetai
             </CardContent>
           </Card>
 
+          {/* ====== FILTERS BAR ====== */}
+          <div className="flex flex-wrap items-center gap-4 bg-blue-50 rounded-lg p-2 mb-2">
+            {/* فلتر التاريخ */}
+            <span className="text-sm text-gray-500">من</span>
+            <input
+              type="date"
+              value={dateRange.startDate || ""}
+              onChange={(e) =>
+                setDateRange((prev) => ({ ...prev, startDate: e.target.value }))
+              }
+              className="border rounded-md p-2 text-sm text-gray-600 bg-white"
+            />
+            <span className="text-sm text-gray-500">إلى</span>
+            <input
+              type="date"
+              value={dateRange.endDate || ""}
+              onChange={(e) =>
+                setDateRange((prev) => ({ ...prev, endDate: e.target.value }))
+              }
+              className="border rounded-md p-2 text-sm text-gray-600 bg-white"
+            />
+            <button
+              onClick={() => {
+                const today = new Date();
+                const lastWeek = new Date(today);
+                lastWeek.setDate(today.getDate() - 7);
+                setDateRange({
+                  startDate: lastWeek.toISOString().split("T")[0],
+                  endDate: today.toISOString().split("T")[0],
+                });
+              }}
+              className="bg-blue-400 text-white text-sm py-1 px-2 rounded-md"
+            >
+              آخر أسبوع
+            </button>
+            <span className="text-gray-400">-</span>
+            <button
+              onClick={() => {
+                const today = new Date();
+                const lastMonth = new Date(today);
+                lastMonth.setMonth(today.getMonth() - 1);
+                setDateRange({
+                  startDate: lastMonth.toISOString().split("T")[0],
+                  endDate: today.toISOString().split("T")[0],
+                });
+              }}
+              className="bg-blue-400 text-white text-sm py-1 px-2 rounded-md"
+            >
+              آخر شهر
+            </button>
+            {/* ----- بطارية ----- */}
+            <select
+              value={batteryTypeFilter}
+              onChange={(e) => setBatteryTypeFilter(e.target.value)}
+              className="border rounded-md p-2 text-sm bg-white text-gray-800 ml-2"
+              style={{ minWidth: 120, fontFamily: 'Tajawal, sans-serif' }}>
+              <option value="all">كل الأصناف</option>
+              {batteryTypesFromDB.map((type, idx) => (
+                <option value={type} key={idx}>{type}</option>
+              ))}
+            </select>
+          </div>
+          {/* ====== END FILTERS BAR ====== */}
+
           {/* Tabs for Purchase History and Account Statement */}
           <Card>
             <CardHeader>
-              {/* --- Tabs & Filters --- */}
-              <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 w-full">
-                    <TabsList className="bg-blue-50" dir="rtl">
-                      <TabsTrigger value="deliveries" className="flex items-center gap-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                        <ShoppingCart className="w-4 h-4" />
-                        تاريخ التوريدات
-                      </TabsTrigger>
-                      <TabsTrigger value="statement" className="flex items-center gap-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                        <FileText className="w-4 h-4" />
-                        كشف الحساب
-                      </TabsTrigger>
-                    </TabsList>
-                    {/* ----- FILTERS DESIGN */}
-                    <div className="flex flex-wrap items-center gap-4 bg-blue-50 rounded-lg p-2">
-                      {/* فلتر التاريخ */}
-                      <span className="text-sm text-gray-500">من</span>
-                      <input
-                        type="date"
-                        value={dateRange.startDate || ""}
-                        onChange={(e) =>
-                          setDateRange((prev) => ({ ...prev, startDate: e.target.value }))
-                        }
-                        className="border rounded-md p-2 text-sm text-gray-600 bg-white"
-                      />
-                      <span className="text-sm text-gray-500">إلى</span>
-                      <input
-                        type="date"
-                        value={dateRange.endDate || ""}
-                        onChange={(e) =>
-                          setDateRange((prev) => ({ ...prev, endDate: e.target.value }))
-                        }
-                        className="border rounded-md p-2 text-sm text-gray-600 bg-white"
-                      />
-                      <button
-                        onClick={() => {
-                          const today = new Date();
-                          const lastWeek = new Date(today);
-                          lastWeek.setDate(today.getDate() - 7);
-                          setDateRange({
-                            startDate: lastWeek.toISOString().split("T")[0],
-                            endDate: today.toISOString().split("T")[0],
-                          });
-                        }}
-                        className="bg-blue-400 text-white text-sm py-1 px-2 rounded-md"
-                      >
-                        آخر أسبوع
-                      </button>
-                      <span className="text-gray-400">-</span>
-                      <button
-                        onClick={() => {
-                          const today = new Date();
-                          const lastMonth = new Date(today);
-                          lastMonth.setMonth(today.getMonth() - 1);
-                          setDateRange({
-                            startDate: lastMonth.toISOString().split("T")[0],
-                            endDate: today.toISOString().split("T")[0],
-                          });
-                        }}
-                        className="bg-blue-400 text-white text-sm py-1 px-2 rounded-md"
-                      >
-                        آخر شهر
-                      </button>
-                      {/* ----- بطارية ----- */}
-                      <select
-                        value={batteryTypeFilter}
-                        onChange={(e) => setBatteryTypeFilter(e.target.value)}
-                        className="border rounded-md p-2 text-sm bg-white text-gray-800 ml-2"
-                        style={{ minWidth: 120, fontFamily: 'Tajawal, sans-serif' }}>
-                        <option value="all">كل الأصناف</option>
-                        {batteryTypesFromDB.map((type, idx) => (
-                          <option value={type} key={idx}>{type}</option>
-                        ))}
-                      </select>
+              {/* --- Tabs --- */}
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 w-full">
+                  <TabsList className="bg-blue-50" dir="rtl">
+                    <TabsTrigger value="deliveries" className="flex items-center gap-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      <ShoppingCart className="w-4 h-4" />
+                      تاريخ التوريدات
+                    </TabsTrigger>
+                    <TabsTrigger value="statement" className="flex items-center gap-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      <FileText className="w-4 h-4" />
+                      كشف الحساب
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+
+                <TabsContent value="deliveries" className="mt-4">
+                  {/* Delivery History Table */}
+                  {filteredHistory.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>التاريخ</th>
+                            <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الصنف</th>
+                            <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الكمية</th>
+                            <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>سعر الكيلو</th>
+                            <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجمالي</th>
+                            <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الخصم</th>
+                            <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>المبلغ النهائي</th>
+                            <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>المصدر</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredHistory.map((entry, index) => (
+                            <tr key={index} className="border-b hover:bg-gray-50">
+                              <td className="p-3 text-sm">{entry.date}</td>
+                              <td className="p-3 text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{entry.battery_type}</td>
+                              <td className="p-3 text-sm">{entry.quantity}</td>
+                              <td className="p-3 text-sm">{entry.price_per_kg}</td>
+                              <td className="p-3 text-sm">{entry.total.toLocaleString && entry.total.toLocaleString()}</td>
+                              <td className="p-3 text-sm">{entry.discount?.toLocaleString ? entry.discount.toLocaleString() : 0}</td>
+                              <td className="p-3 text-sm font-bold text-green-600">{entry.final_total.toLocaleString && entry.final_total.toLocaleString()}</td>
+                              <td className="p-3 text-sm">
+                                <Badge variant={entry.source === 'daily' ? 'default' : 'secondary'}>
+                                  {entry.source === 'daily' ? 'يومية' : 'فاتورة'}
+                                </Badge>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                  </div>
-                  {/* --- END FILTERS --- */}
+                  ) : (
+                    <p className="text-center text-gray-500 py-8" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      لا توجد توريدات مسجلة
+                    </p>
+                  )}
+                </TabsContent>
 
-                  <TabsContent value="deliveries" className="mt-4">
-                    {/* Delivery History Table */}
-                    {filteredHistory.length > 0 ? (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>التاريخ</th>
-                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الصنف</th>
-                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الكمية</th>
-                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>سعر الكيلو</th>
-                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجمالي</th>
-                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>الخصم</th>
-                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>المبلغ النهائي</th>
-                              <th className="p-3 font-semibold text-right" style={{ fontFamily: 'Tajawal, sans-serif' }}>المصدر</th>
+                <TabsContent value="statement" className="mt-4">
+                  {/* أزرار التصدير */}
+                  {accountStatement.length > 0 && (
+                    <div className="mb-3 flex gap-2 justify-end">
+                      <button
+                        className="bg-green-600 text-white py-1 px-3 rounded shadow hover:bg-green-700 text-sm"
+                        onClick={() => {
+                          const cols: { title: string; key: string; format?: (v: any) => any }[] = [
+                            { title: "التاريخ", key: "date" },
+                            { title: "نوع الحركة", key: "type" },
+                            { title: "البيان", key: "description" },
+                            { title: "مدين", key: "debit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
+                            { title: "دائن", key: "credit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
+                            { title: "المرجع", key: "reference" },
+                            { title: "الرصيد", key: "balance", format: (v: any) => v.toLocaleString() }
+                          ];
+                          const filtered = filterDataByDate(accountStatement);
+                          exportAccountStatementToExcel({
+                            data: filtered,
+                            columns: cols,
+                            filename: `كشف حساب مورد ${supplier.name}.xlsx`
+                          });
+                        }}
+                      >تصدير Excel</button>
+                      <button
+                        className="bg-blue-600 text-white py-1 px-3 rounded shadow hover:bg-blue-700 text-sm"
+                        onClick={() => {
+                          const cols: { title: string; key: string; format?: (v: any) => any }[] = [
+                            { title: "التاريخ", key: "date" },
+                            { title: "نوع الحركة", key: "type" },
+                            { title: "البيان", key: "description" },
+                            { title: "مدين", key: "debit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
+                            { title: "دائن", key: "credit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
+                            { title: "المرجع", key: "reference" },
+                            { title: "الرصيد", key: "balance", format: (v: any) => v.toLocaleString() }
+                          ];
+                          const filtered = filterDataByDate(accountStatement);
+                          exportAccountStatementToPDF({
+                            data: filtered,
+                            columns: cols,
+                            filename: `كشف حساب مورد ${supplier.name}.pdf`,
+                            title: `كشف حساب المورد: ${supplier.name} (${supplier.supplierCode})`
+                          });
+                        }}
+                      >تصدير PDF</button>
+                    </div>
+                  )}
+                  {/* جدول كشف الحساب مُعاد التصميم */}
+                  {accountStatement.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm border">
+                        <thead className="bg-gray-100 border-b">
+                          <tr>
+                            <th className="p-3 font-semibold text-right">التاريخ</th>
+                            <th className="p-3 font-semibold text-right">نوع الحركة</th>
+                            <th className="p-3 font-semibold text-right">البيان</th>
+                            <th className="p-3 font-semibold text-right">مدين</th>
+                            <th className="p-3 font-semibold text-right">دائن</th>
+                            <th className="p-3 font-semibold text-right">المرجع (رقم الفاتورة)</th>
+                            <th className="p-3 font-semibold text-right">الرصيد</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filterDataByDate(accountStatement).map((entry, index) => (
+                            <tr key={index} className="border-b hover:bg-gray-50 text-center">
+                              <td className="p-3 text-sm">{entry.date}</td>
+                              <td className="p-3 text-sm">
+                                {entry.type === 'purchase' ? (
+                                  <span className="px-2 py-1 bg-blue-100 text-blue-600 rounded text-xs">
+                                    {entry.description.includes('آجل') ? 'فاتورة مشتريات (آجل)' : 'فاتورة مشتريات'}
+                                  </span>
+                                ) : entry.type === 'voucher_receipt' ? (
+                                  <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">سند قبض</span>
+                                ) : (
+                                  <span className="px-2 py-1 bg-red-100 text-red-800 rounded text-xs">سند صرف</span>
+                                )}
+                              </td>
+                              <td className="p-3 text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{entry.description}</td>
+                              <td className="p-3 text-sm text-red-600">{entry.debit > 0 ? entry.debit.toLocaleString() : '-'}</td>
+                              <td className="p-3 text-sm text-green-600">{entry.credit > 0 ? entry.credit.toLocaleString() : '-'}</td>
+                              <td className="p-3 text-sm font-mono">{entry.reference || '-'}</td>
+                              <td className={`p-3 text-sm font-bold ${entry.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {entry.balance.toLocaleString()}
+                              </td>
                             </tr>
-                          </thead>
-                          <tbody>
-                            {filteredHistory.map((entry, index) => (
-                              <tr key={index} className="border-b hover:bg-gray-50">
-                                <td className="p-3 text-sm">{entry.date}</td>
-                                <td className="p-3 text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{entry.battery_type}</td>
-                                <td className="p-3 text-sm">{entry.quantity}</td>
-                                <td className="p-3 text-sm">{entry.price_per_kg}</td>
-                                <td className="p-3 text-sm">{entry.total.toLocaleString && entry.total.toLocaleString()}</td>
-                                <td className="p-3 text-sm">{entry.discount?.toLocaleString ? entry.discount.toLocaleString() : 0}</td>
-                                <td className="p-3 text-sm font-bold text-green-600">{entry.final_total.toLocaleString && entry.final_total.toLocaleString()}</td>
-                                <td className="p-3 text-sm">
-                                  <Badge variant={entry.source === 'daily' ? 'default' : 'secondary'}>
-                                    {entry.source === 'daily' ? 'يومية' : 'فاتورة'}
-                                  </Badge>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    ) : (
-                      <p className="text-center text-gray-500 py-8" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                        لا توجد توريدات مسجلة
-                      </p>
-                    )}
-                  </TabsContent>
-
-                  <TabsContent value="statement" className="mt-4">
-                    {/* أزرار التصدير */}
-                    {accountStatement.length > 0 && (
-                      <div className="mb-3 flex gap-2 justify-end">
-                        <button
-                          className="bg-green-600 text-white py-1 px-3 rounded shadow hover:bg-green-700 text-sm"
-                          onClick={() => {
-                            const cols: { title: string; key: string; format?: (v: any) => any }[] = [
-                              { title: "التاريخ", key: "date" },
-                              { title: "نوع الحركة", key: "type" },
-                              { title: "البيان", key: "description" },
-                              { title: "مدين", key: "debit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
-                              { title: "دائن", key: "credit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
-                              { title: "المرجع", key: "reference" },
-                              { title: "الرصيد", key: "balance", format: (v: any) => v.toLocaleString() }
-                            ];
-                            const filtered = filterDataByDate(accountStatement);
-                            exportAccountStatementToExcel({
-                              data: filtered,
-                              columns: cols,
-                              filename: `كشف حساب مورد ${supplier.name}.xlsx`
-                            });
-                          }}
-                        >تصدير Excel</button>
-                        <button
-                          className="bg-blue-600 text-white py-1 px-3 rounded shadow hover:bg-blue-700 text-sm"
-                          onClick={() => {
-                            const cols: { title: string; key: string; format?: (v: any) => any }[] = [
-                              { title: "التاريخ", key: "date" },
-                              { title: "نوع الحركة", key: "type" },
-                              { title: "البيان", key: "description" },
-                              { title: "مدين", key: "debit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
-                              { title: "دائن", key: "credit", format: (v: any) => v > 0 ? v.toLocaleString() : "-" },
-                              { title: "المرجع", key: "reference" },
-                              { title: "الرصيد", key: "balance", format: (v: any) => v.toLocaleString() }
-                            ];
-                            const filtered = filterDataByDate(accountStatement);
-                            exportAccountStatementToPDF({
-                              data: filtered,
-                              columns: cols,
-                              filename: `كشف حساب مورد ${supplier.name}.pdf`,
-                              title: `كشف حساب المورد: ${supplier.name} (${supplier.supplierCode})`
-                            });
-                          }}
-                        >تصدير PDF</button>
-                      </div>
-                    )}
-                    {/* جدول كشف الحساب مُعاد التصميم */}
-                    {accountStatement.length > 0 ? (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm border">
-                          <thead className="bg-gray-100 border-b">
-                            <tr>
-                              <th className="p-3 font-semibold text-right">التاريخ</th>
-                              <th className="p-3 font-semibold text-right">نوع الحركة</th>
-                              <th className="p-3 font-semibold text-right">البيان</th>
-                              <th className="p-3 font-semibold text-right">مدين</th>
-                              <th className="p-3 font-semibold text-right">دائن</th>
-                              <th className="p-3 font-semibold text-right">المرجع (رقم الفاتورة)</th>
-                              <th className="p-3 font-semibold text-right">الرصيد</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {filterDataByDate(accountStatement).map((entry, index) => (
-                              <tr key={index} className="border-b hover:bg-gray-50 text-center">
-                                <td className="p-3 text-sm">{entry.date}</td>
-                                <td className="p-3 text-sm">
-                                  {entry.type === 'purchase' ? (
-                                    <span className="px-2 py-1 bg-blue-100 text-blue-600 rounded text-xs">
-                                      {entry.description.includes('آجل') ? 'فاتورة مشتريات (آجل)' : 'فاتورة مشتريات'}
-                                    </span>
-                                  ) : entry.type === 'voucher_receipt' ? (
-                                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">سند قبض</span>
-                                  ) : (
-                                    <span className="px-2 py-1 bg-red-100 text-red-800 rounded text-xs">سند صرف</span>
-                                  )}
-                                </td>
-                                <td className="p-3 text-sm" style={{ fontFamily: 'Tajawal, sans-serif' }}>{entry.description}</td>
-                                <td className="p-3 text-sm text-red-600">{entry.debit > 0 ? entry.debit.toLocaleString() : '-'}</td>
-                                <td className="p-3 text-sm text-green-600">{entry.credit > 0 ? entry.credit.toLocaleString() : '-'}</td>
-                                <td className="p-3 text-sm font-mono">{entry.reference || '-'}</td>
-                                <td className={`p-3 text-sm font-bold ${entry.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                  {entry.balance.toLocaleString()}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    ) : (
-                      <p className="text-center text-gray-500 py-8" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                        لا توجد حركات في كشف الحساب
-                      </p>
-                    )}
-                  </TabsContent>
-                </Tabs>
-              </div>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-center text-gray-500 py-8" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      لا توجد حركات في كشف الحساب
+                    </p>
+                  )}
+                </TabsContent>
+              </Tabs>
             </CardHeader>
           </Card>
         </div>
