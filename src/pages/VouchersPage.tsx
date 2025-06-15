@@ -57,6 +57,13 @@ const VouchersPage = () => {
     }
   };
 
+  // تحديد لون الإدخالات والأزرار بناءً على نوع السند
+  const getTypeColor = () => {
+    if (newVoucher.type === "receipt") return "green";
+    if (newVoucher.type === "payment") return "red";
+    return "gray";
+  };
+
   const handleCustomerSelect = (customer: Customer) => {
     setNewVoucher(prev => ({
       ...prev,
@@ -211,13 +218,13 @@ const VouchersPage = () => {
                 id="date"
                 value={newVoucher.date}
                 onChange={(e) => setNewVoucher({ ...newVoucher, date: e.target.value })}
-                className="text-sm"
+                className={`text-sm border-${getTypeColor()}-300 focus-visible:ring-${getTypeColor()}-500`}
               />
             </div>
             <div>
               <Label htmlFor="type" style={{ fontFamily: 'Tajawal, sans-serif' }}>النوع</Label>
               <Select value={newVoucher.type} onValueChange={handleVoucherTypeChange}>
-                <SelectTrigger>
+                <SelectTrigger className={`border-${getTypeColor()}-300 focus-visible:ring-${getTypeColor()}-500`}>
                   <SelectValue placeholder="اختر نوع السند" style={{ fontFamily: 'Tajawal, sans-serif' }} />
                 </SelectTrigger>
                 <SelectContent dir="rtl">
@@ -229,7 +236,7 @@ const VouchersPage = () => {
             <div>
               <Label htmlFor="entityType" style={{ fontFamily: 'Tajawal, sans-serif' }}>نوع الجهة</Label>
               <Select value={newVoucher.entity_type} onValueChange={handleEntityTypeChange}>
-                <SelectTrigger>
+                <SelectTrigger className={`border-${getTypeColor()}-300 focus-visible:ring-${getTypeColor()}-500`}>
                   <SelectValue placeholder="اختر نوع الجهة" style={{ fontFamily: 'Tajawal, sans-serif' }} />
                 </SelectTrigger>
                 <SelectContent dir="rtl">
@@ -249,7 +256,7 @@ const VouchersPage = () => {
                   placeholder={`اختر ${newVoucher.entity_type === "customer" ? "عميل" : "مورد"}`}
                   value={newVoucher.entity_name}
                   readOnly
-                  className="text-sm flex-1"
+                  className={`text-sm flex-1 border-${getTypeColor()}-300 focus-visible:ring-${getTypeColor()}-500`}
                   style={{ fontFamily: 'Tajawal, sans-serif' }}
                 />
                 <Button
@@ -257,6 +264,7 @@ const VouchersPage = () => {
                   size="sm"
                   onClick={openEntityDialog}
                   style={{ fontFamily: 'Tajawal, sans-serif' }}
+                  className={`border-${getTypeColor()}-400 text-${getTypeColor()}-700 hover:bg-${getTypeColor()}-50`}
                 >
                   اختيار
                 </Button>
@@ -269,13 +277,13 @@ const VouchersPage = () => {
                 id="amount"
                 value={newVoucher.amount}
                 onChange={(e) => setNewVoucher({ ...newVoucher, amount: parseFloat(e.target.value) })}
-                className="text-sm"
+                className={`text-sm border-${getTypeColor()}-300 focus-visible:ring-${getTypeColor()}-500`}
               />
             </div>
             <div>
               <Label htmlFor="paymentMethod" style={{ fontFamily: 'Tajawal, sans-serif' }}>طريقة الدفع</Label>
               <Select value={newVoucher.payment_method} onValueChange={(value) => setNewVoucher({ ...newVoucher, payment_method: value as any })}>
-                <SelectTrigger>
+                <SelectTrigger className={`border-${getTypeColor()}-300 focus-visible:ring-${getTypeColor()}-500`}>
                   <SelectValue placeholder="اختر طريقة الدفع" style={{ fontFamily: 'Tajawal, sans-serif' }} />
                 </SelectTrigger>
                 <SelectContent dir="rtl">
@@ -293,14 +301,14 @@ const VouchersPage = () => {
                 placeholder="أدخل البيان"
                 value={newVoucher.description}
                 onChange={(e) => setNewVoucher({ ...newVoucher, description: e.target.value })}
-                className="text-sm"
+                className={`text-sm border-${getTypeColor()}-300 focus-visible:ring-${getTypeColor()}-500`}
                 style={{ fontFamily: 'Tajawal, sans-serif' }}
               />
             </div>
             <div className="md:col-span-2 flex justify-end">
               <Button 
                 onClick={handleAddVoucher} 
-                className="bg-blue-600 hover:bg-blue-700 text-white" 
+                className={`bg-${getTypeColor()}-600 hover:bg-${getTypeColor()}-700 text-white`}
                 style={{ fontFamily: 'Tajawal, sans-serif' }}
                 disabled={isCreating}
               >
