@@ -157,7 +157,10 @@ const SalesPage = () => {
       customerCode: `C${sale.customerId.substring(0, 3).toUpperCase()}`,
       name: sale.customerName,
       phone: '',
-      totalPurchases: 0,
+      description: '',
+      notes: '',
+      lastSale: '', // تحديث اسم الحقل
+      totalSoldQuantity: 0, // تحديث اسم الحقل
       totalAmount: 0,
       averagePrice: 0,
       purchases: [],
@@ -430,7 +433,7 @@ const SalesPage = () => {
             <Card>
               <CardHeader>
                 <CardTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                  آخر المبيعات
+                  آخر بيع
                 </CardTitle>
               </CardHeader>
               <CardContent>

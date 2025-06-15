@@ -1,3 +1,4 @@
+
 import { Customer, CustomerFormData, PaginatedResponse } from '@/types';
 import { toast } from '@/hooks/use-toast';
 
@@ -35,8 +36,8 @@ class CustomerService {
           phone: "0501234567",
           description: "عميل مميز",
           notes: "عميل منتظم",
-          lastPurchase: "2024-01-20",
-          totalPurchases: 150,
+          lastSale: "2024-01-20", // تم تغيير الاسم هنا
+          totalSoldQuantity: 150, // تم تغيير الاسم هنا
           totalAmount: 45000,
           averagePrice: 300,
           purchases: [],

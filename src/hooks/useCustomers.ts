@@ -7,19 +7,17 @@ import { Customer, CustomerFormData, PaginatedResponse, FilterOptions } from '@/
 const customerService = {
   getCustomers: async (page = 1, limit = 10, filters?: FilterOptions): Promise<PaginatedResponse<Customer>> => {
     const offset = (page - 1) * limit;
-    
     let query = supabase
       .from('customers')
       .select('*', { count: 'exact' })
       .range(offset, offset + limit - 1)
       .order('created_at', { ascending: false });
 
-    // Apply filters if provided
     if (filters?.searchTerm || filters?.search) {
       const searchValue = filters.searchTerm || filters.search;
       query = query.or(`name.ilike.%${searchValue}%,phone.ilike.%${searchValue}%,customer_code.ilike.%${searchValue}%`);
     }
-    
+
     if (filters?.isBlocked !== undefined) {
       query = query.eq('is_blocked', filters.isBlocked);
     }
@@ -38,12 +36,12 @@ const customerService = {
       phone: customer.phone || '',
       description: customer.description,
       notes: customer.notes,
-      lastPurchase: customer.last_purchase,
-      totalPurchases: customer.total_purchases || 0,
+      lastSale: customer.last_sale, // تغيير الاسم
+      totalSoldQuantity: customer.total_sold_quantity || 0, // تغيير الاسم
       totalAmount: customer.total_amount || 0,
       averagePrice: customer.average_price || 0,
-      purchases: [], // This would need a separate query to fetch related purchases
-      last2Quantities: [], // These would be calculated from purchases
+      purchases: [],
+      last2Quantities: [],
       last2Prices: [],
       last2BatteryTypes: [],
       isBlocked: customer.is_blocked || false,
@@ -98,9 +96,10 @@ const customerService = {
       phone: newCustomer.phone || '',
       description: newCustomer.description,
       notes: newCustomer.notes,
-      totalPurchases: 0,
-      totalAmount: 0,
-      averagePrice: 0,
+      lastSale: newCustomer.last_sale, // تغيير الاسم
+      totalSoldQuantity: newCustomer.total_sold_quantity || 0, // تغيير الاسم
+      totalAmount: newCustomer.total_amount || 0,
+      averagePrice: newCustomer.average_price || 0,
       purchases: [],
       isBlocked: false,
       balance: newCustomer.balance || 0
@@ -135,7 +134,8 @@ const customerService = {
       phone: updatedCustomer.phone || '',
       description: updatedCustomer.description,
       notes: updatedCustomer.notes,
-      totalPurchases: updatedCustomer.total_purchases || 0,
+      lastSale: updatedCustomer.last_sale, // تغيير الاسم
+      totalSoldQuantity: updatedCustomer.total_sold_quantity || 0, // تغيير الاسم
       totalAmount: updatedCustomer.total_amount || 0,
       averagePrice: updatedCustomer.average_price || 0,
       purchases: [],
@@ -180,7 +180,8 @@ const customerService = {
       phone: blockedCustomer.phone || '',
       description: blockedCustomer.description,
       notes: blockedCustomer.notes,
-      totalPurchases: blockedCustomer.total_purchases || 0,
+      lastSale: blockedCustomer.last_sale, // تغيير الاسم
+      totalSoldQuantity: blockedCustomer.total_sold_quantity || 0, // تغيير الاسم
       totalAmount: blockedCustomer.total_amount || 0,
       averagePrice: blockedCustomer.average_price || 0,
       purchases: [],
@@ -213,7 +214,8 @@ const customerService = {
       phone: unblockedCustomer.phone || '',
       description: unblockedCustomer.description,
       notes: unblockedCustomer.notes,
-      totalPurchases: unblockedCustomer.total_purchases || 0,
+      lastSale: unblockedCustomer.last_sale, // تغيير الاسم
+      totalSoldQuantity: unblockedCustomer.total_sold_quantity || 0, // تغيير الاسم
       totalAmount: unblockedCustomer.total_amount || 0,
       averagePrice: unblockedCustomer.average_price || 0,
       purchases: [],
@@ -242,7 +244,8 @@ const customerService = {
       phone: updatedCustomer.phone || '',
       description: updatedCustomer.description,
       notes: updatedCustomer.notes,
-      totalPurchases: updatedCustomer.total_purchases || 0,
+      lastSale: updatedCustomer.last_sale, // تغيير الاسم
+      totalSoldQuantity: updatedCustomer.total_sold_quantity || 0, // تغيير الاسم
       totalAmount: updatedCustomer.total_amount || 0,
       averagePrice: updatedCustomer.average_price || 0,
       purchases: [],
@@ -271,7 +274,8 @@ const customerService = {
       phone: customer.phone || '',
       description: customer.description,
       notes: customer.notes,
-      totalPurchases: customer.total_purchases || 0,
+      lastSale: customer.last_sale, // تغيير الاسم
+      totalSoldQuantity: customer.total_sold_quantity || 0, // تغيير الاسم
       totalAmount: customer.total_amount || 0,
       averagePrice: customer.average_price || 0,
       purchases: [],

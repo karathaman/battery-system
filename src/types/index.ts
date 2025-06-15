@@ -1,3 +1,4 @@
+
 // Customer types
 export interface Customer {
   id: string;
@@ -6,8 +7,8 @@ export interface Customer {
   phone: string;
   description?: string;
   notes?: string;
-  lastPurchase?: string; // تم الحفاظ على الحقل، سيتم عرض التسمية "آخر بيع"
-  totalPurchases: number; // سيتم عرض التسمية "مجموع الكميات المباعة"
+  lastSale?: string; // تغيير الاسم، سيتم عرض التسمية "آخر بيع"
+  totalSoldQuantity: number; // تغيير الاسم، سيتم عرض التسمية "مجموع الكميات المباعة"
   totalAmount: number;
   averagePrice: number;
   purchases: CustomerPurchase[];

@@ -84,14 +84,12 @@ export type Database = {
           description: string | null
           id: string
           is_blocked: boolean | null
-          last_message_sent: string | null
-          last_purchase: string | null
-          message_sent: boolean | null
+          last_sale: string | null
           name: string
           notes: string | null
           phone: string | null
           total_amount: number | null
-          total_purchases: number | null
+          total_sold_quantity: number | null
           updated_at: string | null
         }
         Insert: {
@@ -103,14 +101,12 @@ export type Database = {
           description?: string | null
           id?: string
           is_blocked?: boolean | null
-          last_message_sent?: string | null
-          last_purchase?: string | null
-          message_sent?: boolean | null
+          last_sale?: string | null
           name: string
           notes?: string | null
           phone?: string | null
           total_amount?: number | null
-          total_purchases?: number | null
+          total_sold_quantity?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -122,14 +118,12 @@ export type Database = {
           description?: string | null
           id?: string
           is_blocked?: boolean | null
-          last_message_sent?: string | null
-          last_purchase?: string | null
-          message_sent?: boolean | null
+          last_sale?: string | null
           name?: string
           notes?: string | null
           phone?: string | null
           total_amount?: number | null
-          total_purchases?: number | null
+          total_sold_quantity?: number | null
           updated_at?: string | null
         }
         Relationships: []
