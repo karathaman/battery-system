@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -179,7 +180,15 @@ const SalesPage = () => {
     };
     setSelectedCustomer(customer);
     
-    setSaleItems(sale.items || []);
+    const extendedItems: SaleItem[] = (sale.items || []).map((item: any) => ({
+      id: item.id || Date.now().toString(),
+      batteryType: item.batteryType || 'غير معروف',
+      batteryTypeId: item.batteryTypeId || "",
+      quantity: item.quantity,
+      price: item.price,
+      total: item.total
+    }));
+    setSaleItems(extendedItems);
     setDiscount(sale.discount);
     setPaymentMethod(sale.paymentMethod);
     setVatEnabled(sale.tax > 0);
@@ -321,59 +330,68 @@ const SalesPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-100 p-4 sm:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-teal-100 p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
         {/* Modern Header */}
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          <div className="bg-gradient-to-r from-emerald-600 via-green-700 to-teal-600 p-6">
-            <div className="flex items-center justify-center gap-3">
-              <ShoppingBag className="w-8 h-8 text-white" />
-              <h1 className="text-2xl sm:text-3xl font-bold text-white" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                {editingSale ? `تعديل فاتورة ${editingSale.invoiceNumber}` : 'نظام المبيعات'}
-              </h1>
+        <div className="relative overflow-hidden bg-white rounded-3xl shadow-2xl">
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 via-green-700 to-teal-600"></div>
+          <div className="relative z-10 p-8">
+            <div className="flex items-center justify-center gap-4">
+              <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
+                <ShoppingBag className="w-10 h-10 text-white" />
+              </div>
+              <div className="text-center">
+                <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  {editingSale ? `تعديل فاتورة ${editingSale.invoiceNumber}` : 'نظام المبيعات'}
+                </h1>
+                <p className="text-emerald-100 text-lg" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  إدارة فواتير المبيعات والعملاء
+                </p>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
           {/* Main Form Section */}
-          <div className="xl:col-span-3 space-y-6">
+          <div className="xl:col-span-3 space-y-8">
             {/* Customer Selection Card */}
-            <Card className="shadow-lg border-0 bg-white">
-              <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50 border-b">
-                <CardTitle className="text-lg font-semibold text-gray-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+            <Card className="shadow-xl border-0 bg-white overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-blue-500 via-cyan-600 to-teal-600 text-white">
+                <CardTitle className="text-xl font-bold flex items-center gap-3" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  <Search className="w-6 h-6" />
                   اختيار العميل
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6">
+              <CardContent className="p-8">
                 <Button 
                   variant="outline" 
-                  className="w-full h-14 flex items-center gap-3 text-right border-2 border-dashed border-gray-300 hover:border-emerald-400 hover:bg-emerald-50 transition-all duration-200"
+                  className="w-full h-16 flex items-center gap-4 text-right border-2 border-dashed border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 transition-all duration-300 rounded-xl"
                   onClick={() => setShowCustomerDialog(true)}
                 >
-                  <Search className="w-5 h-5 text-gray-500" />
-                  <span className="text-lg" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  <Search className="w-6 h-6 text-gray-500" />
+                  <span className="text-xl font-medium" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                     {selectedCustomer ? selectedCustomer.name : "اختر العميل"}
                   </span>
                 </Button>
                 
                 {selectedCustomer && (
-                  <div className="mt-4 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200">
+                  <div className="mt-6 p-6 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl border border-emerald-200">
                     <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="font-bold text-lg text-gray-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                      <div className="space-y-2">
+                        <h3 className="font-bold text-xl text-gray-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                           {selectedCustomer.name}
                         </h3>
-                        <p className="text-gray-600">{selectedCustomer.phone}</p>
-                        <Badge variant="secondary" className="mt-2 bg-emerald-100 text-emerald-800">
+                        <p className="text-gray-600 text-lg">{selectedCustomer.phone}</p>
+                        <Badge variant="secondary" className="mt-3 bg-emerald-100 text-emerald-800 px-3 py-1">
                           {selectedCustomer.customer_code}
                         </Badge>
                       </div>
                       <div className="text-left">
-                        <p className={`text-xl font-bold ${selectedCustomer.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        <p className={`text-2xl font-bold ${selectedCustomer.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                           {selectedCustomer.balance.toLocaleString()} ريال
                         </p>
-                        <p className="text-sm text-gray-500">الرصيد الحالي</p>
+                        <p className="text-sm text-gray-500 mt-1">الرصيد الحالي</p>
                       </div>
                     </div>
                   </div>
@@ -382,34 +400,35 @@ const SalesPage = () => {
             </Card>
 
             {/* Items Table Card */}
-            <Card className="shadow-lg border-0 bg-white">
-              <CardHeader className="bg-gradient-to-r from-violet-50 to-purple-50 border-b">
-                <CardTitle className="text-lg font-semibold text-gray-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+            <Card className="shadow-xl border-0 bg-white overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-violet-500 via-purple-600 to-pink-600 text-white">
+                <CardTitle className="text-xl font-bold flex items-center gap-3" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  <Plus className="w-6 h-6" />
                   أصناف الفاتورة
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6">
-                <div className="overflow-x-auto">
+              <CardContent className="p-8">
+                <div className="overflow-x-auto rounded-xl border border-gray-200">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-gray-50">
-                        <TableHead className="text-right font-semibold" style={{ fontFamily: 'Tajawal, sans-serif' }}>نوع البطارية</TableHead>
-                        <TableHead className="text-center font-semibold" style={{ fontFamily: 'Tajawal, sans-serif' }}>الكمية</TableHead>
-                        <TableHead className="text-center font-semibold" style={{ fontFamily: 'Tajawal, sans-serif' }}>السعر</TableHead>
-                        <TableHead className="text-center font-semibold" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجمالي</TableHead>
-                        <TableHead className="text-center font-semibold" style={{ fontFamily: 'Tajawal, sans-serif' }}>إجراءات</TableHead>
+                        <TableHead className="text-right font-bold text-lg py-4" style={{ fontFamily: 'Tajawal, sans-serif' }}>نوع البطارية</TableHead>
+                        <TableHead className="text-center font-bold text-lg py-4" style={{ fontFamily: 'Tajawal, sans-serif' }}>الكمية</TableHead>
+                        <TableHead className="text-center font-bold text-lg py-4" style={{ fontFamily: 'Tajawal, sans-serif' }}>السعر</TableHead>
+                        <TableHead className="text-center font-bold text-lg py-4" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجمالي</TableHead>
+                        <TableHead className="text-center font-bold text-lg py-4" style={{ fontFamily: 'Tajawal, sans-serif' }}>إجراءات</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {saleItems.map((item, index) => (
-                        <TableRow key={item.id} className="hover:bg-gray-50">
-                          <TableCell className="w-1/3">
+                        <TableRow key={item.id} className="hover:bg-gray-50 transition-colors">
+                          <TableCell className="w-1/3 py-4">
                             <Select
                               value={item.batteryTypeId}
                               onValueChange={(value) => updateSaleItem(index, 'batteryTypeId', value)}
                               disabled={batteryTypesLoading}
                             >
-                              <SelectTrigger className="w-full">
+                              <SelectTrigger className="w-full h-12 text-lg">
                                 <SelectValue placeholder="اختر نوع البطارية" />
                               </SelectTrigger>
                               <SelectContent>
@@ -421,36 +440,36 @@ const SalesPage = () => {
                               </SelectContent>
                             </Select>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="py-4">
                             <Input
                               type="number"
                               placeholder="الكمية"
                               value={item.quantity || ''}
                               onChange={(e) => updateSaleItem(index, 'quantity', Number(e.target.value) || 0)}
-                              className="text-center"
+                              className="text-center h-12 text-lg"
                             />
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="py-4">
                             <Input
                               type="number"
                               placeholder="السعر"
                               value={item.price || ''}
                               onChange={(e) => updateSaleItem(index, 'price', Number(e.target.value) || 0)}
-                              className="text-center"
+                              className="text-center h-12 text-lg"
                             />
                           </TableCell>
-                          <TableCell>
-                            <div className="text-center font-semibold text-green-600">
+                          <TableCell className="py-4">
+                            <div className="text-center font-bold text-lg text-green-600">
                               {item.total.toLocaleString()} ريال
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="py-4">
                             <Button
                               variant="destructive"
                               size="sm"
                               onClick={() => removeSaleItem(index)}
                               disabled={saleItems.length === 1}
-                              className="w-full"
+                              className="w-full h-10"
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -464,29 +483,30 @@ const SalesPage = () => {
                 <Button
                   onClick={addSaleItem}
                   variant="outline"
-                  className="mt-4 w-full h-12 border-2 border-dashed border-gray-300 hover:border-emerald-400 hover:bg-emerald-50 transition-all duration-200"
+                  className="mt-6 w-full h-14 border-2 border-dashed border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 transition-all duration-300 rounded-xl text-lg"
                   style={{ fontFamily: 'Tajawal, sans-serif' }}
                 >
-                  <Plus className="w-5 h-5 ml-2" />
+                  <Plus className="w-6 h-6 ml-3" />
                   إضافة صنف جديد
                 </Button>
               </CardContent>
             </Card>
 
             {/* Payment & Settings Card */}
-            <Card className="shadow-lg border-0 bg-white">
-              <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 border-b">
-                <CardTitle className="text-lg font-semibold text-gray-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+            <Card className="shadow-xl border-0 bg-white overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-amber-500 via-orange-600 to-red-600 text-white">
+                <CardTitle className="text-xl font-bold flex items-center gap-3" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  <CreditCard className="w-6 h-6" />
                   إعدادات الدفع
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6 space-y-6">
+              <CardContent className="p-8 space-y-8">
                 {/* Payment Methods */}
                 <div>
-                  <Label className="text-lg font-semibold mb-3 block" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  <Label className="text-xl font-bold mb-4 block" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                     طريقة الدفع
                   </Label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-4">
                     {paymentMethods.map(method => {
                       const Icon = method.icon;
                       return (
@@ -494,10 +514,10 @@ const SalesPage = () => {
                           key={method.value}
                           variant={paymentMethod === method.value ? "default" : "outline"}
                           onClick={() => setPaymentMethod(method.value)}
-                          className="h-14 flex items-center gap-3 text-lg"
+                          className="h-16 flex items-center gap-4 text-xl rounded-xl"
                           style={{ fontFamily: 'Tajawal, sans-serif' }}
                         >
-                          <Icon className="w-5 h-5" />
+                          <Icon className="w-6 h-6" />
                           {method.label}
                         </Button>
                       );
@@ -506,10 +526,10 @@ const SalesPage = () => {
                 </div>
 
                 {/* VAT & Discount */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <Label className="text-lg font-semibold" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-6 bg-gray-50 rounded-xl">
+                      <Label className="text-xl font-bold" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                         ضريبة القيمة المضافة (15%)
                       </Label>
                       <Switch
@@ -519,8 +539,8 @@ const SalesPage = () => {
                     </div>
                   </div>
                   
-                  <div className="space-y-3">
-                    <Label className="text-lg font-semibold" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  <div className="space-y-4">
+                    <Label className="text-xl font-bold" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                       الخصم (ريال)
                     </Label>
                     <Input
@@ -528,16 +548,16 @@ const SalesPage = () => {
                       value={discount || ''}
                       onChange={(e) => setDiscount(Number(e.target.value) || 0)}
                       placeholder="0"
-                      className="h-12 text-lg"
+                      className="h-14 text-xl rounded-xl"
                     />
                   </div>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-3 pt-4">
+                <div className="flex gap-4 pt-6">
                   <Button
                     onClick={generateSale}
-                    className="flex-1 h-14 text-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+                    className="flex-1 h-16 text-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 rounded-xl shadow-lg"
                     disabled={isCreating || isUpdating}
                     style={{ fontFamily: 'Tajawal, sans-serif' }}
                   >
@@ -547,7 +567,7 @@ const SalesPage = () => {
                     <Button
                       onClick={resetForm}
                       variant="outline"
-                      className="h-14 px-8"
+                      className="h-16 px-8 text-xl rounded-xl"
                       style={{ fontFamily: 'Tajawal, sans-serif' }}
                     >
                       إلغاء
@@ -559,44 +579,44 @@ const SalesPage = () => {
           </div>
 
           {/* Summary Sidebar */}
-          <div className="xl:col-span-1 space-y-6">
+          <div className="xl:col-span-1 space-y-8">
             {/* Sale Summary */}
-            <Card className="shadow-lg border-0 bg-gradient-to-br from-emerald-50 to-teal-100 sticky top-6">
+            <Card className="shadow-xl border-0 bg-gradient-to-br from-emerald-50 to-teal-100 sticky top-6 overflow-hidden">
               <CardHeader className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white">
-                <CardTitle className="text-center text-lg" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                <CardTitle className="text-center text-xl font-bold" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                   ملخص الفاتورة
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6 space-y-4">
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm">
-                    <span className="font-semibold" style={{ fontFamily: 'Tajawal, sans-serif' }}>المجموع الفرعي:</span>
-                    <span className="font-bold text-lg">{calculateSubtotal().toLocaleString()} ريال</span>
+              <CardContent className="p-6 space-y-6">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-4 bg-white rounded-xl shadow-sm">
+                    <span className="font-bold text-lg" style={{ fontFamily: 'Tajawal, sans-serif' }}>المجموع الفرعي:</span>
+                    <span className="font-bold text-xl">{calculateSubtotal().toLocaleString()} ريال</span>
                   </div>
                   
                   {vatEnabled && (
-                    <div className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm">
-                      <span className="font-semibold" style={{ fontFamily: 'Tajawal, sans-serif' }}>ضريبة القيمة المضافة:</span>
-                      <span className="font-bold text-lg text-blue-600">{calculateTax().toLocaleString()} ريال</span>
+                    <div className="flex justify-between items-center p-4 bg-white rounded-xl shadow-sm">
+                      <span className="font-bold text-lg" style={{ fontFamily: 'Tajawal, sans-serif' }}>ضريبة القيمة المضافة:</span>
+                      <span className="font-bold text-xl text-blue-600">{calculateTax().toLocaleString()} ريال</span>
                     </div>
                   )}
                   
-                  <div className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm">
-                    <span className="font-semibold" style={{ fontFamily: 'Tajawal, sans-serif' }}>الخصم:</span>
-                    <span className="font-bold text-lg text-red-600">-{discount.toLocaleString()} ريال</span>
+                  <div className="flex justify-between items-center p-4 bg-white rounded-xl shadow-sm">
+                    <span className="font-bold text-lg" style={{ fontFamily: 'Tajawal, sans-serif' }}>الخصم:</span>
+                    <span className="font-bold text-xl text-red-600">-{discount.toLocaleString()} ريال</span>
                   </div>
                   
-                  <div className="border-t-2 border-emerald-200 pt-3">
-                    <div className="flex justify-between items-center p-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg shadow-lg">
-                      <span className="font-bold text-lg" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجمالي:</span>
-                      <span className="font-bold text-xl">{calculateTotal().toLocaleString()} ريال</span>
+                  <div className="border-t-2 border-emerald-200 pt-4">
+                    <div className="flex justify-between items-center p-6 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl shadow-lg">
+                      <span className="font-bold text-xl" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجمالي:</span>
+                      <span className="font-bold text-2xl">{calculateTotal().toLocaleString()} ريال</span>
                     </div>
                   </div>
                 </div>
                 
                 {paymentMethod === 'credit' && (
-                  <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg mt-4">
-                    <p className="text-sm text-yellow-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                  <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-xl mt-6">
+                    <p className="text-sm text-yellow-800 font-medium" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                       ملاحظة: سيتم إضافة هذا المبلغ لرصيد العميل في حالة البيع الآجل
                     </p>
                   </div>
@@ -608,30 +628,31 @@ const SalesPage = () => {
 
         {/* Recent Sales */}
         {sales.length > 0 && (
-          <Card className="shadow-lg border-0 bg-white">
-            <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b">
-              <CardTitle className="text-lg font-semibold text-gray-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+          <Card className="shadow-xl border-0 bg-white overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-purple-500 via-pink-600 to-rose-600 text-white">
+              <CardTitle className="text-xl font-bold flex items-center gap-3" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                <AlertCircle className="w-6 h-6" />
                 آخر المبيعات
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <CardContent className="p-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {sales.slice(0, 6).map(sale => (
-                  <div key={sale.id} className="p-4 border border-gray-200 rounded-xl hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-white to-gray-50">
-                    <div className="space-y-3">
+                  <div key={sale.id} className="p-6 border border-gray-200 rounded-2xl hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50">
+                    <div className="space-y-4">
                       <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-bold text-lg text-gray-800">{sale.invoiceNumber}</p>
-                          <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                        <div className="space-y-2">
+                          <p className="font-bold text-xl text-gray-800">{sale.invoiceNumber}</p>
+                          <p className="text-lg text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                             {sale.customerName || 'غير معروف'}
                           </p>
-                          <Badge variant={sale.paymentMethod === 'credit' ? 'destructive' : 'default'} className="mt-2">
+                          <Badge variant={sale.paymentMethod === 'credit' ? 'destructive' : 'default'} className="mt-3 px-3 py-1">
                             {paymentMethods.find(m => m.value === sale.paymentMethod)?.label}
                           </Badge>
                         </div>
                         <div className="text-left">
-                          <p className="font-bold text-lg text-green-600">{sale.total.toLocaleString()} ريال</p>
-                          <p className="text-xs text-gray-500">
+                          <p className="font-bold text-xl text-green-600">{sale.total.toLocaleString()} ريال</p>
+                          <p className="text-sm text-gray-500 mt-1">
                             {new Date(sale.date).toLocaleDateString('ar-SA')}
                           </p>
                         </div>
