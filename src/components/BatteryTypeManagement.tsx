@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,22 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Battery, Search, Plus, Edit3, Trash2, Save, X, Minus, TrendingDown, Package } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-
-interface BatteryType {
-  id: string;
-  name: string;
-  description?: string;
-  unit_price: number;
-  currentQty: number;
-  isActive: boolean;
-  createdAt: string;
-}
+import { useBatteryTypes } from "@/hooks/useBatteryTypes";
 
 const BatteryTypeManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [batteryTypes, setBatteryTypes] = useState<BatteryType[]>([]);
   const [editingType, setEditingType] = useState<string | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showDecreaseDialog, setShowDecreaseDialog] = useState<string | null>(null);
@@ -35,26 +24,16 @@ const BatteryTypeManagement = () => {
     currentQty: 0,
   });
 
-  useEffect(() => {
-    const fetchBatteryTypes = async () => {
-      const { data, error } = await supabase
-        .from("battery_types")
-        .select("id, name, description, unit_price, currentQty");
-  
-      if (error) {
-        console.error("Error fetching battery types:", error);
-      } else {
-        console.log("Fetched battery types:", data);
-        setBatteryTypes((data || []).map((item: any) => ({
-          ...item,
-          isActive: true,
-          createdAt: item.createdAt || new Date().toISOString().split('T')[0],
-        })));
-      }
-    };
-  
-    fetchBatteryTypes();
-  }, []);
+  const {
+    batteryTypes,
+    isLoading,
+    createBatteryType,
+    updateBatteryType,
+    deleteBatteryType,
+    isCreating,
+    isUpdating,
+    isDeleting
+  } = useBatteryTypes();
 
   const filteredTypes = batteryTypes.filter(type =>
     type.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -72,28 +51,18 @@ const BatteryTypeManagement = () => {
       return;
     }
 
-    const newType: BatteryType = {
-      id: Date.now().toString(),
+    createBatteryType({
       name: formData.name.trim(),
       description: formData.description.trim() || undefined,
       unit_price: formData.unit_price,
       currentQty: formData.currentQty || 0,
-      isActive: true,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
+    });
 
-    setBatteryTypes(prev => [...prev, newType]);
     setFormData({ name: "", description: "", unit_price: 0, currentQty: 0 });
     setShowAddDialog(false);
-
-    toast({
-      title: "تم إضافة النوع",
-      description: `تم إضافة ${newType.name} بنجاح`,
-      duration: 2000,
-    });
   };
 
-  const handleEditType = (type: BatteryType) => {
+  const handleEditType = (type: any) => {
     setEditingType(type.id);
     setFormData({
       name: type.name,
@@ -114,28 +83,20 @@ const BatteryTypeManagement = () => {
       return;
     }
 
-    setBatteryTypes(prev =>
-      prev.map(type =>
-        type.id === editingType
-          ? {
-              ...type,
-              name: formData.name.trim(),
-              description: formData.description.trim() || undefined,
-              unit_price: formData.unit_price,
-              currentQty: formData.currentQty,
-            }
-          : type
-      )
-    );
+    if (editingType) {
+      updateBatteryType({
+        id: editingType,
+        data: {
+          name: formData.name.trim(),
+          description: formData.description.trim() || undefined,
+          unit_price: formData.unit_price,
+          currentQty: formData.currentQty,
+        }
+      });
 
-    setEditingType(null);
-    setFormData({ name: "", description: "", unit_price: 0, currentQty: 0 });
-
-    toast({
-      title: "تم تحديث النوع",
-      description: "تم تحديث بيانات النوع بنجاح",
-      duration: 2000,
-    });
+      setEditingType(null);
+      setFormData({ name: "", description: "", unit_price: 0, currentQty: 0 });
+    }
   };
 
   const handleDecreaseQuantity = () => {
@@ -161,49 +122,19 @@ const BatteryTypeManagement = () => {
       return;
     }
 
-    setBatteryTypes(prev =>
-      prev.map(type =>
-        type.id === showDecreaseDialog
-          ? {
-              ...type,
-              currentQty: type.currentQty - amount,
-            }
-          : type
-      )
-    );
+    updateBatteryType({
+      id: showDecreaseDialog!,
+      data: {
+        currentQty: typeToUpdate.currentQty - amount,
+      }
+    });
 
     setShowDecreaseDialog(null);
     setDecreaseAmount("");
-
-    toast({
-      title: "تم تقليل الكمية",
-      description: `تم تقليل ${amount} كيلو من ${typeToUpdate?.name}`,
-      duration: 2000,
-    });
   };
 
   const handleDeleteType = (typeId: string) => {
-    setBatteryTypes(prev => prev.filter(type => type.id !== typeId));
-    toast({
-      title: "تم حذف النوع",
-      description: "تم حذف نوع البطارية بنجاح",
-      duration: 2000,
-    });
-  };
-
-  const toggleTypeStatus = (typeId: string) => {
-    setBatteryTypes(prev =>
-      prev.map(type =>
-        type.id === typeId ? { ...type, isActive: !type.isActive } : type
-      )
-    );
-  
-    const type = batteryTypes.find(t => t.id === typeId);
-    toast({
-      title: type?.isActive ? "تم إيقاف النوع" : "تم تفعيل النوع",
-      description: type?.isActive ? "تم إيقاف نوع البطارية" : "تم تفعيل نوع البطارية",
-      duration: 2000,
-    });
+    deleteBatteryType(typeId);
   };
 
   const AddEditDialog = ({ isEdit = false }: { isEdit?: boolean }) => (
@@ -220,7 +151,7 @@ const BatteryTypeManagement = () => {
         }
       }}
     >
-      <DialogContent dir="rtl" className="max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+      <DialogContent dir="rtl" className="max-w-md" modal={true}>
         <DialogHeader>
           <DialogTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
             {isEdit ? "تعديل نوع البطارية" : "إضافة نوع بطارية جديد"}
@@ -292,6 +223,7 @@ const BatteryTypeManagement = () => {
             <Button
               onClick={isEdit ? handleUpdateType : handleAddType}
               style={{ fontFamily: 'Tajawal, sans-serif' }}
+              disabled={isCreating || isUpdating}
             >
               <Save className="w-4 h-4 mr-2" />
               {isEdit ? "تحديث النوع" : "إضافة النوع"}
@@ -316,6 +248,17 @@ const BatteryTypeManagement = () => {
       </DialogContent>
     </Dialog>
   );
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <Battery className="w-8 h-8 mx-auto mb-2 text-purple-600 animate-pulse" />
+          <p style={{ fontFamily: 'Tajawal, sans-serif' }}>جاري تحميل أنواع البطاريات...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -365,7 +308,7 @@ const BatteryTypeManagement = () => {
             <Card>
               <CardContent className="p-4 text-center">
                 <Battery className="w-8 h-8 mx-auto mb-2 text-green-600" />
-                <p className="text-2xl font-bold">{batteryTypes.filter(t => t.isActive).length}</p>
+                <p className="text-2xl font-bold">{batteryTypes.length}</p>
                 <p className="text-sm text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                   الأنواع النشطة
                 </p>
@@ -390,7 +333,7 @@ const BatteryTypeManagement = () => {
       {/* Battery Types Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {filteredTypes.map(type => (
-          <Card key={type.id} className={`shadow-md hover:shadow-lg transition-shadow ${!type.isActive ? 'bg-gray-50 border-gray-300' : ''}`}>
+          <Card key={type.id} className="shadow-md hover:shadow-lg transition-shadow">
             <CardContent className="p-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between flex-row-reverse">
@@ -402,8 +345,8 @@ const BatteryTypeManagement = () => {
                         </span>
                     </h3>
                     <div className="flex items-center gap-2 mt-1 flex-row-reverse">
-                      <Badge variant={type.isActive ? "default" : "secondary"} className="text-xs">
-                        {type.isActive ? "نشط" : "غير نشط"}
+                      <Badge variant="default" className="text-xs">
+                        نشط
                       </Badge>
                       {type.currentQty <= 10 && (
                         <Badge variant="destructive" className="text-xs">
@@ -451,19 +394,21 @@ const BatteryTypeManagement = () => {
                     size="sm"
                     className="flex-1 flex items-center gap-2 flex-row-reverse text-xs"
                     style={{ fontFamily: 'Tajawal, sans-serif' }}
+                    disabled={isUpdating}
                   >
                     <Edit3 className="w-3 h-3" />
                     تعديل
                   </Button>
                   
                   <Button
-                    onClick={() => toggleTypeStatus(type.id)}
-                    variant={type.isActive ? "outline" : "default"}
+                    onClick={() => setShowDecreaseDialog(type.id)}
+                    variant="outline"
                     size="sm"
-                    className="flex-1 text-xs"
+                    className="flex-1 text-xs border-orange-300 text-orange-600 hover:bg-orange-50"
                     style={{ fontFamily: 'Tajawal, sans-serif' }}
+                    disabled={type.currentQty <= 0}
                   >
-                    {type.isActive ? "إيقاف" : "تفعيل"}
+                    إيقاف
                   </Button>
                 </div>
 
@@ -486,6 +431,7 @@ const BatteryTypeManagement = () => {
                   size="sm"
                   className="w-full flex items-center gap-2 flex-row-reverse text-xs"
                   style={{ fontFamily: 'Tajawal, sans-serif' }}
+                  disabled={isDeleting}
                 >
                   <Trash2 className="w-3 h-3" />
                   حذف النوع
@@ -541,6 +487,7 @@ const BatteryTypeManagement = () => {
               <Button
                 onClick={handleDecreaseQuantity}
                 style={{ fontFamily: 'Tajawal, sans-serif' }}
+                disabled={isUpdating}
               >
                 <TrendingDown className="w-4 h-4 mr-2" />
                 تقليل الكمية
