@@ -15,6 +15,7 @@ import { Purchase as ServicePurchase, PurchaseFormData } from "@/services/purcha
 import { supabase } from "@/integrations/supabase/client";
 import { AlertCircle } from "lucide-react";
 import { InvoiceDialog } from "@/components/InvoiceDialog";
+import { SupplierSearchDialog } from "@/components/SupplierSearchDialog";
 
 interface ExtendedPurchaseItem extends PurchaseItem {
   batteryTypeId: string;
@@ -311,9 +312,24 @@ const PurchasesPage = () => {
     }, 250);
   };
 
-  const handleSupplierSelect = (supplier: Supplier) => {
-    setSelectedSupplier(supplier);
+  const handleSupplierSelect = (supplier: any) => {
+    setSelectedSupplier({
+      id: supplier.id,
+      name: supplier.name,
+      phone: supplier.phone || '',
+      supplier_code: supplier.supplierCode,
+      balance: 0,
+      total_purchases: 0,
+      total_amount: 0,
+      average_price: 0,
+      is_blocked: false
+    });
     setShowSupplierDialog(false);
+  };
+
+  const handleAddSupplier = (initialName: string) => {
+    console.log("Add supplier called with name:", initialName);
+    // هذا يجب أن يفتح دايلاوج إضافة مورد جديد
   };
 
   const fetchSuppliers = async () => {
@@ -596,49 +612,8 @@ const PurchasesPage = () => {
               </div>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Purchase Summary */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                ملخص الفاتورة
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between">
-                <span style={{ fontFamily: 'Tajawal, sans-serif' }}>المجموع الفرعي:</span>
-                <span className="font-bold">{calculateSubtotal().toLocaleString()} ريال</span>
-              </div>
-              {vatEnabled && (
-                <div className="flex justify-between">
-                  <span style={{ fontFamily: 'Tajawal, sans-serif' }}>ضريبة القيمة المضافة (15%):</span>
-                  <span className="font-bold">{calculateTax().toLocaleString()} ريال</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span style={{ fontFamily: 'Tajawal, sans-serif' }}>الخصم:</span>
-                <span className="font-bold text-red-600">-{discount.toLocaleString()} ريال</span>
-              </div>
-              <div className="border-t pt-4">
-                <div className="flex justify-between text-lg">
-                  <span className="font-bold" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجمالي:</span>
-                  <span className="font-bold text-green-600">{calculateTotal().toLocaleString()} ريال</span>
-                </div>
-              </div>
-              
-              {paymentMethod === 'check' && (
-                <div className="bg-yellow-50 p-3 rounded border">
-                  <p className="text-sm text-yellow-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                    ملاحظة: سيتم إضافة هذا المبلغ لرصيد المورد في حالة الشراء الآجل
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Recent Purchases */}
+          {/* آخر المشتريات - منقول من الجانب الأيمن */}
           {purchases.length > 0 && (
             <Card>
               <CardHeader>
@@ -705,6 +680,47 @@ const PurchasesPage = () => {
             </Card>
           )}
         </div>
+
+        {/* Purchase Summary */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                ملخص الفاتورة
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between">
+                <span style={{ fontFamily: 'Tajawal, sans-serif' }}>المجموع الفرعي:</span>
+                <span className="font-bold">{calculateSubtotal().toLocaleString()} ريال</span>
+              </div>
+              {vatEnabled && (
+                <div className="flex justify-between">
+                  <span style={{ fontFamily: 'Tajawal, sans-serif' }}>ضريبة القيمة المضافة (15%):</span>
+                  <span className="font-bold">{calculateTax().toLocaleString()} ريال</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span style={{ fontFamily: 'Tajawal, sans-serif' }}>الخصم:</span>
+                <span className="font-bold text-red-600">-{discount.toLocaleString()} ريال</span>
+              </div>
+              <div className="border-t pt-4">
+                <div className="flex justify-between text-lg">
+                  <span className="font-bold" style={{ fontFamily: 'Tajawal, sans-serif' }}>الإجمالي:</span>
+                  <span className="font-bold text-green-600">{calculateTotal().toLocaleString()} ريال</span>
+                </div>
+              </div>
+              
+              {paymentMethod === 'check' && (
+                <div className="bg-yellow-50 p-3 rounded border">
+                  <p className="text-sm text-yellow-800" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                    ملاحظة: سيتم إضافة هذا المبلغ لرصيد المورد في حالة الشراء الآجل
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Supplier Search Dialog */}
@@ -712,7 +728,11 @@ const PurchasesPage = () => {
         open={showSupplierDialog}
         onClose={() => setShowSupplierDialog(false)}
         onSupplierSelect={handleSupplierSelect}
+        searchTerm=""
+        language="ar"
+        onAddSupplier={handleAddSupplier}
       />
+
       {/* == Dialog عرض الفاتورة == */}
       <InvoiceDialog
         open={showInvoiceDialog}
