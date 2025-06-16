@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileText, Calculator, TrendingUp, TrendingDown, Download, Printer, Calendar } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { getTaxDataForPeriod } from "@/utils/accountUtils";
+import { useSales } from "@/hooks/useSales";
+import { usePurchases } from "@/hooks/usePurchases";
 
 interface TaxPeriod {
   year: number;
@@ -33,6 +34,10 @@ const TaxDeclarationPage = () => {
   const [taxData, setTaxData] = useState<TaxData | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
 
+  // استخدام البيانات الفعلية من المبيعات والمشتريات
+  const { sales } = useSales();
+  const { purchases } = usePurchases();
+
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
   const quarters = [
     { value: 1, label: "الربع الأول (يناير - مارس)", startMonth: 1, endMonth: 3 },
@@ -41,17 +46,49 @@ const TaxDeclarationPage = () => {
     { value: 4, label: "الربع الرابع (أكتوبر - ديسمبر)", startMonth: 10, endMonth: 12 }
   ];
 
-  const getTaxDataForCustomPeriod = (startDate: string, endDate: string) => {
-    // Convert date strings to Date objects
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    
-    // For custom periods, we'll calculate based on the date range
-    // This is a simplified implementation - in a real system you'd query the database
-    const year = start.getFullYear();
-    const quarter = Math.ceil((start.getMonth() + 1) / 3);
-    
-    return getTaxDataForPeriod(year, quarter);
+  const filterDataByPeriod = (data: any[], startDate: string, endDate: string) => {
+    return data.filter(item => {
+      const itemDate = new Date(item.date);
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      return itemDate >= start && itemDate <= end;
+    });
+  };
+
+  const calculateTaxDataFromRealData = (startDate: string, endDate: string) => {
+    // تصفية المبيعات والمشتريات حسب الفترة
+    const filteredSales = filterDataByPeriod(sales, startDate, endDate);
+    const filteredPurchases = filterDataByPeriod(purchases, startDate, endDate);
+
+    console.log('Filtered sales:', filteredSales);
+    console.log('Filtered purchases:', filteredPurchases);
+
+    // حساب إجمالي المبيعات
+    const salesAmount = filteredSales.reduce((sum, sale) => sum + (sale.subtotal || 0), 0);
+    const salesVAT = filteredSales.reduce((sum, sale) => sum + (sale.tax || 0), 0);
+
+    // حساب إجمالي المشتريات
+    const purchaseAmount = filteredPurchases.reduce((sum, purchase) => sum + (purchase.subtotal || 0), 0);
+    const purchaseVAT = filteredPurchases.reduce((sum, purchase) => sum + (purchase.tax || 0), 0);
+
+    // حساب صافي الضريبة (ضريبة المبيعات - ضريبة المشتريات)
+    const netVAT = salesVAT - purchaseVAT;
+
+    console.log('Tax calculation:', {
+      salesAmount,
+      salesVAT,
+      purchaseAmount,
+      purchaseVAT,
+      netVAT
+    });
+
+    return {
+      salesAmount,
+      salesVAT,
+      purchaseAmount,
+      purchaseVAT,
+      netVAT
+    };
   };
 
   const calculateTax = async () => {
@@ -61,7 +98,6 @@ const TaxDeclarationPage = () => {
 
     let startDate: string;
     let endDate: string;
-    let realTaxData: any;
 
     if (useCustomPeriod) {
       if (!customStartDate || !customEndDate) {
@@ -86,13 +122,14 @@ const TaxDeclarationPage = () => {
 
       startDate = customStartDate;
       endDate = customEndDate;
-      realTaxData = getTaxDataForCustomPeriod(customStartDate, customEndDate);
     } else {
       const quarter = quarters.find(q => q.value === selectedQuarter)!;
       startDate = `${selectedYear}-${quarter.startMonth.toString().padStart(2, '0')}-01`;
       endDate = new Date(selectedYear, quarter.endMonth, 0).toISOString().split('T')[0];
-      realTaxData = getTaxDataForPeriod(selectedYear, selectedQuarter);
     }
+
+    // حساب الإقرار الضريبي من البيانات الفعلية
+    const realTaxData = calculateTaxDataFromRealData(startDate, endDate);
 
     setTaxData({
       salesVAT: Math.round(realTaxData.salesVAT),
@@ -116,7 +153,7 @@ const TaxDeclarationPage = () => {
     
     toast({
       title: "تم حساب الإقرار الضريبي",
-      description: `تم حساب الإقرار للفترة ${periodText}`,
+      description: `تم حساب الإقرار للفترة ${periodText} من البيانات الفعلية`,
     });
   };
 

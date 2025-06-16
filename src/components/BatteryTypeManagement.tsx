@@ -20,7 +20,8 @@ interface BatteryType {
   isActive: boolean;
   createdAt: string;
 }
-export const BatteryTypeManagement = () => {
+
+const BatteryTypeManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [batteryTypes, setBatteryTypes] = useState<BatteryType[]>([]);
   const [editingType, setEditingType] = useState<string | null>(null);
@@ -34,7 +35,7 @@ export const BatteryTypeManagement = () => {
     currentQty: 0,
   });
 
-    useEffect(() => {
+  useEffect(() => {
     const fetchBatteryTypes = async () => {
       const { data, error } = await supabase
         .from("battery_types")
@@ -44,7 +45,6 @@ export const BatteryTypeManagement = () => {
         console.error("Error fetching battery types:", error);
       } else {
         console.log("Fetched battery types:", data);
-        // Add isActive: true as default since it's not in the table
         setBatteryTypes((data || []).map((item: any) => ({
           ...item,
           isActive: true,
@@ -138,8 +138,7 @@ export const BatteryTypeManagement = () => {
     });
   };
 
-
- const handleDecreaseQuantity = () => {
+  const handleDecreaseQuantity = () => {
     const amount = parseInt(decreaseAmount);
     if (!amount || amount <= 0) {
       toast({
@@ -207,11 +206,21 @@ export const BatteryTypeManagement = () => {
     });
   };
 
- 
-
   const AddEditDialog = ({ isEdit = false }: { isEdit?: boolean }) => (
-    <Dialog open={isEdit ? !!editingType : showAddDialog} onOpenChange={isEdit ? () => setEditingType(null) : setShowAddDialog}>
-      <DialogContent dir="rtl" className="max-w-md">
+    <Dialog 
+      open={isEdit ? !!editingType : showAddDialog} 
+      onOpenChange={(open) => {
+        if (!open) {
+          if (isEdit) {
+            setEditingType(null);
+          } else {
+            setShowAddDialog(false);
+          }
+          setFormData({ name: "", description: "", unit_price: 0, currentQty: 0 });
+        }
+      }}
+    >
+      <DialogContent dir="rtl" className="max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle style={{ fontFamily: 'Tajawal, sans-serif' }}>
             {isEdit ? "تعديل نوع البطارية" : "إضافة نوع بطارية جديد"}
@@ -278,7 +287,6 @@ export const BatteryTypeManagement = () => {
               />
             </div>
           </div>
- 
 
           <div className="flex gap-2 flex-row-reverse pt-4">
             <Button
@@ -554,3 +562,5 @@ export const BatteryTypeManagement = () => {
     </div>
   );
 };
+
+export default BatteryTypeManagement;

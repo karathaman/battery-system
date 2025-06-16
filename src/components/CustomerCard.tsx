@@ -2,7 +2,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, MessageCircle, User, DollarSign, FileText, Edit, X, Ban, CheckCircle } from "lucide-react";
+import { Calendar, MessageCircle, User, DollarSign, FileText, Edit, X, Ban, CheckCircle, CreditCard } from "lucide-react";
 import { useCustomerLastSales } from "@/hooks/useCustomerLastSales";
 import { Customer } from "@/types";
 import { useState } from "react";
@@ -29,6 +29,21 @@ export function CustomerCard({
   getDaysSinceLastPurchase,
 }: Props) {
   const { data: lastSales, isLoading: isLastSalesLoading } = useCustomerLastSales(customer.id);
+
+  const getPaymentMethodText = (method: string) => {
+    switch (method) {
+      case 'cash':
+        return 'نقداً';
+      case 'check':
+        return 'شيك';
+      case 'bank_transfer':
+        return 'تحويل بنكي';
+      case 'credit':
+        return 'آجل';
+      default:
+        return method || 'غير محدد';
+    }
+  };
 
   return (
     <Card
@@ -116,13 +131,20 @@ export function CustomerCard({
                     <span>الكمية</span>
                     <span>السعر</span>
                     <span>المبلغ</span>
+                    <span>الدفع</span>
                   </div>
                   {lastSales.map((item, idx) => (
-                    <div key={idx} className="flex justify-between text-xs text-gray-700 my-1 px-1" style={{ fontFamily: 'Tajawal, sans-serif' }}>
-                      <span>{item.batteryTypeName}</span>
-                      <span>{item.quantity}</span>
-                      <span>{item.price}</span>
-                      <span>{item.total}</span>
+                    <div key={idx} className="space-y-1">
+                      <div className="flex justify-between text-xs text-gray-700 px-1" style={{ fontFamily: 'Tajawal, sans-serif' }}>
+                        <span>{item.batteryTypeName}</span>
+                        <span>{item.quantity}</span>
+                        <span>{item.price}</span>
+                        <span>{item.total}</span>
+                        <span className="flex items-center gap-1">
+                          <CreditCard className="w-3 h-3" />
+                          {getPaymentMethodText(item.paymentMethod)}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </>
