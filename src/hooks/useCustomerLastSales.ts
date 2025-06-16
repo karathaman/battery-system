@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -14,6 +15,7 @@ type SaleRow = {
   id: string;
   date: string;
   customer_id: string;
+  payment_method: string;
   sale_items: SaleItem[];
 };
 
@@ -23,6 +25,7 @@ export type LastSaleForCustomer = {
   price: number;
   total: number;
   date: string;
+  paymentMethod: string;
 };
 
 export function useCustomerLastSales(customerId: string | undefined) {
@@ -40,6 +43,7 @@ export function useCustomerLastSales(customerId: string | undefined) {
             id,
             date,
             customer_id,
+            payment_method,
             sale_items(
               battery_type_id,
               quantity,
@@ -72,6 +76,7 @@ export function useCustomerLastSales(customerId: string | undefined) {
               price: item.price_per_kg,
               total: item.total,
               date: sale.date,
+              paymentMethod: sale.payment_method,
             });
           }
           if (batteryRows.length >= 2) break;

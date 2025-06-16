@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StickyNote, Battery, Plus, Edit, Trash2, Search, CheckSquare } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { BatteryTypeManagement } from "@/components/BatteryTypeManagement";
+import BatteryTypeManagement from "@/components/BatteryTypeManagement";
 import { TaskListWidget } from "@/components/TaskListWidget";
 import { useNotes } from "@/hooks/useNotes";
 
