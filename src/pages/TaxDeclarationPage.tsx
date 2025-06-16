@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,8 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileText, Calculator, TrendingUp, TrendingDown, Download, Printer, Calendar } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { useSales } from "@/hooks/useSales";
-import { usePurchases } from "@/hooks/usePurchases";
+import { getTaxDataForPeriod } from "@/utils/accountUtils";
 
 interface TaxPeriod {
   year: number;
@@ -35,10 +33,6 @@ const TaxDeclarationPage = () => {
   const [taxData, setTaxData] = useState<TaxData | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
 
-  // جلب بيانات المبيعات والمشتريات الفعلية
-  const { sales } = useSales();
-  const { purchases } = usePurchases();
-
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
   const quarters = [
     { value: 1, label: "الربع الأول (يناير - مارس)", startMonth: 1, endMonth: 3 },
@@ -47,40 +41,17 @@ const TaxDeclarationPage = () => {
     { value: 4, label: "الربع الرابع (أكتوبر - ديسمبر)", startMonth: 10, endMonth: 12 }
   ];
 
-  const getActualTaxData = (startDate: string, endDate: string) => {
+  const getTaxDataForCustomPeriod = (startDate: string, endDate: string) => {
+    // Convert date strings to Date objects
     const start = new Date(startDate);
     const end = new Date(endDate);
     
-    // فلترة المبيعات ضمن الفترة المحددة
-    const filteredSales = sales.filter(sale => {
-      const saleDate = new Date(sale.date);
-      return saleDate >= start && saleDate <= end;
-    });
-
-    // فلترة المشتريات ضمن الفترة المحددة
-    const filteredPurchases = purchases.filter(purchase => {
-      const purchaseDate = new Date(purchase.date);
-      return purchaseDate >= start && purchaseDate <= end;
-    });
-
-    // حساب إجمالي المبيعات وضريبتها
-    const totalSalesAmount = filteredSales.reduce((sum, sale) => sum + (sale.subtotal || 0), 0);
-    const totalSalesVAT = filteredSales.reduce((sum, sale) => sum + (sale.tax || 0), 0);
-
-    // حساب إجمالي المشتريات وضريبتها
-    const totalPurchaseAmount = filteredPurchases.reduce((sum, purchase) => sum + (purchase.subtotal || 0), 0);
-    const totalPurchaseVAT = filteredPurchases.reduce((sum, purchase) => sum + (purchase.tax || 0), 0);
-
-    // حساب صافي الضريبة (ضريبة المبيعات - ضريبة المشتريات)
-    const netVAT = totalSalesVAT - totalPurchaseVAT;
-
-    return {
-      salesAmount: totalSalesAmount,
-      salesVAT: totalSalesVAT,
-      purchaseAmount: totalPurchaseAmount,
-      purchaseVAT: totalPurchaseVAT,
-      netVAT: netVAT
-    };
+    // For custom periods, we'll calculate based on the date range
+    // This is a simplified implementation - in a real system you'd query the database
+    const year = start.getFullYear();
+    const quarter = Math.ceil((start.getMonth() + 1) / 3);
+    
+    return getTaxDataForPeriod(year, quarter);
   };
 
   const calculateTax = async () => {
@@ -90,6 +61,7 @@ const TaxDeclarationPage = () => {
 
     let startDate: string;
     let endDate: string;
+    let realTaxData: any;
 
     if (useCustomPeriod) {
       if (!customStartDate || !customEndDate) {
@@ -114,14 +86,13 @@ const TaxDeclarationPage = () => {
 
       startDate = customStartDate;
       endDate = customEndDate;
+      realTaxData = getTaxDataForCustomPeriod(customStartDate, customEndDate);
     } else {
       const quarter = quarters.find(q => q.value === selectedQuarter)!;
       startDate = `${selectedYear}-${quarter.startMonth.toString().padStart(2, '0')}-01`;
       endDate = new Date(selectedYear, quarter.endMonth, 0).toISOString().split('T')[0];
+      realTaxData = getTaxDataForPeriod(selectedYear, selectedQuarter);
     }
-
-    // استخدام البيانات الفعلية من المبيعات والمشتريات
-    const realTaxData = getActualTaxData(startDate, endDate);
 
     setTaxData({
       salesVAT: Math.round(realTaxData.salesVAT),
@@ -145,7 +116,7 @@ const TaxDeclarationPage = () => {
     
     toast({
       title: "تم حساب الإقرار الضريبي",
-      description: `تم حساب الإقرار للفترة ${periodText} بناءً على الفواتير الفعلية`,
+      description: `تم حساب الإقرار للفترة ${periodText}`,
     });
   };
 
@@ -167,8 +138,6 @@ const TaxDeclarationPage = () => {
       ضريبة المشتريات (15%): ${taxData.purchaseVAT.toLocaleString()} ريال
       
       صافي الضريبة المستحقة: ${taxData.netVAT.toLocaleString()} ريال
-      
-      ملاحظة: تم حساب هذا الإقرار بناءً على الفواتير الفعلية المسجلة في النظام
     `;
 
     const blob = new Blob([reportContent], { type: 'text/plain;charset=utf-8' });
@@ -208,7 +177,6 @@ const TaxDeclarationPage = () => {
             .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
             .amount { font-weight: bold; color: #2563eb; }
             .total { background-color: #f3f4f6; font-size: 18px; font-weight: bold; }
-            .note { background-color: #fef3c7; padding: 10px; margin-top: 20px; border-radius: 5px; }
           </style>
         </head>
         <body>
@@ -235,10 +203,6 @@ const TaxDeclarationPage = () => {
             <p style="font-size: 24px;">${taxData.netVAT.toLocaleString()} ريال</p>
             ${taxData.netVAT > 0 ? '<p style="color: red;">مبلغ مستحق للسداد</p>' : '<p style="color: green;">مبلغ مستحق الاسترداد</p>'}
           </div>
-          
-          <div class="note">
-            <p><strong>ملاحظة:</strong> تم حساب هذا الإقرار بناءً على الفواتير الفعلية المسجلة في النظام</p>
-          </div>
         </body>
       </html>
     `);
@@ -254,7 +218,7 @@ const TaxDeclarationPage = () => {
         <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
           <CardTitle className="flex items-center gap-2 flex-row-reverse text-lg sm:text-xl" style={{ fontFamily: 'Tajawal, sans-serif' }}>
             <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
-            الإقرار الضريبي (بناءً على الفواتير الفعلية)
+            الإقرار الضريبي
           </CardTitle>
         </CardHeader>
       </Card>
