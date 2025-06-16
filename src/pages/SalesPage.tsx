@@ -186,7 +186,7 @@ const SalesPage = () => {
     }));
     setSaleItems(extendedItems);
     setDiscount(sale.discount);
-    setPaymentMethod(sale.payment_method || sale.paymentMethod || "cash");
+    setPaymentMethod(sale.paymentMethod || "cash");
     setVatEnabled(sale.tax > 0);
   };
 
@@ -644,10 +644,10 @@ const SalesPage = () => {
                           </p>
                           {/* إصلاح عرض طريقة الدفع */}
                           <Badge 
-                            variant={(sale.payment_method || sale.paymentMethod) === 'credit' ? 'destructive' : 'default'} 
+                            variant={sale.paymentMethod === 'credit' ? 'destructive' : 'default'} 
                             className="mt-3 px-3 py-1"
                           >
-                            {(sale.payment_method || sale.paymentMethod) === 'credit' ? 'آجل' : 'نقداً'}
+                            {sale.paymentMethod === 'credit' ? 'آجل' : 'نقداً'}
                           </Badge>
                         </div>
                         <div className="text-left">

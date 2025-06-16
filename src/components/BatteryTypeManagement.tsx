@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,7 @@ const EditBatteryTypeDialog = ({ open, onClose, batteryType, onSave }: EditBatte
   const [unitPrice, setUnitPrice] = useState(0);
 
   // تحديث البيانات عند فتح الدايلوج
-  useState(() => {
+  useEffect(() => {
     if (batteryType) {
       setName(batteryType.name);
       setUnitPrice(batteryType.unit_price);
@@ -188,8 +188,16 @@ const BatteryTypeManagement = () => {
     setUnitPrice("");
   };
 
-  const handleEdit = (batteryType: BatteryType) => {
-    setEditingBatteryType(batteryType);
+  const handleEdit = (batteryType: any) => {
+    // تحويل نوع البطارية إلى النوع المطلوب
+    const formattedBatteryType: BatteryType = {
+      id: batteryType.id,
+      name: batteryType.name,
+      unit_price: batteryType.unit_price,
+      created_at: batteryType.created_at,
+      updated_at: batteryType.updated_at || batteryType.created_at
+    };
+    setEditingBatteryType(formattedBatteryType);
     setShowEditDialog(true);
   };
 
