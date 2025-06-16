@@ -186,7 +186,7 @@ const SalesPage = () => {
     }));
     setSaleItems(extendedItems);
     setDiscount(sale.discount);
-    setPaymentMethod(sale.paymentMethod);
+    setPaymentMethod(sale.payment_method || sale.paymentMethod || "cash");
     setVatEnabled(sale.tax > 0);
   };
 
@@ -622,7 +622,7 @@ const SalesPage = () => {
           </div>
         </div>
 
-        {/* Recent Sales */}
+        {/* Recent Sales - إصلاح عرض طريقة الدفع */}
         {sales.length > 0 && (
           <Card className="shadow-xl border-0 bg-white overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-purple-500 via-pink-600 to-rose-600 text-white">
@@ -642,8 +642,12 @@ const SalesPage = () => {
                           <p className="text-lg text-gray-600" style={{ fontFamily: 'Tajawal, sans-serif' }}>
                             {sale.customerName || 'غير معروف'}
                           </p>
-                          <Badge variant={sale.paymentMethod === 'credit' ? 'destructive' : 'default'} className="mt-3 px-3 py-1">
-                            {paymentMethods.find(m => m.value === sale.paymentMethod)?.label}
+                          {/* إصلاح عرض طريقة الدفع */}
+                          <Badge 
+                            variant={(sale.payment_method || sale.paymentMethod) === 'credit' ? 'destructive' : 'default'} 
+                            className="mt-3 px-3 py-1"
+                          >
+                            {(sale.payment_method || sale.paymentMethod) === 'credit' ? 'آجل' : 'نقداً'}
                           </Badge>
                         </div>
                         <div className="text-left">
