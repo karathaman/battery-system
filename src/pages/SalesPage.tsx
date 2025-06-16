@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -139,20 +138,17 @@ const SalesPage = () => {
     }
 
     const saleData: SaleFormData = {
-      invoiceNumber: "",
+      customer_id: selectedCustomer.id,
       date: new Date().toISOString().split('T')[0],
-      customerId: selectedCustomer.id,
       subtotal: calculateSubtotal(),
       discount,
       tax: calculateTax(),
       total: calculateTotal(),
-      paymentMethod: paymentMethod as "cash" | "credit",
-      status: "completed",
+      payment_method: paymentMethod as "cash" | "credit",
       items: saleItems.map(item => ({
-        batteryTypeId: item.batteryTypeId,
+        battery_type_id: item.batteryTypeId,
         quantity: item.quantity,
-        price: item.price,
-        total: item.total
+        price_per_kg: item.price
       }))
     };
 
@@ -705,7 +701,7 @@ const SalesPage = () => {
         <CustomerSearchDialog
           open={showCustomerDialog}
           onClose={() => setShowCustomerDialog(false)}
-          onCustomerSelect={handleCustomerSelect}
+          onSelectCustomer={handleCustomerSelect}
         />
 
         <InvoiceDialog
